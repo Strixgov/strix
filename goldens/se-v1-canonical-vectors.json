@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "generator": "scripts/generate-public-release-fixtures.mjs",
+  "vectors": [
+    {
+      "name": "minimal-valid-record",
+      "description": "Smallest VERIFIED record: all required fields present, regulatoryContext flags all false.",
+      "input": {
+        "schemaVersion": 1,
+        "evidenceId": 1,
+        "evidenceHash": "f1c4a7e2b9d6053824173a8e9c5b4d0f7e2c8b1a6d9f3e0c8b5a2d7f1e4c0b9a",
+        "proofChainHash": "",
+        "capabilityId": "example.demo.allowAction",
+        "action": "allow",
+        "actorId": "example:test-user",
+        "actorRole": "owner",
+        "createdAt": "2026-05-15T18:00:00.000Z",
+        "signingKeyId": "strix-test-2026-05",
+        "environment": "test",
+        "tenantId": "example-tenant",
+        "regulatoryContext": {
+          "complianceMode": null,
+          "euAiActArticle12": false,
+          "euAiActArticle14": false,
+          "euAiActArticle28": false
+        },
+        "sourceApp": "strix-verifier-public-release-example"
+      },
+      "expected": {
+        "canonicalBytes": "{\"schemaVersion\":\"1\",\"evidenceId\":\"1\",\"evidenceHash\":\"f1c4a7e2b9d6053824173a8e9c5b4d0f7e2c8b1a6d9f3e0c8b5a2d7f1e4c0b9a\",\"proofChainHash\":\"\",\"capabilityId\":\"example.demo.allowAction\",\"action\":\"allow\",\"actorId\":\"example:test-user\",\"actorRole\":\"owner\",\"createdAt\":\"2026-05-15T18:00:00.000Z\",\"signingKeyId\":\"strix-test-2026-05\",\"environment\":\"test\",\"tenantId\":\"example-tenant\",\"regulatoryContext\":{\"complianceMode\":null,\"euAiActArticle12\":false,\"euAiActArticle14\":false,\"euAiActArticle28\":false}}",
+        "canonicalSha256": "0aa4db02081c37aebdd52f390d861d6411e2d551f2b69e69f17e80e7c6099dd1",
+        "canonicalByteLength": 492
+      }
+    },
+    {
+      "name": "compliance-mode-eu-ai-act",
+      "description": "Record with regulatoryContext.complianceMode set to 'eu-ai-act' and all article flags true. Tests that the regulatoryContext block serializes in canonical field order.",
+      "input": {
+        "schemaVersion": 1,
+        "evidenceId": 2,
+        "evidenceHash": "f1c4a7e2b9d6053824173a8e9c5b4d0f7e2c8b1a6d9f3e0c8b5a2d7f1e4c0b9a",
+        "proofChainHash": "",
+        "capabilityId": "example.demo.allowAction",
+        "action": "allow",
+        "actorId": "example:test-user",
+        "actorRole": "owner",
+        "createdAt": "2026-05-15T18:00:00.000Z",
+        "signingKeyId": "strix-test-2026-05",
+        "environment": "test",
+        "tenantId": "example-tenant",
+        "regulatoryContext": {
+          "complianceMode": "eu-ai-act",
+          "euAiActArticle12": true,
+          "euAiActArticle14": true,
+          "euAiActArticle28": true
+        },
+        "sourceApp": "strix-verifier-public-release-example"
+      },
+      "expected": {
+        "canonicalBytes": "{\"schemaVersion\":\"1\",\"evidenceId\":\"2\",\"evidenceHash\":\"f1c4a7e2b9d6053824173a8e9c5b4d0f7e2c8b1a6d9f3e0c8b5a2d7f1e4c0b9a\",\"proofChainHash\":\"\",\"capabilityId\":\"example.demo.allowAction\",\"action\":\"allow\",\"actorId\":\"example:test-user\",\"actorRole\":\"owner\",\"createdAt\":\"2026-05-15T18:00:00.000Z\",\"signingKeyId\":\"strix-test-2026-05\",\"environment\":\"test\",\"tenantId\":\"example-tenant\",\"regulatoryContext\":{\"complianceMode\":\"eu-ai-act\",\"euAiActArticle12\":true,\"euAiActArticle14\":true,\"euAiActArticle28\":true}}",
+        "canonicalSha256": "3d930a642dc5aaf254b6fdba846dcd88cf86e5e1f6e6c0a7e4671ffba16b0c44",
+        "canonicalByteLength": 496
+      }
+    },
+    {
+      "name": "compliance-mode-null",
+      "description": "Record with regulatoryContext.complianceMode explicitly null. Tests that null does NOT collapse to undefined or omission — the field must serialize as `null` in the canonical bytes.",
+      "input": {
+        "schemaVersion": 1,
+        "evidenceId": 3,
+        "evidenceHash": "f1c4a7e2b9d6053824173a8e9c5b4d0f7e2c8b1a6d9f3e0c8b5a2d7f1e4c0b9a",
+        "proofChainHash": "",
+        "capabilityId": "example.demo.allowAction",
+        "action": "allow",
+        "actorId": "example:test-user",
+        "actorRole": "owner",
+        "createdAt": "2026-05-15T18:00:00.000Z",
+        "signingKeyId": "strix-test-2026-05",
+        "environment": "test",
+        "tenantId": "example-tenant",
+        "regulatoryContext": {
+          "complianceMode": null,
+          "euAiActArticle12": false,
+          "euAiActArticle14": false,
+          "euAiActArticle28": false
+        },
+        "sourceApp": "strix-verifier-public-release-example"
+      },
+      "expected": {
+        "canonicalBytes": "{\"schemaVersion\":\"1\",\"evidenceId\":\"3\",\"evidenceHash\":\"f1c4a7e2b9d6053824173a8e9c5b4d0f7e2c8b1a6d9f3e0c8b5a2d7f1e4c0b9a\",\"proofChainHash\":\"\",\"capabilityId\":\"example.demo.allowAction\",\"action\":\"allow\",\"actorId\":\"example:test-user\",\"actorRole\":\"owner\",\"createdAt\":\"2026-05-15T18:00:00.000Z\",\"signingKeyId\":\"strix-test-2026-05\",\"environment\":\"test\",\"tenantId\":\"example-tenant\",\"regulatoryContext\":{\"complianceMode\":null,\"euAiActArticle12\":false,\"euAiActArticle14\":false,\"euAiActArticle28\":false}}",
+        "canonicalSha256": "2ce86c854097f07e6950bf3a1e43783ab2e61298660eb9dfe727c62fe8c3f65d",
+        "canonicalByteLength": 492
+      }
+    }
+  ]
+}

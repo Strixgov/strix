@@ -1,0 +1,159 @@
+# Golden Vectors for Signed Evidence v1
+
+Byte-locked test vectors against which you can validate your own
+reimplementation of the canonical-payload builder.
+
+The vectors are scoped to the **Signed Evidence v1 13-field canonical
+payload**. They are NOT receipt-format vectors, NOT execution-receipt
+vectors, NOT SCJ-v1 generic canonicalization vectors — those are
+different surfaces with their own goldens elsewhere.
+
+---
+
+## Files
+
+| File | Purpose |
+|---|---|
+| [`goldens/se-v1-canonical-vectors.json`](goldens/se-v1-canonical-vectors.json) | Input records + expected canonical bytes + expected SHA-256 hashes. |
+| [`goldens/se-v1-canonical-vectors.sha256.lock`](goldens/se-v1-canonical-vectors.sha256.lock) | A separate lock file mapping each vector name to its SHA-256. Treated as the regression pin: any change to canonical-builder output must update this file in the same commit. |
+
+---
+
+## Vector format
+
+Each entry in `vectors[]` has this shape:
+
+```jsonc
+{
+  "name": "<short-identifier>",
+  "description": "<what this vector tests>",
+  "input": { /* the source record as a JS object */ },
+  "expected": {
+    "canonicalBytes": "<the canonical UTF-8 string, hand-serialized in locked order>",
+    "canonicalSha256": "<64-char lowercase hex>",
+    "canonicalByteLength": <integer>
+  }
+}
+```
+
+The `input` is the source record you'd pass to a `buildCanonicalPayload()`
+function. The `expected.canonicalBytes` is what that function must
+return. The `canonicalSha256` is SHA-256 of those bytes.
+
+---
+
+## How to validate your reimplementation
+
+In any Ed25519-capable language:
+
+1. Load `goldens/se-v1-canonical-vectors.json`.
+2. For each vector, call your canonical builder with `input`.
+3. Compare your output **byte-for-byte** with `expected.canonicalBytes`.
+4. If they match, compute SHA-256 and compare with `expected.canonicalSha256`.
+5. All vectors must pass. A single byte off on any vector is a
+   reimplementation bug.
+
+A reference validator in Node.js:
+
+```js
+import crypto from "node:crypto";
+import fs from "node:fs/promises";
+
+import { buildCanonicalPayload } from "@strixgov/verifier";
+
+const goldens = JSON.parse(
+  await fs.readFile("./goldens/se-v1-canonical-vectors.json", "utf8"),
+);
+const lock = JSON.parse(
+  await fs.readFile("./goldens/se-v1-canonical-vectors.sha256.lock", "utf8"),
+);
+
+for (const v of goldens.vectors) {
+  const bytes = buildCanonicalPayload(v.input);
+  const sha = crypto.createHash("sha256").update(bytes).digest("hex");
+
+  if (bytes.toString("utf8") !== v.expected.canonicalBytes) {
+    throw new Error(`Vector ${v.name}: canonical bytes differ`);
+  }
+  if (sha !== v.expected.canonicalSha256) {
+    throw new Error(`Vector ${v.name}: SHA-256 differs (recomputed=${sha})`);
+  }
+  if (sha !== lock[v.name]) {
+    throw new Error(`Vector ${v.name}: lock file mismatch`);
+  }
+}
+console.log("All vectors verified.");
+```
+
+---
+
+## Current vector inventory
+
+| Name | What it tests |
+|---|---|
+| `minimal-valid-record` | The smallest VERIFIED record. All required fields present, `regulatoryContext` flags all false, `complianceMode` null. |
+| `compliance-mode-eu-ai-act` | `regulatoryContext.complianceMode = "eu-ai-act"` with all three article flags set true. Tests the canonical builder serializes the nested object in locked field order. |
+| `compliance-mode-null` | `regulatoryContext.complianceMode` explicitly null. Tests that null does NOT collapse to undefined or omission — the field MUST serialize as `null` in the canonical bytes. |
+
+If your reimplementation passes all three vectors, your canonical
+builder agrees with the reference on the three most common shapes.
+Additional vectors will be added as new edge cases are discovered.
+
+---
+
+## Why these vectors are byte-locked
+
+The SHA-256 of the canonical bytes is the only signal external auditors
+have to confirm that a verifier's reimplementation produces the bytes
+that were originally signed. A change of even one byte (a trailing
+space, a re-ordered field, a Unicode escape difference) breaks
+verification of every signed record.
+
+The lock file (`*.sha256.lock`) is therefore not just a test artifact
+— it's a **public contract**. Updating it requires the same review
+discipline as a schema change:
+
+- Any PR that changes the canonical builder's output must update the
+  lock file in the same commit.
+- The diff makes the byte-level change visible to reviewers.
+- A future regression that produces drift will fail against the lock
+  before it ships.
+
+This is the same discipline used in `solo-builder-core/tests/golden-vectors/canonical-json/`
+internally for the SCJ-v1 canonicalization layer. The mechanism is
+proven; this is its application to SE v1 specifically.
+
+---
+
+## Regenerating the vectors
+
+If a legitimate schema change ships (e.g., a new SE v1 field is added
+by an additive, signature-preserving migration — rare), the vectors can
+be regenerated by running:
+
+```bash
+# From within the source repository
+node scripts/generate-public-release-fixtures.mjs
+```
+
+The script writes both `goldens/*.json` and `goldens/*.sha256.lock`.
+**Always commit both files in the same change** — the lock without the
+vector update (or vice versa) is a broken state.
+
+---
+
+## Roadmap
+
+Additional vectors planned:
+
+- Records with very long strings in `actorId` (UTF-8 boundary cases).
+- Records with the maximum allowed `evidenceHash` and `proofChainHash`
+  values (proof-chain edge case).
+- Records with `regulatoryContext` containing only a subset of article
+  flags (validate the "all flags required to be present" invariant).
+- Genesis records (empty `proofChainHash`).
+
+If you encounter a record shape in production that you can't verify
+locally with the current vector set, file an issue with the record's
+canonical bytes (you can extract them from the proof API) and we'll add
+the corresponding vector.

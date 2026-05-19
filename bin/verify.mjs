@@ -1,0 +1,477 @@
+#!/usr/bin/env node
+
+/**
+ * @strixgov/verifier CLI
+ *
+ * Independent verification of Strix governance evidence records.
+ * Uses only standard Ed25519 + SHA-256 — no Strix SDK required.
+ *
+ * Usage:
+ *   npx @strixgov/verifier <evidenceId>
+ *   npx @strixgov/verifier 42
+ *   npx @strixgov/verifier 42 --proof-base https://your-deployment.example.com --jwks-base https://your-deployment.example.com
+ *
+ * Exit codes:
+ *   0 = VERIFIED
+ *   1 = FAILED (signature invalid or hash mismatch)
+ *   2 = ERROR (network, key not found, etc.)
+ */
+
+import fs from "node:fs/promises";
+import {
+  verify,
+  verifyApprovalArtifact,
+  verifyApprovalQuorum,
+  verifyWithAttestations,
+  verifyReceipt,
+  verifyReceiptChain,
+  verifyVisual,
+} from "../src/index.mjs";
+
+// ─── Argument Parsing ─────────────────────────────────────────────────────────
+
+const args = process.argv.slice(2);
+
+if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
+  console.log(`
+@strixgov/verifier — Independent governance evidence + approval verification
+
+Usage:
+  strix-verify <evidenceId> [options]
+  strix-verify approval <artifactId> [options]
+  strix-verify quorum <decisionId> [options]
+  strix-verify receipt <path-to-receipt.json> [--jwks <path>]
+  strix-verify chain <path-to-receipts.jsonl> [--jwks <path>]
+  strix-verify visual <path-to-svg> [--jwks <path>] [--live-jwks-url <url>]
+
+Options:
+  --proof-base <url>      Base URL for proof API (default: https://www.strixgov.com)
+  --jwks-base <url>       Base URL for JWKS endpoint (default: https://www.strixgov.com)
+  --verify-base <url>     Base URL for Console verify endpoint (defaults to --jwks-base)
+  --include-attestations  Fetch + verify linked attestations (E1.5; v1.3.0+)
+  --json                  Output raw JSON instead of formatted text
+  --help, -h              Show this help
+
+Examples:
+  strix-verify 1
+  strix-verify 42 --json
+  strix-verify 42 --include-attestations
+  strix-verify approval <artifactId>
+  strix-verify quorum <decisionId>
+
+What evidence verification does:
+  1. Fetches the evidence record from the proof API
+  2. Fetches the signing public key from the JWKS endpoint
+  3. Reconstructs the canonical 13-field signed payload
+  4. Verifies the Ed25519 signature
+  5. Verifies the SHA-256 evidence hash
+  6. Reports pass/fail with cryptographic details
+
+What approval verification does (Phase 3):
+  1. Fetches a signed approval artifact (or all artifacts for a decision)
+  2. Reconstructs the canonical 9-field approval payload
+  3. Verifies the Ed25519 signature against the public JWKS
+  4. Verifies the SHA-256 canonical hash
+  5. For quorum mode: checks chain continuity + quorum satisfaction
+
+No Strix account, SDK, or API key required.
+`);
+  process.exit(0);
+}
+
+// Visual Artifacts v1 — verify an SVG produced by the @strixgov/render renderer.
+// Mirror of apps/strix-verify-web (same gates, same outcome vocabulary).
+if (args[0] === "visual") {
+  const filePath = args[1];
+  if (!filePath) {
+    console.error("Missing path. Usage: strix-verify visual <path-to-svg> [--jwks <path>] [--live-jwks-url <url>] [--json]");
+    process.exit(2);
+  }
+  let pinnedJwksPath = null;
+  let liveJwksUrl = null;
+  let jsonOut = false;
+  for (let i = 2; i < args.length; i++) {
+    if (args[i] === "--jwks" && args[i + 1]) pinnedJwksPath = args[++i];
+    else if (args[i] === "--live-jwks-url" && args[i + 1]) liveJwksUrl = args[++i];
+    else if (args[i] === "--json") jsonOut = true;
+  }
+  try {
+    const svg = await fs.readFile(filePath, "utf8");
+    const opts = {};
+    if (pinnedJwksPath) {
+      const raw = await fs.readFile(pinnedJwksPath, "utf8");
+      const parsed = JSON.parse(raw);
+      opts.pinnedJwks = "keys" in parsed ? parsed : { keys: [parsed] };
+    }
+    if (liveJwksUrl) opts.liveJwksUrl = liveJwksUrl;
+    const result = await verifyVisual(svg, opts);
+    if (jsonOut) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log();
+      console.log(`@strixgov/verifier — Visual Artifacts v1`);
+      console.log("─".repeat(56));
+      console.log(`  File:              ${filePath}`);
+      console.log(`  Visual kind:       ${result.meta.visualKind ?? "—"}`);
+      console.log(`  Render version:    ${result.meta.renderVersion ?? "—"}`);
+      console.log(`  Signing kid:       ${result.meta.signingKeyId ?? "—"}`);
+      console.log(`  Canonical hash:    ${result.canonical.embeddedHash ?? "—"}`);
+      console.log(`  Self-consistent:   ${result.canonical.match === true ? "yes" : result.canonical.match === false ? "NO" : "—"}`);
+      console.log(`  Pinned:            ${result.pinned.jwkPresent ? (result.pinned.ok ? "VERIFIED" : "FAILED") : "(no kid match)"}${result.pinned.error ? "  · " + result.pinned.error : ""}`);
+      console.log(`  Live:              ${result.live.fetched ? (result.live.jwkPresent ? (result.live.ok ? "VERIFIED" : "FAILED") : "(no kid match)") : "(not fetched)"}${result.live.error ? "  · " + result.live.error : ""}`);
+      console.log(`  Drift:             ${result.drift.state}`);
+      console.log(`  Status:            ${result.verificationStatus}`);
+      console.log(`  Reason:            ${result.verificationReason}`);
+      console.log();
+    }
+    const exitCode = ["VERIFIED", "VERIFIED_PINNED_ONLY", "VERIFIED_LIVE_ONLY"].includes(result.verificationStatus) ? 0 : 1;
+    process.exit(exitCode);
+  } catch (err) {
+    console.error(`strix-verify visual: ${err.message}`);
+    process.exit(2);
+  }
+}
+
+// Tool-gateway receipt subcommands (offline-capable)
+if (args[0] === "receipt" || args[0] === "chain") {
+  const subcommand = args[0];
+  const filePath = args[1];
+  if (!filePath) {
+    console.error(
+      `Missing path. Usage: strix-verify ${subcommand} <path> [--jwks <path>]`,
+    );
+    process.exit(2);
+  }
+  let jwksPath = null;
+  let jsonOut = false;
+  for (let i = 2; i < args.length; i++) {
+    if (args[i] === "--jwks" && args[i + 1]) jwksPath = args[++i];
+    else if (args[i] === "--json") jsonOut = true;
+  }
+
+  try {
+    const opts = {};
+    if (jwksPath) {
+      const jwksRaw = await fs.readFile(jwksPath, "utf8");
+      const parsed = JSON.parse(jwksRaw);
+      opts.jwks = "keys" in parsed ? parsed : { keys: [parsed] };
+    }
+
+    const raw = await fs.readFile(filePath, "utf8");
+
+    if (subcommand === "receipt") {
+      const receipt = JSON.parse(raw);
+      const result = await verifyReceipt(receipt, opts);
+      if (jsonOut) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        console.log();
+        console.log(`@strixgov/verifier — Tool Gateway Receipt`);
+        console.log("─".repeat(56));
+        console.log(`  Receipt ID:        ${receipt.receiptId}`);
+        console.log(`  Capability:        ${receipt.capabilityId}`);
+        console.log(`  Action:            ${receipt.action}`);
+        console.log(`  Decision:          ${receipt.decision}`);
+        console.log(`  Risk:              ${receipt.risk}`);
+        console.log(`  Mode:              ${receipt.mode}`);
+        console.log(`  Signing key id:    ${receipt.signingKeyId}`);
+        console.log(`  Hash valid:        ${result.hashValid}`);
+        console.log(`  Signature present: ${result.signaturePresent}`);
+        console.log(`  Signature valid:   ${result.signatureValid}`);
+        console.log(`  Status:            ${result.verificationStatus}`);
+        if (result.error) console.log(`  Error:             ${result.error}`);
+        console.log();
+      }
+      if (result.error) process.exit(2);
+      process.exit(result.verificationStatus === "VERIFIED" ? 0 : 1);
+    }
+
+    // chain — JSONL or JSON array
+    const receipts = raw.trim().startsWith("[")
+      ? JSON.parse(raw)
+      : raw
+          .split("\n")
+          .filter(Boolean)
+          .map((l) => JSON.parse(l));
+    const result = await verifyReceiptChain(receipts, opts);
+    if (jsonOut) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log();
+      console.log(`@strixgov/verifier — Tool Gateway Receipt Chain`);
+      console.log("─".repeat(56));
+      console.log(`  Receipts:          ${result.count}`);
+      console.log(`  Chain valid:       ${result.chainValid}`);
+      if (result.brokenAt) {
+        console.log(`  Broken at:         ${result.brokenAt}`);
+      }
+      let signedOk = 0;
+      for (const r of result.receipts) {
+        if (r.verificationStatus === "VERIFIED") signedOk++;
+      }
+      console.log(`  Signatures valid:  ${signedOk}/${result.count}`);
+      console.log();
+    }
+    if (!result.chainValid) process.exit(1);
+    const allSigned = result.receipts.every(
+      (r) => r.verificationStatus === "VERIFIED",
+    );
+    process.exit(allSigned ? 0 : 1);
+  } catch (err) {
+    console.error(`Fatal error: ${err.message}`);
+    process.exit(2);
+  }
+}
+
+// Approval artifact subcommand
+if (args[0] === "approval" || args[0] === "quorum") {
+  const subcommand = args[0];
+  const id = args[1];
+  if (!id) {
+    console.error(`Missing ID. Usage: strix-verify ${subcommand} <id>`);
+    process.exit(2);
+  }
+
+  const subOpts = {};
+  let subJson = false;
+  for (let i = 2; i < args.length; i++) {
+    if (args[i] === "--proof-base" && args[i + 1]) {
+      subOpts.proofBase = args[++i];
+    } else if (args[i] === "--jwks-base" && args[i + 1]) {
+      subOpts.jwksBase = args[++i];
+    } else if (args[i] === "--json") {
+      subJson = true;
+    }
+  }
+
+  try {
+    const result = subcommand === "approval"
+      ? await verifyApprovalArtifact({ artifactId: id, ...subOpts })
+      : await verifyApprovalQuorum({ decisionId: id, ...subOpts });
+
+    if (subJson) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log();
+      console.log(`@strixgov/verifier — ${subcommand === "approval" ? "Approval Artifact" : "Approval Quorum"} ${id}`);
+      console.log("─".repeat(64));
+      if (result.error) {
+        console.log(`Error: ${result.error}`);
+      } else if (subcommand === "approval") {
+        console.log(`  Hash valid:        ${result.hashValid}`);
+        console.log(`  Signature present: ${result.signaturePresent}`);
+        console.log(`  Signature valid:   ${result.signatureValid}`);
+        console.log(`  Status:            ${result.verificationStatus}`);
+      } else {
+        console.log(`  Required:          ${result.requiredApprovals}`);
+        console.log(`  Valid approvals:   ${result.validApprovals}`);
+        console.log(`  Quorum satisfied:  ${result.quorumSatisfied}`);
+        console.log(`  Chain continuous:  ${result.chainContinuous}`);
+      }
+      console.log();
+    }
+
+    const ok = subcommand === "approval"
+      ? result.verificationStatus === "VERIFIED"
+      : result.quorumSatisfied && result.chainContinuous;
+    if (result.error) process.exit(2);
+    process.exit(ok ? 0 : 1);
+  } catch (err) {
+    console.error(`Fatal error: ${err.message}`);
+    process.exit(2);
+  }
+}
+
+const evidenceId = args[0];
+const options = {};
+let jsonOutput = false;
+
+for (let i = 1; i < args.length; i++) {
+  if (args[i] === "--proof-base" && args[i + 1]) {
+    options.proofBase = args[++i];
+  } else if (args[i] === "--jwks-base" && args[i + 1]) {
+    options.jwksBase = args[++i];
+  } else if (args[i] === "--verify-base" && args[i + 1]) {
+    options.verifyBase = args[++i];
+  } else if (args[i] === "--include-attestations") {
+    options.includeAttestations = true;
+  } else if (args[i] === "--json") {
+    jsonOutput = true;
+  }
+}
+
+// ─── Verification ─────────────────────────────────────────────────────────────
+
+const RESET = "\x1b[0m";
+const GREEN = "\x1b[32m";
+const RED = "\x1b[31m";
+const YELLOW = "\x1b[33m";
+const CYAN = "\x1b[36m";
+const DIM = "\x1b[2m";
+const BOLD = "\x1b[1m";
+
+function statusColor(status) {
+  if (status === "VERIFIED") return GREEN;
+  if (status === "LEGACY_UNSIGNED" || status === "UNSIGNED") return YELLOW;
+  return RED;
+}
+
+function checkMark(ok) {
+  return ok ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
+}
+
+try {
+  // E1.5: when --include-attestations is set, route through the
+  // attestation-aware verifier. Result shape is a superset of base verify.
+  const result = options.includeAttestations
+    ? await verifyWithAttestations(evidenceId, options)
+    : await verify(evidenceId, options);
+
+  if (jsonOutput) {
+    console.log(JSON.stringify(result, null, 2));
+  } else {
+    console.log();
+    console.log(
+      `${BOLD}@strixgov/verifier${RESET} — Evidence Record #${evidenceId}`
+    );
+    console.log(`${"─".repeat(52)}`);
+
+    if (result.error) {
+      console.log(`${RED}Error: ${result.error}${RESET}`);
+      if (/Network error fetching/.test(result.error)) {
+        console.log("");
+        console.log(`${DIM}If you're behind a corporate proxy, VPN, or air-gapped network,${RESET}`);
+        console.log(`${DIM}see the Troubleshooting section:${RESET}`);
+        console.log(`  https://github.com/Tarshann/strix-platform/tree/main/packages/strixgov-verifier#troubleshooting`);
+        console.log("");
+        console.log(`${DIM}To use a custom deployment instead of www.strixgov.com:${RESET}`);
+        console.log(`  strix-verify <id> --proof-base https://your.host --jwks-base https://your.host`);
+      }
+      process.exit(2);
+    }
+
+    const record = result.record;
+    if (record) {
+      console.log(
+        `${DIM}Capability:${RESET}  ${record.capabilityId ?? "unknown"}`
+      );
+      console.log(
+        `${DIM}Action:${RESET}      ${record.action ?? record.decision ?? "unknown"}`
+      );
+      console.log(
+        `${DIM}Actor:${RESET}       ${record.actorId ?? record.actor?.id ?? "unknown"}`
+      );
+      console.log(
+        `${DIM}Created:${RESET}     ${record.createdAt ?? "unknown"}`
+      );
+      console.log(
+        `${DIM}Key ID:${RESET}      ${record.signingKeyId ?? "none"}`
+      );
+      console.log();
+    }
+
+    console.log(`${BOLD}Verification Results${RESET}`);
+    console.log(`${"─".repeat(52)}`);
+    console.log(
+      `  ${checkMark(result.hashValid)} Hash valid:        ${result.hashValid}`
+    );
+    console.log(
+      `  ${checkMark(result.signaturePresent)} Signature present: ${result.signaturePresent}`
+    );
+    console.log(
+      `  ${checkMark(result.signatureValid)} Signature valid:   ${result.signatureValid}`
+    );
+    console.log();
+
+    const color = statusColor(result.verificationStatus);
+    console.log(
+      `  ${BOLD}Status: ${color}${result.verificationStatus}${RESET}`
+    );
+    console.log();
+
+    if (result.verificationStatus === "VERIFIED") {
+      console.log(
+        `${GREEN}This record was cryptographically signed by the Strix governance kernel.${RESET}`
+      );
+      console.log(
+        `${GREEN}The evidence hash and signature are independently verifiable.${RESET}`
+      );
+    } else if (result.verificationStatus === "LEGACY_UNSIGNED") {
+      console.log(
+        `${YELLOW}This is a pre-Signed Evidence v1 record (no signature).${RESET}`
+      );
+      console.log(
+        `${YELLOW}Hash integrity can still be verified but provenance cannot.${RESET}`
+      );
+    } else {
+      console.log(
+        `${RED}Verification failed. The record may have been tampered with.${RESET}`
+      );
+    }
+    console.log();
+
+    // ── E1.5: render attestations if --include-attestations was passed ───
+    if (options.includeAttestations) {
+      console.log(`${BOLD}Linked Attestations${RESET}`);
+      console.log(`${"─".repeat(52)}`);
+      const atts = result.attestations ?? [];
+      if (atts.length === 0) {
+        console.log(`${DIM}  (no attestations found)${RESET}`);
+      } else {
+        for (const a of atts) {
+          const color = statusColor(a.verificationStatus);
+          console.log(
+            `  ${checkMark(a.verificationStatus === "VERIFIED")} ` +
+              `[${a.attestationType}] ${color}${a.verificationStatus}${RESET}`,
+          );
+          if (a.attestationType === "ACTOR" && a.actorType) {
+            console.log(
+              `       ${DIM}actor:${RESET} ${a.actorType}` +
+                (a.actorId ? ` (${a.actorId})` : "") +
+                (a.agentId ? ` agent=${a.agentId}` : "") +
+                (a.onBehalfOf ? ` onBehalfOf=${a.onBehalfOf}` : ""),
+            );
+          }
+        }
+      }
+      console.log();
+      const ccolor = statusColor(
+        result.compositeStatus === "FULLY_VERIFIED" ||
+          result.compositeStatus === "EVIDENCE_VERIFIED"
+          ? "VERIFIED"
+          : "FAIL",
+      );
+      console.log(
+        `  ${BOLD}Composite: ${ccolor}${result.compositeStatus}${RESET}`,
+      );
+      console.log();
+    }
+  }
+
+  // Exit code based on verification status
+  if (result.verificationStatus === "VERIFIED") {
+    process.exit(0);
+  } else if (result.error) {
+    process.exit(2);
+  } else {
+    process.exit(1);
+  }
+} catch (err) {
+  if (jsonOutput) {
+    const payload = { error: err.message, verificationStatus: "ERROR" };
+    if (err.url) payload.attemptedUrl = err.url;
+    console.log(JSON.stringify(payload));
+  } else {
+    console.error(`${RED}Fatal error: ${err.message}${RESET}`);
+    if (/Network error fetching/.test(err.message)) {
+      console.error("");
+      console.error(`${DIM}If you're behind a corporate proxy, VPN, or air-gapped network,${RESET}`);
+      console.error(`${DIM}see the Troubleshooting section:${RESET}`);
+      console.error(`  https://github.com/Tarshann/strix-platform/tree/main/packages/strixgov-verifier#troubleshooting`);
+      console.error("");
+      console.error(`${DIM}To use a custom deployment instead of www.strixgov.com:${RESET}`);
+      console.error(`  strix-verify <id> --proof-base https://your.host --jwks-base https://your.host`);
+    }
+  }
+  process.exit(2);
+}
