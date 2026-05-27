@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "2",
+  "receiptId": "rcpt_example_001",
+  "capabilityId": "example.demo.toolCall",
+  "action": "fs.readFile",
+  "decision": "ALLOW",
+  "risk": "low",
+  "mode": "local",
+  "policyVersion": "sha256:00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+  "tenantId": "example-tenant",
+  "environment": "test",
+  "invocationHash": "4fdbdcb96a35107b7a786031c4eb9c74e78bbe83faaace359afbd017463af555",
+  "evidenceHash": "9cdd9396ccdd9932404b0781cf6f5258868b63276a75cee02248a27964000347",
+  "proofChainHash": "9bcb4b3e16c2f1c8d37fb663dd6b03383a2b83f0113a6e72d96cb642aa6b4975",
+  "timestamp": "2026-05-20T12:00:01.000Z",
+  "signature": "UF_w463EzP-yfYx0bPv02KpjSmfvFmEFY4Wy8zwd0AK9CyewJfEcD-N0gCvRivtiHZBdW2Qrhg0onxNl1DZ6Dw",
+  "signingKeyId": "strix-test-2026-05",
+  "_meta": {
+    "description": "Sample VERIFIED tool-gateway receipt (schema v2). Genesis receipt; proofChainHash = sha256('0'*64 | evidenceHash). Demonstrates a clean offline receipt verification.",
+    "expectedStatus": "VERIFIED",
+    "verifyWith": "strix-verify receipt examples/receipt-verified.json --jwks examples/test-jwks.json"
+  }
+}

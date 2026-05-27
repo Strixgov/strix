@@ -1,0 +1,66 @@
+{
+  "name": "@strixgov/tool-gateway",
+  "version": "0.4.1",
+  "description": "Local-first governed tool execution gateway for AI agents. Read/write classification, policy evaluation, signed execution receipts, multi-key rotation with cross-signed chain snapshots, per-capability rate limits, threshold-based escalation, file/webhook approvers, signed shared capability registry, and opt-in connected mode (v0.4-stable wire format with timestamp+nonce replay defense) for upstream sync — no Strix account required, local-first by default.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./src/types.d.ts",
+      "import": "./src/index.mjs"
+    },
+    "./adapters/filesystem": {
+      "types": "./src/types.d.ts",
+      "import": "./src/adapters/filesystem.mjs"
+    },
+    "./adapters/shell": {
+      "types": "./src/types.d.ts",
+      "import": "./src/adapters/shell.mjs"
+    },
+    "./adapters/mcp": {
+      "types": "./src/types.d.ts",
+      "import": "./src/adapters/mcp.mjs"
+    }
+  },
+  "bin": {
+    "strix-gateway": "bin/strix-gateway.mjs"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "docs/",
+    "assets/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "example:filesystem": "node examples/filesystem-example.mjs",
+    "example:shell": "node examples/shell-example.mjs",
+    "example:mcp": "node examples/mcp-example.mjs"
+  },
+  "keywords": [
+    "strix",
+    "governance",
+    "ai-agents",
+    "tool-execution",
+    "mcp",
+    "policy-engine",
+    "ed25519",
+    "claude-code",
+    "agent-security"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/tool-gateway"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

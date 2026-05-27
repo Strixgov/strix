@@ -1,56 +1,19 @@
 {
-  "name": "@strixgov/verifier",
-  "version": "1.10.1",
-  "description": "Public cryptographic verification primitive for Signed Evidence v1. Independent Ed25519 + JWKS verification of Strix governance evidence, approval artifacts, linked attestations, and tool-gateway receipts. Zero runtime dependencies. No Strix account, SDK, or API key required.",
+  "name": "strixgov-strix",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Public release surface for the Strix open-source packages (verifier, tool-gateway, capability registries).",
   "license": "MIT",
-  "bin": {
-    "strix-verify": "bin/verify.mjs"
-  },
-  "main": "./src/index.mjs",
-  "exports": {
-    ".": {
-      "import": "./src/index.mjs",
-      "default": "./src/index.mjs"
-    }
-  },
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "engines": {
     "node": ">=18.0.0"
   },
   "scripts": {
-    "test": "node --test test/*.test.mjs"
+    "test": "npm test --workspaces --if-present"
   },
-  "keywords": [
-    "strix",
-    "governance",
-    "verification",
-    "ed25519",
-    "jwks",
-    "proof",
-    "evidence",
-    "ai-governance",
-    "runtime-governance",
-    "aarm",
-    "signed-evidence",
-    "auditable"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "files": [
-    "bin/",
-    "src/",
-    "assets/",
-    "examples/",
-    "goldens/",
-    "README.md",
-    "CHANGELOG.md",
-    "LICENSE",
-    "JWKS.md",
-    "CANONICAL_PAYLOAD.md",
-    "GOLDEN_VECTORS.md",
-    "SECURITY.md"
-  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/Strixgov/strix"

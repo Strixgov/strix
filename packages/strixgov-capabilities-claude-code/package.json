@@ -1,0 +1,50 @@
+{
+  "name": "@strixgov/capabilities-claude-code",
+  "version": "0.1.0",
+  "description": "Pre-classified capability registry for Claude Code's built-in tools (Read, Write, Edit, Bash, Glob, Grep, Task, NotebookEdit, WebFetch, WebSearch). Drop-in starter for @strixgov/tool-gateway.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./src/types.d.ts",
+      "import": "./src/index.mjs"
+    }
+  },
+  "files": [
+    "src/",
+    "assets/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "peerDependencies": {
+    "@strixgov/tool-gateway": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@strixgov/tool-gateway": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "strix",
+    "governance",
+    "ai-agents",
+    "claude-code",
+    "capability-registry"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/strixgov-capabilities-claude-code"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

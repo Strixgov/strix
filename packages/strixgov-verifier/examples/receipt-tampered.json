@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "2",
+  "receiptId": "rcpt_example_001",
+  "capabilityId": "example.demo.toolCall",
+  "action": "fs.readFile",
+  "decision": "ALLOW",
+  "risk": "low",
+  "mode": "local",
+  "policyVersion": "sha256:00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+  "tenantId": "example-tenant",
+  "environment": "test",
+  "invocationHash": "4fdbdcb96a35107b7a786031c4eb9c74e78bbe83faaace359afbd017463af555",
+  "evidenceHash": "9cdd9396ccdd9932404b0781cf6f5258868b63276a75cee02248a2796400034a",
+  "proofChainHash": "9bcb4b3e16c2f1c8d37fb663dd6b03383a2b83f0113a6e72d96cb642aa6b4975",
+  "timestamp": "2026-05-20T12:00:01.000Z",
+  "signature": "UF_w463EzP-yfYx0bPv02KpjSmfvFmEFY4Wy8zwd0AK9CyewJfEcD-N0gCvRivtiHZBdW2Qrhg0onxNl1DZ6Dw",
+  "signingKeyId": "strix-test-2026-05",
+  "_meta": {
+    "description": "Sample TAMPERED tool-gateway receipt: evidenceHash last char flipped AFTER signing. Canonical bytes diverge from the signed bytes. Demonstrates SIGNATURE_INVALID detection at the cryptographic layer.",
+    "expectedStatus": "TAMPERED (signature invalid against mutated canonical)",
+    "verifyWith": "strix-verify receipt examples/receipt-tampered.json --jwks examples/test-jwks.json",
+    "mutationDetail": {
+      "field": "evidenceHash",
+      "origLastChar": "7",
+      "newLastChar": "a"
+    }
+  }
+}

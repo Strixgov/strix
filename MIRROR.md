@@ -7,11 +7,22 @@ Strix codebase, and how changes flow between them.
 
 ## TL;DR
 
-This repository is the **public release surface** for `@strixgov/verifier`.
-It is not the source of truth.
+This repository is the **public release surface** for the Strix
+open-source packages. It is not the source of truth.
+
+It is a monorepo. Each package lives under `packages/<name>/`, at the
+exact path that package's published `package.json` declares in
+`repository.directory`:
+
+| Package | Public path | npm |
+|---|---|---|
+| `@strixgov/verifier` | `packages/strixgov-verifier/` | live |
+| `@strixgov/tool-gateway` | `packages/tool-gateway/` | live (0.4.1) |
+| `@strixgov/capabilities-claude-code` | `packages/strixgov-capabilities-claude-code/` | live (0.1.0) |
+| `@strixgov/capabilities-mcp-common` | `packages/strixgov-capabilities-mcp-common/` | live (0.1.1) |
 
 The source of truth lives **upstream in the Strix monorepo**, where the
-verifier code is co-located with the kernel, the proof routes, the
+package code is co-located with the kernel, the proof routes, the
 canonical-payload builders that produce the records we verify, and the
 parity test machinery that keeps everything aligned.
 
@@ -21,22 +32,60 @@ down to this repository at release time.
 
 ---
 
+## Layout history
+
+The verifier shipped first, before the multi-package plan, and
+originally lived at the repo root. It now lives at
+`packages/strixgov-verifier/` alongside the other packages. This was a
+**directory-layout change only** — it did not change the source-of-truth
+model (authority stays upstream; see "Stability of this contract"
+below). The relocation also made every package's npm "Repository" link
+resolve (each points at `Strixgov/strix/tree/main/packages/<name>`) and
+let `@strixgov/tool-gateway`'s byte-parity suite run from this mirror —
+those tests import the verifier as a sibling
+(`../strixgov-verifier/src/index.mjs`), which only resolves once both
+are under `packages/`.
+
+---
+
 ## What lives here
+
+Per package, under `packages/<name>/`:
 
 | Artifact | Status | Notes |
 |---|---|---|
-| `src/index.mjs` | Mirror | Byte-for-byte mirror of the upstream source. |
-| `bin/verify.mjs` | Mirror | Byte-for-byte mirror. |
-| `test/*.test.mjs` | Mirror | Byte-for-byte mirror, including the redaction-promotion regression test. |
-| `package.json` | Adapted | Same package metadata as upstream, with `repository.url` pointing at this repo. |
+| `src/` | Mirror | Byte-for-byte mirror of the upstream source. |
+| `bin/` | Mirror | Byte-for-byte mirror (packages that ship a CLI). |
+| `test/*.test.mjs` | Mirror | Byte-for-byte mirror. The verifier's redaction-promotion regression test and tool-gateway's verifier-parity suite both live here. |
+| `package.json` | Adapted | Same package metadata as upstream, with `repository.directory` set to this package's path. |
 | `LICENSE`, `CHANGELOG.md` | Mirror | Byte-for-byte mirror. |
-| `README.md` | Adapted | Public-facing variant of the upstream README. Includes "Status & Roadmap" framing that's specific to the public release. |
+| `README.md` | Adapted | Public-facing variant of the upstream README. |
+| `assets/` | Mirror | Hero SVG + any package badges. |
+
+Verifier-only, under `packages/strixgov-verifier/`:
+
+| Artifact | Status | Notes |
+|---|---|---|
 | `JWKS.md` | Public-facing | Public contract for the JWKS surface. Distilled from internal architecture docs. |
 | `CANONICAL_PAYLOAD.md` | Public-facing | Public contract for the SE v1 13-field canonical payload. Distilled from internal schema docs. |
 | `GOLDEN_VECTORS.md` | Public-facing | Documentation for the byte-locked test vectors. |
+| `SECURITY.md` | Public-facing | Verifier-specific security policy (the verifier is a cryptographic primitive; bugs are security-class). |
 | `goldens/` | Generated | Test vectors. Generated from the upstream canonical builder. Lock file is the regression pin. |
 | `examples/` | Generated | Offline test fixtures (verified / tamper / wrong-key / mutation). Generated from a throwaway test key. |
-| `CONTRIBUTING.md`, `SECURITY.md`, `MIRROR.md` | This repo | Public-repo-specific docs. No upstream counterparts. |
+
+Repo root:
+
+| Artifact | Status | Notes |
+|---|---|---|
+| `README.md` | This repo | Monorepo landing page — what each package is, how the mirror works. |
+| `package.json` | This repo | Workspace root (`packages/*`). No dependencies; pins the package set. |
+| `CONTRIBUTING.md`, `MIRROR.md`, `LICENSE` | This repo | Repo-level docs. No upstream counterparts. |
+
+Sync tooling (upstream, in the monorepo):
+[`scripts/sync-verifier-to-public-release.mjs`](../../scripts/sync-verifier-to-public-release.mjs)
+mirrors the verifier (with fixture + golden regeneration);
+[`scripts/sync-packages-to-public-release.mjs`](../../scripts/sync-packages-to-public-release.mjs)
+mirrors the tool-gateway + capability packs.
 
 ---
 
@@ -81,8 +130,8 @@ Currently, sync is **manual at release time**. The procedure:
 4. A new release/tag is published from this repository.
 5. The npm package is published from this tag.
 
-A future automation lives at
-[`.github/workflows/sync-verifier-to-public-release.yml`](.github/workflows/sync-verifier-to-public-release.yml)
+A future automation lives upstream at
+`.github/workflows/sync-public-release.yml`
 (stub; requires a deploy key or GitHub App with write access to this
 repository before it can be enabled). Until that's wired up, sync is
 manual but reproducible.

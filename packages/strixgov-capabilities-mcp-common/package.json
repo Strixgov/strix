@@ -1,0 +1,87 @@
+{
+  "name": "@strixgov/capabilities-mcp-common",
+  "version": "0.1.1",
+  "description": "Pre-classified capability registry for popular MCP servers (Slack, GitHub, Linear, Notion, Filesystem, Postgres, Email/SMTP/Gmail). Drop-in starter for @strixgov/tool-gateway.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./src/types.d.ts",
+      "import": "./src/index.mjs"
+    },
+    "./slack": {
+      "types": "./src/types.d.ts",
+      "import": "./src/slack.mjs"
+    },
+    "./github": {
+      "types": "./src/types.d.ts",
+      "import": "./src/github.mjs"
+    },
+    "./linear": {
+      "types": "./src/types.d.ts",
+      "import": "./src/linear.mjs"
+    },
+    "./notion": {
+      "types": "./src/types.d.ts",
+      "import": "./src/notion.mjs"
+    },
+    "./filesystem": {
+      "types": "./src/types.d.ts",
+      "import": "./src/filesystem.mjs"
+    },
+    "./postgres": {
+      "types": "./src/types.d.ts",
+      "import": "./src/postgres.mjs"
+    },
+    "./email": {
+      "types": "./src/types.d.ts",
+      "import": "./src/email.mjs"
+    }
+  },
+  "files": [
+    "src/",
+    "assets/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "peerDependencies": {
+    "@strixgov/tool-gateway": "workspace:^0.4.1"
+  },
+  "peerDependenciesMeta": {
+    "@strixgov/tool-gateway": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "strix",
+    "governance",
+    "ai-agents",
+    "mcp",
+    "slack",
+    "github",
+    "linear",
+    "notion",
+    "filesystem",
+    "postgres",
+    "email",
+    "gmail",
+    "smtp",
+    "capability-registry"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/strixgov-capabilities-mcp-common"
+  }
+}

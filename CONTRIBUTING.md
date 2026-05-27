@@ -1,11 +1,19 @@
 # Contributing
 
-Thanks for considering a contribution. This package is the public
-release surface for `@strixgov/verifier`. The source of truth lives
-upstream in the Strix monorepo; this repository receives synchronized
-releases. See [MIRROR.md](MIRROR.md) for the sync model.
+Thanks for considering a contribution. This repository is the public
+release surface for the Strix open-source packages — `@strixgov/verifier`,
+`@strixgov/tool-gateway`, and the `@strixgov/capabilities-*` packs, each
+under `packages/<name>/`. The source of truth lives upstream in the Strix
+monorepo; this repository receives synchronized releases. See
+[MIRROR.md](MIRROR.md) for the sync model.
 
-That model affects how contributions flow.
+That model affects how contributions flow. The flow below is written
+against the verifier (the original package and the one with the
+strictest contribution rules, because it is a cryptographic primitive);
+the same upstream-first discipline applies to every package. Per-package
+specifics — canonical-payload locks, golden vectors, JWKS contract — are
+verifier-specific and live under
+[`packages/strixgov-verifier/`](packages/strixgov-verifier/).
 
 ---
 
@@ -72,17 +80,17 @@ where the signing/verifying contract is maintained.
 
 - Changes to the canonical-payload schema. Schema changes ship as new
   versions (v2), not in-place edits to v1. The locked-schema discipline
-  is documented in [CANONICAL_PAYLOAD.md](CANONICAL_PAYLOAD.md).
+  is documented in [CANONICAL_PAYLOAD.md](packages/strixgov-verifier/CANONICAL_PAYLOAD.md).
 - Changes that produce different canonical bytes for an existing input
-  vector in [GOLDEN_VECTORS.md](GOLDEN_VECTORS.md) without an explicit
+  vector in [GOLDEN_VECTORS.md](packages/strixgov-verifier/GOLDEN_VECTORS.md) without an explicit
   versioning plan.
 - Vendoring or duplication of the canonical builder logic. There MUST
   be one source of truth.
 - Removing or weakening the offline-verification fixtures in
   `examples/`.
 - Changes that reduce the verifier's stability guarantees on the
-  JWKS or canonical-payload contract documented in [JWKS.md](JWKS.md)
-  and [CANONICAL_PAYLOAD.md](CANONICAL_PAYLOAD.md).
+  JWKS or canonical-payload contract documented in [JWKS.md](packages/strixgov-verifier/JWKS.md)
+  and [CANONICAL_PAYLOAD.md](packages/strixgov-verifier/CANONICAL_PAYLOAD.md).
 
 ---
 
@@ -93,7 +101,7 @@ way to produce a record that the verifier reports as `VERIFIED` but
 shouldn't, or a way to make a legitimate record fail verification —
 **do not file a public issue**.
 
-Follow the responsible-disclosure flow in [SECURITY.md](SECURITY.md).
+Follow the responsible-disclosure flow in [SECURITY.md](packages/strixgov-verifier/SECURITY.md).
 
 ---
 
@@ -131,7 +139,7 @@ The test suite includes:
 
 Goldens (`goldens/se-v1-canonical-vectors.json`) must also continue to
 verify against the lock file — see the sample validator in
-[GOLDEN_VECTORS.md](GOLDEN_VECTORS.md).
+[GOLDEN_VECTORS.md](packages/strixgov-verifier/GOLDEN_VECTORS.md).
 
 ---
 
@@ -159,4 +167,4 @@ This project follows the [Contributor Covenant](https://www.contributor-covenant
 v2.1. By participating, you agree to abide by its terms.
 
 Report violations or concerns confidentially via the contact in
-[SECURITY.md](SECURITY.md).
+[SECURITY.md](packages/strixgov-verifier/SECURITY.md).
