@@ -82,12 +82,30 @@ Repo root:
 | `package.json` | This repo | Workspace root (`packages/*`). No dependencies; pins the package set. |
 | `CONTRIBUTING.md`, `MIRROR.md`, `LICENSE` | This repo | Repo-level docs. No upstream counterparts. |
 | `PUBLIC_RELEASE_INVARIANTS.md` | This repo | The chain-of-custody contract: source of truth, locked layout, derivation invariants (PR-1..PR-5), sync guarantees, what's omitted, provenance expectations. Enforced upstream by `scripts/lint-public-release-invariants.mjs`. |
+| `LICENSING_BOUNDARY.md` | Mirror | Byte-for-byte mirror of the upstream root `LICENSING_BOUNDARY.md`. Documents the MIT / Elastic-2.0 split across all `@strixgov/*` packages. Referenced from `packages/tool-gateway/README.md` via `../../LICENSING_BOUNDARY.md`; must stay present at this repo root for that link to resolve on the public mirror. |
+
+Marketing surface, under `marketing/<slug>/`:
+
+| Artifact | Status | Notes |
+|---|---|---|
+| Static page bundles (HTML / JSX / CSS / SVG / mp4) | Mirror | Byte-for-byte mirror of the corresponding folder under `apps/strix-verify-web/marketing/<slug>/` in the upstream monorepo. Source of truth stays upstream; this directory is just a sibling-publication of the same files so anyone who clones the public repo can inspect, fork, or self-host the page. |
+| `README.md` | Adapted | Public-facing variant of the upstream README — same files inventory, but the hosting + CSP guidance is rewritten for someone serving the page outside of upstream's Vercel deployment. |
+
+Marketing-bundle invariants (no separate linter today; check by hand at sync time):
+
+- Each `marketing/<slug>/` directory is self-contained — no relative imports that climb out of the directory, no hard dependency on upstream-only paths.
+- No build step. The bundle is whatever's needed for `npx http-server` to serve it.
+- Asset weight stays within reason for a public git repo (per-bundle target: < 25 MB committed). The mp4 in `marketing/mcp-tool-gateway/assets/` is the largest item today at ~13 MB.
 
 Sync tooling (upstream, in the monorepo):
 [`scripts/sync-verifier-to-public-release.mjs`](../../scripts/sync-verifier-to-public-release.mjs)
 mirrors the verifier (with fixture + golden regeneration);
 [`scripts/sync-packages-to-public-release.mjs`](../../scripts/sync-packages-to-public-release.mjs)
-mirrors the tool-gateway + capability packs.
+mirrors the tool-gateway + capability packs. The marketing surface is
+not yet covered by a sync script — bundles are mirrored manually at
+release time alongside the other artifacts in the same push. A future
+`sync-marketing-to-public-release.mjs` can land if the cadence
+warrants it.
 
 ---
 

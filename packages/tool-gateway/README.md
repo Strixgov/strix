@@ -97,6 +97,10 @@ npx strix-gateway init
 npx strix-gateway keys jwks
 ```
 
+Save the following as `quickstart.mjs` (any `.mjs` filename works — the
+extension matters because the snippet uses ESM `import`), then run it with
+`node quickstart.mjs`:
+
 ```ts
 import {
   createGateway,
@@ -142,19 +146,19 @@ Verify any time with `npx strix-gateway verify` (CLI shortcut) or with
 directly — see [Verification](#verification) below for the full story.
 
 ```bash
-$ npx strix-gateway receipts list -n 3
-2026-05-07T01:14:22Z  ALLOW              LOW      filesystem.read           rcpt_abf7…
-2026-05-07T01:14:22Z  APPROVAL_REQUIRED  HIGH     filesystem.write          rcpt_2a09…
-2026-05-07T01:14:22Z  DENY               CRITICAL filesystem.delete         rcpt_91d3…
+npx strix-gateway receipts list -n 3
+# 2026-05-07T01:14:22Z  ALLOW              LOW      filesystem.read           rcpt_abf7…
+# 2026-05-07T01:14:22Z  APPROVAL_REQUIRED  HIGH     filesystem.write          rcpt_2a09…
+# 2026-05-07T01:14:22Z  DENY               CRITICAL filesystem.delete         rcpt_91d3…
 
-$ npx strix-gateway verify
-✓ rcpt_abf7… VERIFIED
-✓ rcpt_2a09… VERIFIED
-✓ rcpt_91d3… VERIFIED
-3/3 receipts VERIFIED
+npx strix-gateway verify
+# ✓ rcpt_abf7… VERIFIED
+# ✓ rcpt_2a09… VERIFIED
+# ✓ rcpt_91d3… VERIFIED
+# 3/3 receipts VERIFIED
 
-$ npx strix-gateway chain
-proof chain: OK
+npx strix-gateway chain
+# proof chain: OK
 ```
 
 ## What you can govern in v1
@@ -543,12 +547,12 @@ The `strix-gateway` binary covers six command groups (run any with
 
 MIT.
 
-**Why MIT and not BSL / ELv2?** The tool-gateway is execution-control
+**Why MIT and not ELv2?** The tool-gateway is execution-control
 primitives — the kind of code that benefits everyone when the trust
-surface is widest. The packages built ON TOP (`mcp-adapter`, `mcp-proxy`
-under ELv2; `@strixgov/sdk` under BSL) carry the commercial-restriction
-license tier because they're the application-integration surface where
-hosted-governance competitors could otherwise build a competing managed
-service. The trust primitives — tool-gateway + verifier +
-mcp-token-validator — stay MIT permanently. Verification has no
-commercial-restriction story and never will.
+surface is widest. Only the protected runtime/control packages
+(`mcp-adapter`, `mcp-proxy`, under Elastic-2.0) carry the
+commercial-restriction tier, because they're the application-integration
+runtime where hosted-governance competitors could otherwise build a
+competing managed service. The open trust primitives — tool-gateway +
+verifier + `@strixgov/sdk` + mcp-token-validator + capabilities packs —
+stay MIT permanently. See [`LICENSING_BOUNDARY.md`](../../LICENSING_BOUNDARY.md).

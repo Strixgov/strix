@@ -57,6 +57,18 @@ npx strix-gateway init
 
 See each package's own README for the full story.
 
+## Marketing assets
+
+Public-source bundles for the launch material that demonstrates these
+packages. Pure static HTML + JSX + media — no build step, MIT-licensed,
+clone-and-host.
+
+| Bundle | What it is |
+|---|---|
+| [`marketing/mcp-tool-gateway/`](marketing/mcp-tool-gateway/) | 55-second branded video that wraps the `@strixgov/tool-gateway` CLI walkthrough (init, capabilities, allow, deny, receipts, chain) with six animated scenes. ~13 MB. |
+
+See [MIRROR.md](MIRROR.md#repo-root) for how the marketing surface relates to upstream.
+
 ## Running the test suites
 
 Every package is pure-ESM with no build step and ships its tests:

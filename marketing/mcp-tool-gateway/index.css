@@ -1,0 +1,23 @@
+/* Marketing video host page styles.
+   Kept as a separate file so the CSP for /marketing/(.*) does NOT need
+   'unsafe-inline' in style-src. All scene styles live in JSX inline
+   style objects (which React applies via DOM .style.* assignment,
+   not via <style> tags, so CSP style-src does not apply to them). */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #03060d;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+}
+
+#root {
+  position: fixed;
+  inset: 0;
+}
