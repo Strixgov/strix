@@ -292,12 +292,11 @@ strix-verify approval <approval-artifact-id>
 # decisionId is also a cuid string identifying the underlying decision.
 strix-verify quorum <decision-id>
 
-# Offline: verify the example fixtures shipped with this package
-strix-verify receipt ./examples/verified.json --jwks ./examples/test-jwks.json
-# Note: evidence records currently require the online proof API path;
-# the `receipt` subcommand verifies tool-gateway receipts (separate schema).
-# For offline evidence-record verification, use the programmatic API
-# directly — see examples/README.md for the 6-line snippet.
+# Offline: verify a shipped tool-gateway receipt fixture
+strix-verify receipt ./examples/receipt-verified.json --jwks ./examples/test-jwks.json
+# (For offline evidence-record verification, the `receipt` subcommand
+# uses a different schema. Use the programmatic API instead — see
+# examples/README.md for the 6-line snippet.)
 
 # Offline: walk an append-only receipt chain
 strix-verify chain ~/.strix-gateway/receipts.jsonl --jwks ./public-jwks.json

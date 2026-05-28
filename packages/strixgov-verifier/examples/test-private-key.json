@@ -1,12 +1,12 @@
 {
   "crv": "Ed25519",
-  "d": "EJQUgj6YKFjXuDRWsg1F7DiKQ_BJDejNftWEsWXdVco",
-  "x": "Oh1764Y1Fd_C7sXE8h3W4pRoUf1PA60eizpHZ2938eI",
+  "d": "x_ZKTr9QekXlISXK6cZyMTxbur9PAgv90km3zen6Llk",
+  "x": "O2fja7-fpqleqaPZJMSX5luh0wgBC8WKkrM6_fDJcyE",
   "kty": "OKP",
   "kid": "strix-test-2026-05",
   "_meta": {
     "warning": "THROWAWAY TEST PRIVATE KEY. Generated for the public-release example fixtures. ZERO production trust value. Never use for signing anything that needs to be trusted.",
-    "generated": "2026-05-20T17:56:40.636Z",
+    "generated": "2026-05-28T12:23:47.335Z",
     "regenerate": "node scripts/generate-public-release-fixtures.mjs"
   }
 }

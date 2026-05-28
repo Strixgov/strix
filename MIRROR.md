@@ -20,6 +20,7 @@ exact path that package's published `package.json` declares in
 | `@strixgov/tool-gateway` | `packages/tool-gateway/` | live (0.4.1) |
 | `@strixgov/capabilities-claude-code` | `packages/strixgov-capabilities-claude-code/` | live (0.1.0) |
 | `@strixgov/capabilities-mcp-common` | `packages/strixgov-capabilities-mcp-common/` | live (0.1.1) |
+| `@strixgov/mcp-adapter` | `packages/strixgov-mcp-adapter/` | live (0.1.0) |
 
 The source of truth lives **upstream in the Strix monorepo**, where the
 package code is co-located with the kernel, the proof routes, the
@@ -80,6 +81,7 @@ Repo root:
 | `README.md` | This repo | Monorepo landing page — what each package is, how the mirror works. |
 | `package.json` | This repo | Workspace root (`packages/*`). No dependencies; pins the package set. |
 | `CONTRIBUTING.md`, `MIRROR.md`, `LICENSE` | This repo | Repo-level docs. No upstream counterparts. |
+| `PUBLIC_RELEASE_INVARIANTS.md` | This repo | The chain-of-custody contract: source of truth, locked layout, derivation invariants (PR-1..PR-5), sync guarantees, what's omitted, provenance expectations. Enforced upstream by `scripts/lint-public-release-invariants.mjs`. |
 
 Sync tooling (upstream, in the monorepo):
 [`scripts/sync-verifier-to-public-release.mjs`](../../scripts/sync-verifier-to-public-release.mjs)

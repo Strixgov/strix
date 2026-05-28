@@ -22,7 +22,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test"
   },
   "peerDependencies": {
     "@strixgov/tool-gateway": "workspace:*"

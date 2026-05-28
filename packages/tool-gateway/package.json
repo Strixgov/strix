@@ -39,7 +39,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "test": "node --test test/*.test.mjs",
+    "test": "node --test",
     "example:filesystem": "node examples/filesystem-example.mjs",
     "example:shell": "node examples/shell-example.mjs",
     "example:mcp": "node examples/mcp-example.mjs"

@@ -1801,3 +1801,153 @@ function vaExplainStatus(status, r) {
     default: return "";
   }
 }
+
+// =============================================================================
+// Strix-CT v1 (Cryptographic Transparency Log)
+// =============================================================================
+//
+// Verifies inclusion + consistency proofs from a Strix-CT sequencer.
+// Mirrors the Merkle algebra of apps/strix-ct-sequencer/src/merkle.mjs +
+// apps/strix-ct-witness/src/witness.mjs — drift between any of the three
+// breaks every previously-issued proof.
+// Spec: docs/architecture/strix-ct-v1.md
+// =============================================================================
+
+const CT_LEAF_PREFIX = Buffer.from([0x00]);
+const CT_NODE_PREFIX = Buffer.from([0x01]);
+
+function ctHashLeaf(dataHex) {
+  return crypto.createHash("sha256").update(Buffer.concat([CT_LEAF_PREFIX, Buffer.from(dataHex, "hex")])).digest();
+}
+function ctHashNode(left, right) {
+  return crypto.createHash("sha256").update(Buffer.concat([CT_NODE_PREFIX, left, right])).digest();
+}
+function ctLargestPow2LessThan(n) {
+  let k = 1;
+  while (k * 2 < n) k *= 2;
+  return k;
+}
+function ctParsePathEntry(s) {
+  return Buffer.from(s.replace(/^sha256:/, ""), "hex");
+}
+function ctParseRoot(s) {
+  return Buffer.from(s.replace(/^sha256:/, ""), "hex");
+}
+
+export function verifyCtInclusionPath(leafHash, leafIndex, treeSize, auditPathHashes, rootHash) {
+  if (leafIndex < 0 || leafIndex >= treeSize) return false;
+  const computed = _ctVerifyInclRec(leafHash, leafIndex, treeSize, auditPathHashes);
+  return computed !== null && computed.equals(rootHash);
+}
+
+function _ctVerifyInclRec(leafHash, leafIndex, treeSize, path) {
+  if (treeSize === 1) return path.length === 0 ? leafHash : null;
+  if (path.length === 0) return null;
+  const k = ctLargestPow2LessThan(treeSize);
+  const top = path[path.length - 1];
+  const inner = path.slice(0, -1);
+  if (leafIndex < k) {
+    const left = _ctVerifyInclRec(leafHash, leafIndex, k, inner);
+    if (left === null) return null;
+    return ctHashNode(left, top);
+  }
+  const right = _ctVerifyInclRec(leafHash, leafIndex - k, treeSize - k, inner);
+  if (right === null) return null;
+  return ctHashNode(top, right);
+}
+
+export function verifyCtConsistencyPath(firstTreeSize, secondTreeSize, firstRoot, secondRoot, proof) {
+  if (firstTreeSize > secondTreeSize) return false;
+  if (firstTreeSize === secondTreeSize) {
+    return proof.length === 0 && firstRoot.equals(secondRoot);
+  }
+  if (firstTreeSize === 0) return proof.length === 0;
+  if (proof.length === 0) return false;
+  let node = firstTreeSize - 1;
+  let lastNode = secondTreeSize - 1;
+  while ((node & 1) === 1) { node >>= 1; lastNode >>= 1; }
+  let pos = 0;
+  let hash1, hash2;
+  if (node > 0) { hash1 = proof[pos]; hash2 = proof[pos]; pos++; }
+  else { hash1 = firstRoot; hash2 = firstRoot; }
+  while (node > 0) {
+    if ((node & 1) === 1) {
+      if (pos >= proof.length) return false;
+      hash1 = ctHashNode(proof[pos], hash1);
+      hash2 = ctHashNode(proof[pos], hash2);
+      pos++;
+    } else if (node < lastNode) {
+      if (pos >= proof.length) return false;
+      hash2 = ctHashNode(hash2, proof[pos]);
+      pos++;
+    }
+    node >>= 1; lastNode >>= 1;
+  }
+  while (lastNode > 0) {
+    if (pos >= proof.length) return false;
+    hash2 = ctHashNode(hash2, proof[pos]);
+    pos++; lastNode >>= 1;
+  }
+  return hash1.equals(firstRoot) && hash2.equals(secondRoot) && pos === proof.length;
+}
+
+export async function verifyCtInclusion(evidenceHashHex, opts = {}) {
+  const ctBase = opts.ctBase ?? "https://well-known.strixgov.com";
+  if (typeof evidenceHashHex !== "string" || !/^[0-9a-f]{64}$/.test(evidenceHashHex)) {
+    return { verificationStatus: "ERROR", evidenceHash: evidenceHashHex, error: "evidenceHash must be 64-char lowercase hex" };
+  }
+  let proof = opts.proof;
+  if (!proof) {
+    try {
+      const url = `${ctBase}/ct/v1/inclusion?evidenceHash=${evidenceHashHex}`;
+      const r = await fetch(url, { cache: "no-cache" });
+      if (r.status === 404) return { verificationStatus: "NOT_LOGGED", evidenceHash: evidenceHashHex };
+      if (!r.ok) return { verificationStatus: "ERROR", evidenceHash: evidenceHashHex, error: `HTTP ${r.status}` };
+      proof = await r.json();
+    } catch (err) {
+      return { verificationStatus: "ERROR", evidenceHash: evidenceHashHex, error: err.message };
+    }
+  }
+  const leafHash = ctHashLeaf(evidenceHashHex);
+  const auditPath = proof.auditPath.map(ctParsePathEntry);
+  const rootHash = ctParseRoot(proof.rootHash);
+  const ok = verifyCtInclusionPath(leafHash, proof.leafIndex, proof.treeSize, auditPath, rootHash);
+  return {
+    verificationStatus: ok ? "VERIFIED" : "PROOF_INVALID",
+    evidenceHash: evidenceHashHex,
+    leafIndex: proof.leafIndex,
+    treeSize: proof.treeSize,
+    rootHash: proof.rootHash,
+  };
+}
+
+export async function verifyCtConsistency(sthFirst, sthSecond, opts = {}) {
+  const ctBase = opts.ctBase ?? "https://well-known.strixgov.com";
+  if (sthFirst?.logId !== sthSecond?.logId) {
+    return { verificationStatus: "ERROR", firstTreeSize: sthFirst?.treeSize, secondTreeSize: sthSecond?.treeSize, error: `STHs are for different logs: ${sthFirst?.logId} vs ${sthSecond?.logId}` };
+  }
+  if (sthFirst?.treeSize > sthSecond?.treeSize) {
+    return { verificationStatus: "PROOF_INVALID", firstTreeSize: sthFirst?.treeSize, secondTreeSize: sthSecond?.treeSize, error: "firstTreeSize > secondTreeSize — log went backwards" };
+  }
+  let proof = opts.proof;
+  if (!proof) {
+    try {
+      const url = `${ctBase}/ct/v1/consistency?from=${sthFirst.treeSize}`;
+      const r = await fetch(url, { cache: "no-cache" });
+      if (!r.ok) return { verificationStatus: "ERROR", firstTreeSize: sthFirst.treeSize, secondTreeSize: sthSecond.treeSize, error: `HTTP ${r.status}` };
+      proof = await r.json();
+    } catch (err) {
+      return { verificationStatus: "ERROR", firstTreeSize: sthFirst.treeSize, secondTreeSize: sthSecond.treeSize, error: err.message };
+    }
+  }
+  const firstRoot = ctParseRoot(sthFirst.rootHash);
+  const secondRoot = ctParseRoot(sthSecond.rootHash);
+  const proofHashes = proof.consistencyPath.map(ctParsePathEntry);
+  const ok = verifyCtConsistencyPath(sthFirst.treeSize, sthSecond.treeSize, firstRoot, secondRoot, proofHashes);
+  return {
+    verificationStatus: ok ? "VERIFIED" : "PROOF_INVALID",
+    firstTreeSize: sthFirst.treeSize,
+    secondTreeSize: sthSecond.treeSize,
+  };
+}
+

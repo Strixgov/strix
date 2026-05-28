@@ -1,0 +1,73 @@
+{
+  "name": "@strixgov/mcp-adapter",
+  "version": "0.1.0",
+  "description": "One-call governance for any MCP server. Wraps every tool.call() with policy evaluation, signed execution receipts, and an optional approval gate — no changes to your tool implementations required.",
+  "license": "Elastic-2.0",
+  "type": "module",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./src/types.d.ts",
+      "import": "./src/index.mjs"
+    },
+    "./scaffold": {
+      "import": "./src/scaffold.mjs"
+    }
+  },
+  "bin": {
+    "strixgov-mcp-adapter": "./bin/demo.mjs"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "demo": "node bin/demo.mjs"
+  },
+  "dependencies": {
+    "@strixgov/verifier": "^1.10.1"
+  },
+  "peerDependencies": {
+    "@strixgov/tool-gateway": ">=0.4.1"
+  },
+  "peerDependenciesMeta": {
+    "@strixgov/tool-gateway": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "@strixgov/tool-gateway": "workspace:*",
+    "@strixgov/capabilities-mcp-common": "workspace:*"
+  },
+  "keywords": [
+    "strix",
+    "mcp",
+    "model-context-protocol",
+    "governance",
+    "ai-agents",
+    "tool-execution",
+    "policy-engine",
+    "claude-code",
+    "agent-security",
+    "execution-receipts"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/strixgov-mcp-adapter"
+  },
+  "files": [
+    "src/",
+    "bin/",
+    "assets/",
+    "examples/",
+    "README.md",
+    "CHANGELOG.md",
+    "COMMERCIAL.md",
+    "SECURITY.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -26,7 +26,61 @@ import {
   verifyReceipt,
   verifyReceiptChain,
   verifyVisual,
+  verifyCtInclusion,
+  verifyCtConsistency,
 } from "../src/index.mjs";
+
+/**
+ * Read a text file with explicit BOM detection.
+ *
+ * PowerShell's `>` redirect on Windows writes files as UTF-16 LE with a
+ * BOM (FF FE). Node's `fs.readFile(p, "utf8")` returns the raw bytes
+ * re-interpreted as UTF-8, so a JWKS that came out of `npx strix-gateway
+ * keys jwks > file.json` parses as `￾{...` and JSON.parse blows up with
+ * `Unexpected token '�'`. That error tells a CLI user nothing; the fix
+ * names the encoding and the one-line PowerShell repair.
+ *
+ * - UTF-8 BOM (EF BB BF): silently stripped (matches browser JSON behavior).
+ * - UTF-16 LE BOM (FF FE) / UTF-16 BE BOM (FE FF): throw with the fix.
+ * - UTF-32 BOMs: same family of fix, called out separately.
+ *
+ * @param {string} filePath
+ * @returns {Promise<string>}
+ */
+async function readTextFileNoBom(filePath) {
+  const buf = await fs.readFile(filePath);
+  if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) {
+    throw new Error(
+      `${filePath}: file is UTF-16 LE BOM-encoded (PowerShell '>' default on Windows). ` +
+        `Re-export the file as UTF-8 without BOM:\n` +
+        `  PowerShell 7+:  <cmd> | Out-File -Encoding utf8NoBOM ${filePath}\n` +
+        `  PowerShell 5.1: <cmd> | Out-File -Encoding ascii ${filePath}\n` +
+        `Or write it from cmd.exe instead of PowerShell.`,
+    );
+  }
+  if (buf.length >= 2 && buf[0] === 0xfe && buf[1] === 0xff) {
+    throw new Error(
+      `${filePath}: file is UTF-16 BE BOM-encoded. Re-export as UTF-8 without BOM ` +
+        `(see https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/out-file).`,
+    );
+  }
+  if (
+    buf.length >= 4 &&
+    ((buf[0] === 0xff && buf[1] === 0xfe && buf[2] === 0x00 && buf[3] === 0x00) ||
+      (buf[0] === 0x00 && buf[1] === 0x00 && buf[2] === 0xfe && buf[3] === 0xff))
+  ) {
+    throw new Error(
+      `${filePath}: file is UTF-32 BOM-encoded. Re-export as UTF-8 without BOM.`,
+    );
+  }
+  let text = buf.toString("utf8");
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+  return text;
+}
+
+async function readJsonFile(filePath) {
+  return JSON.parse(await readTextFileNoBom(filePath));
+}
 
 // ─── Argument Parsing ─────────────────────────────────────────────────────────
 
@@ -43,6 +97,8 @@ Usage:
   strix-verify receipt <path-to-receipt.json> [--jwks <path>]
   strix-verify chain <path-to-receipts.jsonl> [--jwks <path>]
   strix-verify visual <path-to-svg> [--jwks <path>] [--live-jwks-url <url>]
+  strix-verify ct inclusion <evidenceHash> [--ct-base <url>] [--proof <file>]
+  strix-verify ct consistency <sth1.json> <sth2.json> [--ct-base <url>] [--proof <file>]
 
 Options:
   --proof-base <url>      Base URL for proof API (default: https://www.strixgov.com)
@@ -99,8 +155,7 @@ if (args[0] === "visual") {
     const svg = await fs.readFile(filePath, "utf8");
     const opts = {};
     if (pinnedJwksPath) {
-      const raw = await fs.readFile(pinnedJwksPath, "utf8");
-      const parsed = JSON.parse(raw);
+      const parsed = await readJsonFile(pinnedJwksPath);
       opts.pinnedJwks = "keys" in parsed ? parsed : { keys: [parsed] };
     }
     if (liveJwksUrl) opts.liveJwksUrl = liveJwksUrl;
@@ -132,6 +187,92 @@ if (args[0] === "visual") {
   }
 }
 
+// Strix-CT v1 — inclusion + consistency proof verification.
+// Standalone (sequencer endpoint, not the proof API). Per
+// docs/architecture/strix-ct-v1.md.
+if (args[0] === "ct") {
+  const sub = args[1];
+  let ctBase = null;
+  let proofPath = null;
+  let jsonOut = false;
+  // Collect non-flag positional args
+  const positional = [];
+  for (let i = 2; i < args.length; i++) {
+    if (args[i] === "--ct-base" && args[i + 1]) ctBase = args[++i];
+    else if (args[i] === "--proof" && args[i + 1]) proofPath = args[++i];
+    else if (args[i] === "--json") jsonOut = true;
+    else positional.push(args[i]);
+  }
+
+  try {
+    if (sub === "inclusion") {
+      const evidenceHash = positional[0];
+      if (!evidenceHash) {
+        console.error("Missing evidenceHash. Usage: strix-verify ct inclusion <evidenceHash> [--ct-base <url>] [--proof <file>] [--json]");
+        process.exit(2);
+      }
+      const opts = {};
+      if (ctBase) opts.ctBase = ctBase;
+      if (proofPath) {
+        opts.proof = JSON.parse(await fs.readFile(proofPath, "utf8"));
+      }
+      const r = await verifyCtInclusion(evidenceHash, opts);
+      if (jsonOut) {
+        console.log(JSON.stringify(r, null, 2));
+      } else {
+        console.log();
+        console.log(`@strixgov/verifier — Strix-CT v1 inclusion`);
+        console.log("─".repeat(56));
+        console.log(`  Evidence hash:     ${r.evidenceHash}`);
+        console.log(`  Leaf index:        ${r.leafIndex ?? "—"}`);
+        console.log(`  Tree size:         ${r.treeSize ?? "—"}`);
+        console.log(`  Root hash:         ${r.rootHash ?? "—"}`);
+        console.log(`  Status:            ${r.verificationStatus}`);
+        if (r.error) console.log(`  Error:             ${r.error}`);
+        console.log();
+      }
+      if (r.error) process.exit(2);
+      process.exit(r.verificationStatus === "VERIFIED" ? 0 : 1);
+    }
+
+    if (sub === "consistency") {
+      const path1 = positional[0];
+      const path2 = positional[1];
+      if (!path1 || !path2) {
+        console.error("Missing STH paths. Usage: strix-verify ct consistency <sth1.json> <sth2.json> [--ct-base <url>] [--proof <file>] [--json]");
+        process.exit(2);
+      }
+      const [sth1Raw, sth2Raw] = await Promise.all([fs.readFile(path1, "utf8"), fs.readFile(path2, "utf8")]);
+      const sth1 = JSON.parse(sth1Raw);
+      const sth2 = JSON.parse(sth2Raw);
+      const opts = {};
+      if (ctBase) opts.ctBase = ctBase;
+      if (proofPath) opts.proof = JSON.parse(await fs.readFile(proofPath, "utf8"));
+      const r = await verifyCtConsistency(sth1, sth2, opts);
+      if (jsonOut) {
+        console.log(JSON.stringify(r, null, 2));
+      } else {
+        console.log();
+        console.log(`@strixgov/verifier — Strix-CT v1 consistency`);
+        console.log("─".repeat(56));
+        console.log(`  First tree size:   ${r.firstTreeSize}`);
+        console.log(`  Second tree size:  ${r.secondTreeSize}`);
+        console.log(`  Status:            ${r.verificationStatus}`);
+        if (r.error) console.log(`  Error:             ${r.error}`);
+        console.log();
+      }
+      if (r.error) process.exit(2);
+      process.exit(r.verificationStatus === "VERIFIED" ? 0 : 1);
+    }
+
+    console.error(`Unknown ct subcommand: ${sub}. Expected 'inclusion' or 'consistency'.`);
+    process.exit(2);
+  } catch (err) {
+    console.error(`strix-verify ct: ${err.message}`);
+    process.exit(2);
+  }
+}
+
 // Tool-gateway receipt subcommands (offline-capable)
 if (args[0] === "receipt" || args[0] === "chain") {
   const subcommand = args[0];
@@ -152,12 +293,11 @@ if (args[0] === "receipt" || args[0] === "chain") {
   try {
     const opts = {};
     if (jwksPath) {
-      const jwksRaw = await fs.readFile(jwksPath, "utf8");
-      const parsed = JSON.parse(jwksRaw);
+      const parsed = await readJsonFile(jwksPath);
       opts.jwks = "keys" in parsed ? parsed : { keys: [parsed] };
     }
 
-    const raw = await fs.readFile(filePath, "utf8");
+    const raw = await readTextFileNoBom(filePath);
 
     if (subcommand === "receipt") {
       const receipt = JSON.parse(raw);
