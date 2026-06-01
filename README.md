@@ -66,6 +66,7 @@ clone-and-host.
 | Bundle | What it is |
 |---|---|
 | [`marketing/mcp-tool-gateway/`](marketing/mcp-tool-gateway/) | 55-second branded video that wraps the `@strixgov/tool-gateway` CLI walkthrough (init, capabilities, allow, deny, receipts, chain) with six animated scenes. ~13 MB. |
+| [`marketing/enforcement-story/`](marketing/enforcement-story/) | Scroll-driven 2-act story page: clinical-data submission (allowed + signed) and adversarial prompt (denied + audited). Shows the same kernel evaluating both. Pure static HTML/CSS/JS, no build step. |
 
 See [MIRROR.md](MIRROR.md#repo-root) for how the marketing surface relates to upstream.
 

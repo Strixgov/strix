@@ -5,9 +5,14 @@ All notable changes to `@strixgov/mcp-adapter` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.1]
 
 ### Fixed
+- **`SECURITY.md` cross-reference** rewritten to remove a link into the
+  maintainer's internal source tree. The broader-threat-model pointer
+  now directs reviewers to `security@strixgov.com` instead of an
+  internal repo URL. Static text only — no API, no behavior, no tests
+  changed.
 - **`demo` no longer prints a literal verifier command that points at a
   file it never wrote.** Prior to this fix `bin/demo.mjs` ran with
   `MemoryStorage` and ended with the hint `npx @strixgov/verifier chain

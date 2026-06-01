@@ -41,6 +41,9 @@ exact path its published `package.json` declares in `repository.directory`:
 | `@strixgov/capabilities-claude-code` | `packages/strixgov-capabilities-claude-code/` |
 | `@strixgov/capabilities-mcp-common` | `packages/strixgov-capabilities-mcp-common/` |
 | `@strixgov/mcp-adapter` | `packages/strixgov-mcp-adapter/` |
+| `@strixgov/mcp-proxy` | `packages/strixgov-mcp-proxy/` |
+| `@strixgov/verify-embed` | `packages/strixgov-verify-embed/` |
+| `@strixgov/healthcare-demo` | `packages/strixgov-healthcare-demo/` |
 
 Adding or removing a package is a deliberate change that updates this table
 **and** the locked `EXPECTED_PACKAGES` list in the upstream invariant lint
