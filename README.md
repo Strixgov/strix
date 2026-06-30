@@ -2,8 +2,12 @@
 
 This repository is the **public release surface** for the open-source
 pieces of [Strix](https://www.strixgov.com), an execution-control system
-for AI agents. Everything here is MIT-licensed, runs locally, and needs
-no Strix account.
+for AI agents. Everything here runs locally and needs no Strix account.
+The trust primitives — the verifier, the tool-gateway, and the capability
+packs — are **MIT-licensed**; the one MCP runtime adapter
+(`@strixgov/mcp-adapter`) is source-available under **Elastic License 2.0**
+(free to use, not to resell as a competing managed service). See
+[LICENSING_BOUNDARY.md](LICENSING_BOUNDARY.md).
 
 It is a mirror, not the source of truth — the canonical code lives
 upstream in the Strix monorepo and synchronizes here at release time.
@@ -19,6 +23,7 @@ for how changes flow.
 | [`@strixgov/capabilities-claude-code`](packages/strixgov-capabilities-claude-code/) | Pre-classified capability registry for Claude Code's built-in tools. Drop-in starter for the tool-gateway. | [`@strixgov/capabilities-claude-code`](https://www.npmjs.com/package/@strixgov/capabilities-claude-code) |
 | [`@strixgov/capabilities-mcp-common`](packages/strixgov-capabilities-mcp-common/) | Pre-classified capability registry for popular MCP servers (Slack, GitHub, Linear, Notion, Filesystem, Postgres, Email). Drop-in starter for the tool-gateway. | [`@strixgov/capabilities-mcp-common`](https://www.npmjs.com/package/@strixgov/capabilities-mcp-common) |
 | [`@strixgov/mcp-adapter`](packages/strixgov-mcp-adapter/) | One-call governance wrapper for any MCP server. Wraps every `callTool` with policy evaluation, signed execution receipts, and an optional approval gate — five-line integration, no changes to your tool implementations. `npx @strixgov/mcp-adapter demo` shows the full round-trip in under 20 seconds. | [`@strixgov/mcp-adapter`](https://www.npmjs.com/package/@strixgov/mcp-adapter) |
+| [`@strixgov/rcm-reference`](packages/strixgov-rcm-reference/) | Canonical governed-agent **reference architecture** for healthcare revenue-cycle management. The same prior-auth agent runs the same task ungoverned vs. governed across six real-world failure modes, on a real X12 278 surface, synthetic data only. Dependency-free; `node --test`, no install. | reference (not published) |
 
 Each package is self-contained under `packages/<name>/`, at the exact
 path its published `package.json` declares in `repository.directory`, so
@@ -57,6 +62,28 @@ npx strix-gateway init
 
 See each package's own README for the full story.
 
+## Verify in Claude Code (plugin)
+
+A Claude Code plugin wraps the same verifier as a `/strix-verify` slash
+command, an MCP server, and an opt-in stop hook — so you can verify a
+Strix-governed record from inside a session. It vendors
+`@strixgov/verifier`, so it launches offline; Strix is never on the trust
+path, and nothing in the plugin decides a verdict (it shells out to the
+verifier and relays its exit code).
+
+```
+/plugin marketplace add Strixgov/strix
+/plugin install strix-verifier@strixgov
+/strix-verify 5686
+```
+
+The marketplace manifest is at this repo's root
+(`.claude-plugin/marketplace.json`) and the plugin lives at
+[`plugins/strix-verifier/`](plugins/strix-verifier/). Live verification
+fetches the proof record + JWKS from `www.strixgov.com`; see the
+[plugin README](plugins/strix-verifier/) for fully-offline and
+restricted-environment (egress-blocked) options.
+
 ## Marketing assets
 
 Public-source bundles for the launch material that demonstrates these
@@ -84,4 +111,10 @@ cd packages/strixgov-verifier && npm test
 
 ## License
 
-MIT. See [LICENSE](LICENSE) and each package's own `LICENSE`.
+Two-tier, and frozen in CI (`scripts/lint-license-parity.mjs`). The open
+trust primitives — `@strixgov/verifier`, `@strixgov/tool-gateway`, and the
+two `@strixgov/capabilities-*` packs — are **MIT**; the MCP runtime adapter
+`@strixgov/mcp-adapter` is **Elastic License 2.0** (source-available; free
+to use, not to resell as a competing managed service). The repository root
+is MIT. Each package declares its own license — see [LICENSE](LICENSE), each
+package's own `LICENSE`, and [LICENSING_BOUNDARY.md](LICENSING_BOUNDARY.md).

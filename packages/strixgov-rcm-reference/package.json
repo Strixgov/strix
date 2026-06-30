@@ -1,0 +1,46 @@
+{
+  "name": "@strixgov/rcm-reference",
+  "version": "0.1.0",
+  "description": "Canonical governed-agent reference implementation for healthcare revenue-cycle management (RCM). The same prior-authorization agent runs the same task ungoverned (policy + guardrails only) and governed by a Strix execution gate, across six real-world failure modes, on a real X12 278 protocol surface with synthetic patients only. Dependency-free ESM; transpiled from the upstream TypeScript source of truth.",
+  "type": "module",
+  "keywords": [
+    "strix",
+    "strixgov",
+    "rcm",
+    "revenue-cycle-management",
+    "prior-authorization",
+    "x12-278",
+    "ai-governance",
+    "execution-control",
+    "agent-governance",
+    "reference-implementation"
+  ],
+  "author": "Strixgov",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/strixgov-rcm-reference"
+  },
+  "homepage": "https://verify.strixgov.com",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "scenario": "node src/run.js",
+    "duplicate:ungoverned": "node src/run.js --scenario=duplicate --mode=ungoverned",
+    "duplicate:governed": "node src/run.js --scenario=duplicate --mode=governed",
+    "scope-creep:ungoverned": "node src/run.js --scenario=scope-creep --mode=ungoverned",
+    "scope-creep:governed": "node src/run.js --scenario=scope-creep --mode=governed",
+    "injection:ungoverned": "node src/run.js --scenario=injection --mode=ungoverned",
+    "injection:governed": "node src/run.js --scenario=injection --mode=governed",
+    "intercept:ungoverned": "node src/run.js --scenario=intercept --mode=ungoverned",
+    "intercept:governed": "node src/run.js --scenario=intercept --mode=governed",
+    "batch-bleed:ungoverned": "node src/run.js --scenario=batch-bleed --mode=ungoverned",
+    "batch-bleed:governed": "node src/run.js --scenario=batch-bleed --mode=governed",
+    "visualize": "node src/visualize.js",
+    "shots": "npm run visualize && node scripts/capture.mjs",
+    "shots:png": "npm run visualize && node scripts/capture.mjs --no-gif",
+    "test": "node --test 'test/*.test.js'"
+  }
+}

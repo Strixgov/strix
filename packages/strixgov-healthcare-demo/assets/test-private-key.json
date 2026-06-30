@@ -1,0 +1,12 @@
+{
+  "crv": "Ed25519",
+  "d": "XhGEgtgu3PHf2QZPwsWsAjHiAkpaMtiZcMw7HMs-sLM",
+  "x": "QdqokYJebeDTRLip_XhoDIGtf3kvDmRcKPGDbo9YmAg",
+  "kty": "OKP",
+  "kid": "strix-test-2026-05",
+  "_meta": {
+    "warning": "THROWAWAY TEST PRIVATE KEY. Generated for the public-release example fixtures. ZERO production trust value. Never use for signing anything that needs to be trusted.",
+    "generated": "2026-05-30T07:53:29.239Z",
+    "regenerate": "node scripts/generate-public-release-fixtures.mjs"
+  }
+}

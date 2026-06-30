@@ -1,0 +1,20 @@
+{
+  "_comment_upstream_env": "Two patterns for the NOTION_TOKEN. Pattern A (recommended for Claude Desktop): omit upstream.env and set NOTION_TOKEN in Claude Desktop's env block — it propagates to the upstream via process.env. Pattern B (explicit): add upstream.env here, e.g. \"env\": { \"NOTION_TOKEN\": \"secret_...\" }. See README 'Where the upstream's secrets should live' for trade-offs.",
+  "serverId": "notion",
+  "upstream": {
+    "command": "npx",
+    "args": ["-y", "@notionhq/notion-mcp-server"]
+  },
+  "capabilities": "@strixgov/capabilities-mcp-common/notion",
+  "policy": {
+    "riskOverrides": {
+      "LOW": "ALLOW",
+      "MEDIUM": "APPROVAL_REQUIRED",
+      "HIGH": "APPROVAL_REQUIRED",
+      "CRITICAL": "DENY"
+    },
+    "default": "DENY"
+  },
+  "approval": { "enabled": false },
+  "storagePath": "~/.strix-mcp-proxy/notion"
+}

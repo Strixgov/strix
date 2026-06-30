@@ -1,0 +1,6 @@
+node_modules/
+*.log
+.env
+# generated HTML output only — NOT src/visual/ source
+/visual/
+/shots/

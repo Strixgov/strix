@@ -1,0 +1,46 @@
+{
+  "name": "@strixgov/verify-embed",
+  "version": "0.1.0",
+  "description": "One-line embeddable <strix-verify> web component. Verifies Strix-governed evidence records client-side via WebCrypto + the public JWKS. No backend, no Strix runtime, no Strix account.",
+  "type": "module",
+  "main": "src/index.mjs",
+  "exports": {
+    ".": {
+      "default": "./src/index.mjs"
+    },
+    "./dist/embed.js": "./dist/embed.js"
+  },
+  "files": [
+    "src/",
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "strix",
+    "strixgov",
+    "verifier",
+    "ed25519",
+    "webcrypto",
+    "ai-governance",
+    "trust",
+    "web-component",
+    "custom-element",
+    "embed"
+  ],
+  "author": "Strixgov",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/strixgov-verify-embed"
+  },
+  "homepage": "https://verify.strixgov.com/embed",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

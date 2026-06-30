@@ -1,0 +1,95 @@
+{
+  "$schema": "strix-se-v1-conformance/1",
+  "description": "Cross-language conformance vectors for Signed Evidence v1. Any independent verifier MUST reproduce expectedCanonical byte-for-byte from inputRecord, and verify signature against publicJwk. The dual-form discriminator (Academy numeric vs Console string) is load-bearing. Generated from the JS reference verifier; locked by se-v1-golden-vectors.test.mjs.",
+  "publicJwk": {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "x": "DaHEGckS_wvEcPEmZ3R2JozU9jIFv4NigtvUG99wfwE"
+  },
+  "signingKeySeedHex": "5452495820435420676f6c64656e2076656374206b6579207365656420763031",
+  "vectors": [
+    {
+      "name": "console-form",
+      "note": "Console signers: schemaVersion/evidenceId as JSON strings; complianceMode-first regulatoryContext.",
+      "inputRecord": {
+        "evidenceHash": "evevevevevevevevevevevevevevevevevevevevevevevevevevevevevevevev",
+        "proofChainHash": "pcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpc",
+        "capabilityId": "admin.updateMemberRole",
+        "action": "allow",
+        "actorId": "user_golden_actor",
+        "actorRole": "owner",
+        "createdAt": "2026-05-26T00:00:00.000Z",
+        "signingKeyId": "strix-prod-2026-05",
+        "environment": "production",
+        "tenantId": "academy prod",
+        "regulatoryContext": {
+          "complianceMode": "eu-ai-act",
+          "euAiActArticle12": true,
+          "euAiActArticle14": true,
+          "euAiActArticle28": false
+        },
+        "schemaVersion": "1",
+        "evidenceId": "5686"
+      },
+      "expectedCanonical": "{\"schemaVersion\":\"1\",\"evidenceId\":\"5686\",\"evidenceHash\":\"evevevevevevevevevevevevevevevevevevevevevevevevevevevevevevevev\",\"proofChainHash\":\"pcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpc\",\"capabilityId\":\"admin.updateMemberRole\",\"action\":\"allow\",\"actorId\":\"user_golden_actor\",\"actorRole\":\"owner\",\"createdAt\":\"2026-05-26T00:00:00.000Z\",\"signingKeyId\":\"strix-prod-2026-05\",\"environment\":\"production\",\"tenantId\":\"academy prod\",\"regulatoryContext\":{\"complianceMode\":\"eu-ai-act\",\"euAiActArticle12\":true,\"euAiActArticle14\":true,\"euAiActArticle28\":false}}",
+      "expectedSha256": "44f49270bfaec4b9fed2b0160b770243354c93ef823de539b9477376b97b5259",
+      "signatureB64url": "Y4US8c2YTNHbGpkt-5VR4VaifIsFLQ57HSiQZ0LnJIUuKOxeFbfqjLZiEpLKREnx5P5pS_10SslRYOtCP66rDQ"
+    },
+    {
+      "name": "academy-form",
+      "note": "Academy (sourceApp=academy-platform): schemaVersion/evidenceId as JSON numbers; euAiActArticle12-first regulatoryContext. Verifies against a DIFFERENT signature than console-form by design.",
+      "inputRecord": {
+        "evidenceHash": "evevevevevevevevevevevevevevevevevevevevevevevevevevevevevevevev",
+        "proofChainHash": "pcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpc",
+        "capabilityId": "admin.updateMemberRole",
+        "action": "allow",
+        "actorId": "user_golden_actor",
+        "actorRole": "owner",
+        "createdAt": "2026-05-26T00:00:00.000Z",
+        "signingKeyId": "strix-prod-2026-05",
+        "environment": "production",
+        "tenantId": "academy prod",
+        "regulatoryContext": {
+          "complianceMode": "eu-ai-act",
+          "euAiActArticle12": true,
+          "euAiActArticle14": true,
+          "euAiActArticle28": false
+        },
+        "sourceApp": "academy-platform",
+        "schemaVersion": 1,
+        "evidenceId": 5686
+      },
+      "expectedCanonical": "{\"schemaVersion\":1,\"evidenceId\":5686,\"evidenceHash\":\"evevevevevevevevevevevevevevevevevevevevevevevevevevevevevevevev\",\"proofChainHash\":\"pcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpc\",\"capabilityId\":\"admin.updateMemberRole\",\"action\":\"allow\",\"actorId\":\"user_golden_actor\",\"actorRole\":\"owner\",\"createdAt\":\"2026-05-26T00:00:00.000Z\",\"signingKeyId\":\"strix-prod-2026-05\",\"environment\":\"production\",\"tenantId\":\"academy prod\",\"regulatoryContext\":{\"euAiActArticle12\":true,\"euAiActArticle14\":true,\"euAiActArticle28\":false,\"complianceMode\":\"eu-ai-act\"}}",
+      "expectedSha256": "b8bea950b8c92575f31eaeb2b70804172403ea32950e85dc57afc4d05e1f9b3a",
+      "signatureB64url": "9r9a7qe1Rkum-W8Jbv84_Wc-maQTKy2Lpin9UkVYmEP39OHQ3bvd7o2DvqN4jTcKWXvdd01FekvT7fjHNXBhDg"
+    },
+    {
+      "name": "signed-payload-passthrough",
+      "note": "v1.10.0 reconstruction-free path: when signedPayload is present it IS the canonical bytes, returned verbatim.",
+      "inputRecord": {
+        "evidenceHash": "evevevevevevevevevevevevevevevevevevevevevevevevevevevevevevevev",
+        "proofChainHash": "pcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpcpc",
+        "capabilityId": "admin.updateMemberRole",
+        "action": "allow",
+        "actorId": "user_golden_actor",
+        "actorRole": "owner",
+        "createdAt": "2026-05-26T00:00:00.000Z",
+        "signingKeyId": "strix-prod-2026-05",
+        "environment": "production",
+        "tenantId": "academy prod",
+        "regulatoryContext": {
+          "complianceMode": "eu-ai-act",
+          "euAiActArticle12": true,
+          "euAiActArticle14": true,
+          "euAiActArticle28": false
+        },
+        "schemaVersion": "1",
+        "evidenceId": "5686",
+        "signedPayload": "{\"verbatim\":\"bytes\"}"
+      },
+      "expectedCanonical": "{\"verbatim\":\"bytes\"}",
+      "expectedSha256": "7c4e75b2539190b990ad537c485049caf170b895f99f28ab7627fb09f70217d3",
+      "signatureB64url": "P9dbcNWDWvzL62i9XDtGS-9qn8dHpod1dyzB-WzNVJIFXDnwpluNWwcipVUObve_8TEdtE5uoYd0_ODy_Qp0CA"
+    }
+  ]
+}

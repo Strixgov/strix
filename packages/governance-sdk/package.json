@@ -1,0 +1,110 @@
+{
+  "name": "@strixgov/sdk",
+  "version": "0.5.0",
+  "description": "Strix open proof surface — verify governed-action receipts, decision tokens, and actor attestations against the public JWKS without trusting Strix. Canonicalization, schemas, receipt signing, JWKS resolution, and verification badge. (The control layer — policy engine, token minting, enforcement middleware — is the separate commercial Strix platform.)",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./graph": {
+      "import": "./dist/graph/index.js",
+      "types": "./dist/graph/index.d.ts"
+    },
+    "./transaction-proof": {
+      "import": "./dist/transaction-proof/index.js",
+      "types": "./dist/transaction-proof/index.d.ts"
+    },
+    "./mcp-proof": {
+      "import": "./dist/mcp-proof/index.js",
+      "types": "./dist/mcp-proof/index.d.ts"
+    },
+    "./proof-bundle": {
+      "import": "./dist/proof-bundle/index.js",
+      "types": "./dist/proof-bundle/index.d.ts"
+    },
+    "./swarm": {
+      "import": "./dist/swarm/index.js",
+      "types": "./dist/swarm/index.d.ts"
+    },
+    "./jwks": {
+      "import": "./dist/jwks/index.js",
+      "types": "./dist/jwks/index.d.ts"
+    },
+    "./web": {
+      "import": "./dist/web/index.js",
+      "types": "./dist/web/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ac1-conformance": "node --import tsx --test scripts/ac1-conformance.mts",
+    "test:pbv2-conformance": "node --import tsx --test scripts/pbv2-conformance.mts",
+    "test:aa1-conformance": "node --import tsx --test scripts/aa1-conformance.mts",
+    "test:aa2-conformance": "node --import tsx --test scripts/aa2-conformance.mts",
+    "test:mc1-conformance": "node --import tsx --test scripts/mc1-conformance.mts",
+    "test:mc1-injected": "node --import tsx --test scripts/mc1-injected-key.mts",
+    "test:conformance": "node --import tsx --test scripts/ac1-conformance.mts scripts/pbv2-conformance.mts scripts/aa1-conformance.mts scripts/aa2-conformance.mts scripts/mc1-conformance.mts scripts/mc1-injected-key.mts",
+    "dogfood": "node --import tsx --test scripts/ac1-dogfood.mts",
+    "dogfood:mc1": "node --import tsx --test scripts/mc1-dogfood.mts",
+    "mc1:keycheck": "node scripts/mc1-keycheck.mjs",
+    "mc1:mint": "npm run build && node scripts/mc1-mint.mjs",
+    "mc1:verify": "npm run build && node scripts/mc1-verify.mjs",
+    "mc1:debug": "npm run build && node scripts/mc1-debug.mjs",
+    "mc1:render": "npm run build && node scripts/mc1-render.mjs",
+    "test:runtime": "node --import tsx --test scripts/runtime-units.mts",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@noble/ed25519": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^4.1.6",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.6"
+  },
+  "peerDependencies": {
+    "@trpc/server": ">=11.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@trpc/server": {
+      "optional": true
+    }
+  },
+  "files": [
+    "dist",
+    "assets/",
+    "README.md",
+    "MIGRATION.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/governance-sdk"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "keywords": [
+    "governance",
+    "runtime-enforcement",
+    "execution-control",
+    "security",
+    "audit",
+    "compliance",
+    "ai-governance",
+    "strix"
+  ]
+}

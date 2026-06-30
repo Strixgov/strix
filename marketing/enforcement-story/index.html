@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>STRIX · Enforcement in Action</title>
+  <meta name="description" content="Scroll-driven story of two scenarios — a clinical data submission and an adversarial prompt — flowing through the Strix kernel. Default-DENY enforcement, Ed25519-signed receipts." />
+  <meta name="robots" content="noindex, follow" />
+
+  <!-- OpenGraph + Twitter cards for the LinkedIn / X unfurl.
+       The card.svg is the source-of-truth artifact; if your social platform
+       refuses SVG-as-OG-image (LinkedIn historically does), upload a PNG
+       export of the same file in the post composer and this meta block
+       becomes ornamental rather than load-bearing. -->
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="STRIX · Enforcement in Action" />
+  <meta property="og:description" content="Same kernel, two outcomes. Patient data: ALLOW (redacted) + signed. Adversarial prompt: DENY (audited). The model can be tricked. The kernel can't." />
+  <meta property="og:url" content="https://verify.strixgov.com/marketing/enforcement-story/" />
+  <meta property="og:image" content="https://verify.strixgov.com/marketing/enforcement-story/card.svg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="STRIX · Enforcement in Action" />
+  <meta name="twitter:description" content="Same kernel, two outcomes. Patient data: ALLOW (redacted) + signed. Adversarial prompt: DENY (audited)." />
+  <meta name="twitter:image" content="https://verify.strixgov.com/marketing/enforcement-story/card.svg" />
+
+  <link rel="stylesheet" href="./colors_and_type.css" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+
+  <!-- Page chrome -->
+  <div class="page-frame">
+    <div class="top">
+      <div class="brand"><span class="dot"></span>STRIX</div>
+      <div class="scene-counter"><b id="scene-num">00</b>&nbsp;/&nbsp;02 &nbsp;·&nbsp; <span id="scene-name">overview</span></div>
+    </div>
+    <div class="bot">
+      <div>EXECUTION CONTROL LAYER</div>
+      <div>ENFORCEMENT IN ACTION</div>
+    </div>
+  </div>
+
+  <!-- ── HERO ──────────────────────────────────────────────────────── -->
+  <section class="hero" id="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-inner">
+      <div class="eyebrow">STRIX · Enforcement in action</div>
+      <h1>Every action passes through&nbsp;the&nbsp;<em>kernel</em>.</h1>
+      <p>
+        STRIX sits between the people, the AI, and the systems that act on their data, evaluating
+        every request against policy, in real time. Watch two scenarios flow through.
+      </p>
+      <div class="scroll-cue">SCROLL TO BEGIN <span class="arrow"></span></div>
+    </div>
+    <aside class="hero-teaser">
+      <div class="tcard act1">
+        <div class="lbl"><b>ACT 01</b> · HUMAN INPUT</div>
+        <div class="tt">A nurse submits patient data.</div>
+        <div class="ds">STRIX classifies, redacts, signs, and records.</div>
+      </div>
+      <div class="tcard act2">
+        <div class="lbl"><b>ACT 02</b> · MALICIOUS PROMPT</div>
+        <div class="tt">A user tries to coerce the AI.</div>
+        <div class="ds">STRIX intercepts the action, refuses, and audits.</div>
+      </div>
+    </aside>
+  </section>
+
+  <!-- ── ACT 1 ─ Human input ──────────────────────────────────────── -->
+  <section class="act" id="act1">
+    <div class="pin">
+      <div class="pin-header">
+        <div class="headline" id="a1-head">
+          <div class="label-rail">
+            <span class="num">01</span>
+            <span>Act One</span>
+            <span class="div"></span>
+            <span class="ttl">Human Input · Clinical Data Entry</span>
+          </div>
+          <div class="eyebrow">STRIX · Act 01</div>
+          <h2>Patient data, <em>governed</em> the moment it&rsquo;s typed.</h2>
+          <p>The instant Dr. Rivera submits, STRIX classifies the payload, applies HIPAA &lsquo;minimum necessary&rsquo;,
+            verifies the actor, and signs an audit receipt, before the model ever sees a name.</p>
+        </div>
+        <div class="ticker">
+          <div class="seg" data-seg="1"></div>
+          <div class="seg" data-seg="2"></div>
+          <div class="seg" data-seg="3"></div>
+          <div class="seg" data-seg="4"></div>
+          <div class="seg" data-seg="5"></div>
+          <span class="seg-label" id="a1-seg-label">CAPTURE</span>
+        </div>
+      </div>
+
+      <div class="pin-stage-wrap">
+        <div class="progress-rail"><div class="fill" id="rail1"></div><div class="pct" id="pct1">0%</div></div>
+
+        <!-- 3-column stage -->
+        <div class="stage">
+        <div class="col left">
+          <div class="source">
+            <div class="person-frame">
+              <div class="pf-bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="pf-title">care-portal · intake form</div>
+              </div>
+              <div class="pf-body">
+                <div class="who-row">
+                  <div class="avatar"></div>
+                  <div>
+                    <div class="who-name">Dr. Rivera</div>
+                    <div class="who-role">Attending · Cardiology</div>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <div class="field-label">Patient name</div>
+                  <div class="field-input" id="a1-f1"></div>
+                </div>
+                <div class="field">
+                  <div class="field-label">DOB</div>
+                  <div class="field-input" id="a1-f2"></div>
+                </div>
+                <div class="field">
+                  <div class="field-label">Notes (PHI)</div>
+                  <div class="field-input tall" id="a1-f3"></div>
+                </div>
+
+                <button class="submit-btn dim" id="a1-submit">Submit to Care Copilot</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col mid">
+          <!-- pipe + kernel -->
+          <svg class="pipe-svg" id="a1-pipe-left" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+          <div class="kernel" id="a1-kernel">
+            <div class="glow"></div>
+            <div class="ring"></div>
+            <div class="ring r2"></div>
+            <div class="ring r3"></div>
+            <div class="verdict-banner allow" id="a1-verdict">DECISION · ALLOW (REDACTED)</div>
+            <div class="core">
+              <div class="k-eyebrow">STRIX KERNEL</div>
+              <div class="k-title">EVALUATE</div>
+              <div class="k-rows">
+                <div class="k-row" id="a1-k1"><span class="dot"></span>phi.classify(payload)</div>
+                <div class="k-row" id="a1-k2"><span class="dot"></span>min_necessary.evaluate()</div>
+                <div class="k-row" id="a1-k3"><span class="dot"></span>identity.verify(actor)</div>
+                <div class="k-row" id="a1-k4"><span class="dot"></span>audit.append(receipt)</div>
+              </div>
+              <span class="k-tag">FAIL-CLOSED</span>
+            </div>
+          </div>
+          <svg class="pipe-svg" id="a1-pipe-right" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        </div>
+
+        <div class="col right">
+          <div class="decisions" id="a1-decisions">
+            <div class="dec-card allow" id="a1-d-allow">
+              <div class="head">
+                <span class="pill">ALLOW</span>
+                <span class="meta-tag">de-identified · safe-harbor</span>
+              </div>
+              <div class="ttl">Release de-identified record</div>
+              <div class="desc">Names &amp; DOB redacted to age-bracket. Notes returned to model with PHI tokens replaced.</div>
+            </div>
+            <div class="dec-card intercept" id="a1-d-intercept">
+              <div class="head">
+                <span class="pill">INTERCEPT</span>
+                <span class="meta-tag">privacy officer review</span>
+              </div>
+              <div class="ttl">Bulk export &gt; 500 rows</div>
+              <div class="desc">Held in queue. Approval routed to data steward before release.</div>
+            </div>
+            <div class="dec-card deny" id="a1-d-deny">
+              <div class="head">
+                <span class="pill">DENY</span>
+                <span class="meta-tag">policy violation · 4.2.1</span>
+              </div>
+              <div class="ttl">Reject raw PHI egress</div>
+              <div class="desc">No safe-harbor profile applied. Request blocked at the kernel boundary.</div>
+            </div>
+            <div class="dec-card audit" id="a1-d-audit">
+              <div class="head">
+                <span class="pill">AUDIT</span>
+                <span class="meta-tag">ed25519 · append-only</span>
+              </div>
+              <div class="ttl">Sign &amp; record receipt</div>
+              <div class="receipt" id="a1-receipt">0x4f2a · awaiting…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+        </div><!-- /.stage -->
+      </div><!-- /.pin-stage-wrap -->
+    </div>
+  </section>
+
+  <!-- ── ACT 2 ─ Malicious prompt ─────────────────────────────────── -->
+  <section class="act" id="act2">
+    <div class="pin">
+      <div class="pin-header">
+        <div class="headline act2" id="a2-head">
+          <div class="label-rail">
+            <span class="num act2">02</span>
+            <span>Act Two</span>
+            <span class="div"></span>
+            <span class="ttl">AI Chat · Adversarial Instruction</span>
+          </div>
+          <div class="eyebrow">STRIX · Act 02</div>
+          <h2>The model can be tricked. The <em>kernel</em> can&rsquo;t.</h2>
+          <p>Even if a prompt jailbreaks the model, STRIX governs the <i>action</i>. Every tool call is scope-checked
+            against policy. Malicious side-effects never leave the kernel.</p>
+        </div>
+        <div class="ticker">
+          <div class="seg" data-seg="1"></div>
+          <div class="seg" data-seg="2"></div>
+          <div class="seg" data-seg="3"></div>
+          <div class="seg" data-seg="4"></div>
+          <div class="seg" data-seg="5"></div>
+          <span class="seg-label" id="a2-seg-label">PROMPT</span>
+        </div>
+      </div>
+
+      <div class="pin-stage-wrap">
+        <div class="progress-rail"><div class="fill act2" id="rail2"></div><div class="pct" id="pct2">0%</div></div>
+
+        <div class="stage">
+        <div class="col left">
+          <div class="source">
+            <div class="person-frame">
+              <div class="pf-bar">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <div class="pf-title">care-copilot · session #4831</div>
+              </div>
+              <div class="pf-body tall" id="a2-chat">
+                <!-- bubbles injected -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col mid">
+          <svg class="pipe-svg" id="a2-pipe-left" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+          <div class="kernel" id="a2-kernel">
+            <div class="glow act2"></div>
+            <div class="ring"></div>
+            <div class="ring r2"></div>
+            <div class="ring r3"></div>
+            <div class="verdict-banner deny" id="a2-verdict">DECISION · DENY · POLICY 7.1.3</div>
+            <div class="core" id="a2-core">
+              <div class="k-eyebrow">STRIX KERNEL</div>
+              <div class="k-title">EVALUATE</div>
+              <div class="k-rows">
+                <div class="k-row" id="a2-k1"><span class="dot"></span>intent.classify(prompt)</div>
+                <div class="k-row" id="a2-k2"><span class="dot"></span>injection.detect(tokens)</div>
+                <div class="k-row" id="a2-k3"><span class="dot"></span>tool.scope.check()</div>
+                <div class="k-row" id="a2-k4"><span class="dot"></span>action.deny(receipt)</div>
+              </div>
+              <span class="k-tag">FAIL-CLOSED</span>
+            </div>
+          </div>
+          <svg class="pipe-svg" id="a2-pipe-right" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        </div>
+
+        <div class="col right">
+          <div class="decisions" id="a2-decisions">
+            <div class="dec-card intercept" id="a2-d-intercept">
+              <div class="head">
+                <span class="pill">INTERCEPT</span>
+                <span class="meta-tag">prompt-injection · pattern 0x91</span>
+              </div>
+              <div class="ttl">Adversarial instruction detected</div>
+              <div class="desc">User attempted to override system prompt and trigger PHI export tool.</div>
+            </div>
+            <div class="dec-card deny" id="a2-d-deny">
+              <div class="head">
+                <span class="pill">DENY</span>
+                <span class="meta-tag">tool · phi.export · out of scope</span>
+              </div>
+              <div class="ttl">Refuse tool invocation</div>
+              <div class="desc">Care-copilot is not authorized to export raw PHI. Action blocked at the kernel boundary.</div>
+            </div>
+            <div class="dec-card allow" id="a2-d-allow">
+              <div class="head">
+                <span class="pill">ALLOW</span>
+                <span class="meta-tag">safe response · scope: chat</span>
+              </div>
+              <div class="ttl">Return policy-aligned refusal</div>
+              <div class="desc">Model responds with a constrained refusal explaining the violation, no tool fired.</div>
+            </div>
+            <div class="dec-card audit" id="a2-d-audit">
+              <div class="head">
+                <span class="pill">AUDIT</span>
+                <span class="meta-tag">ed25519 · append-only</span>
+              </div>
+              <div class="ttl">Record incident &amp; alert</div>
+              <div class="receipt" id="a2-receipt">0x9e1f · awaiting…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+        </div><!-- /.stage -->
+      </div><!-- /.pin-stage-wrap -->
+    </div>
+  </section>
+
+  <!-- ── CLOSER ───────────────────────────────────────────────────── -->
+  <section class="closer">
+    <div class="eyebrow">STRIX · Always on</div>
+    <h2>One kernel. Every action. <em>Provably governed.</em></h2>
+    <p>Whether the request comes from a person at a keyboard or a model with a tool, STRIX evaluates it
+      against the same policies and signs the same receipts. Compliance becomes a property of the system,
+      not a checklist after the fact.</p>
+
+    <div class="stat-row">
+      <div class="stat">
+        <div class="num"><em>100%</em></div>
+        <div class="lbl">Actions intercepted</div>
+      </div>
+      <div class="stat">
+        <div class="num">&lt;<em>3</em>ms</div>
+        <div class="lbl">Median kernel latency</div>
+      </div>
+      <div class="stat">
+        <div class="num"><em>0</em></div>
+        <div class="lbl">Bypasses by design</div>
+      </div>
+      <div class="stat">
+        <div class="num">ed<em>25519</em></div>
+        <div class="lbl">Signed audit receipts</div>
+      </div>
+    </div>
+  </section>
+
+  <script src="./app.js"></script>
+</body>
+</html>

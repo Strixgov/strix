@@ -5,6 +5,20 @@ All notable changes to `@strixgov/mcp-adapter` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2]
+
+License-fidelity patch. No functional change to the adapter, the receipt
+format, the signing flow, or any runtime behavior.
+
+### Fixed
+- **`LICENSE` corrected to canonical Elastic License 2.0.** The Limitations
+  clause read "provide the software to **others** as a hosted or managed
+  service"; the canonical ELv2 wording is "to **third parties**." Corrected
+  byte-for-byte against Elastic's published license. `@strixgov/mcp-proxy`
+  carried the identical deviation and was fixed in the same change. Legal-text
+  fidelity only; no change to intent or the MIT/ELv2 split. **Counsel should
+  confirm before publish.**
+
 ## [0.1.1]
 
 ### Fixed

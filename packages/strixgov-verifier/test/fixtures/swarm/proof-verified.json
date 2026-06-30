@@ -1,0 +1,154 @@
+{
+  "verification_status": "VERIFIED",
+  "reason": "SWARM_VERIFIED",
+  "rooted": true,
+  "swarmRunId": "swarm_gv1",
+  "environment": "prod",
+  "counts": {
+    "edges": 2,
+    "actions": 1
+  },
+  "run": {
+    "canonical": {
+      "schemaVersion": "1",
+      "payload": {
+        "schemaVersion": 1,
+        "swarmRunId": "swarm_gv1",
+        "rootDecisionId": "dec_1",
+        "rootApprovalId": "appr_1",
+        "rootActorId": "human-anna",
+        "capabilityCeiling": [
+          "deal.read",
+          "deal.summarize",
+          "deal.notify"
+        ],
+        "riskCeiling": "high",
+        "scopeCeiling": {
+          "dealId": [
+            "17"
+          ]
+        },
+        "budgetCeiling": 10,
+        "maxDepth": 3,
+        "maxFanout": 4,
+        "openedAt": "2026-06-07T00:00:00.000Z",
+        "expiresAt": "2026-06-07T06:00:00.000Z",
+        "environment": "prod",
+        "tenantId": "tenant-acme"
+      }
+    },
+    "signature": "mkOqivcsyKy8+2scgotCQBJAiKePow7tt/+YijTMlRiEgYrQJwozvmBlOMEB3EdEuDcGHRm2Eqvz1vst+EnCDg==",
+    "rootDecisionId": "dec_1",
+    "rootApprovalId": "appr_1",
+    "rootActorId": "human-anna"
+  },
+  "delegations": [
+    {
+      "canonical": {
+        "schemaVersion": "1",
+        "payload": {
+          "schemaVersion": 1,
+          "delegationId": "d1",
+          "swarmRunId": "swarm_gv1",
+          "parentDelegationId": null,
+          "depth": 1,
+          "delegatorAgentId": "agent-planner",
+          "delegateeAgentId": "agent-worker",
+          "capabilitySubset": [
+            "deal.read",
+            "deal.summarize"
+          ],
+          "riskCeiling": "high",
+          "scopeSubset": {
+            "dealId": [
+              "17"
+            ]
+          },
+          "budget": 5,
+          "taskHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "nonce": "n1",
+          "notBefore": "2026-06-07T00:00:00.000Z",
+          "notAfter": "2026-06-07T03:00:00.000Z",
+          "issuedAt": "2026-06-07T00:00:00.000Z",
+          "environment": "prod",
+          "tenantId": "tenant-acme"
+        }
+      },
+      "signature": "hCCdSOKF/9z2jRlNVUYq6aFDom4dWH2OCfOy/McBSQKQ5QGBMITmorbiwpNcXir7NpCniqHipj01xb1aJmcHAQ==",
+      "delegatorKeyKnown": true,
+      "delegatorPublicKeyJwk": {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "x": "DTNSpmM4754TZR8f4fRzLzQL4NbgAVtJSFc5CrPozQs"
+      }
+    },
+    {
+      "canonical": {
+        "schemaVersion": "1",
+        "payload": {
+          "schemaVersion": 1,
+          "delegationId": "d2",
+          "swarmRunId": "swarm_gv1",
+          "parentDelegationId": "d1",
+          "depth": 2,
+          "delegatorAgentId": "agent-worker",
+          "delegateeAgentId": "agent-subworker",
+          "capabilitySubset": [
+            "deal.read"
+          ],
+          "riskCeiling": "medium",
+          "scopeSubset": {
+            "dealId": [
+              "17"
+            ]
+          },
+          "budget": 2,
+          "taskHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "nonce": "n2",
+          "notBefore": "2026-06-07T00:30:00.000Z",
+          "notAfter": "2026-06-07T02:00:00.000Z",
+          "issuedAt": "2026-06-07T00:30:00.000Z",
+          "environment": "prod",
+          "tenantId": "tenant-acme"
+        }
+      },
+      "signature": "JCVlWVZII7t4VJ9rX767WkDTLqs5BEHTnP9i8psjmWDFiEGZF6tPzEId+RioLgvzlJEbR59qCSSNlaLRr9qhBw==",
+      "delegatorKeyKnown": true,
+      "delegatorPublicKeyJwk": {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "x": "-9Z1R5ybv2hePXsR3-KuP3OA9XGk7Nez6MRUVpjcCPs"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "canonical": {
+        "schemaVersion": "1",
+        "payload": {
+          "schemaVersion": 1,
+          "swarmActionId": "act_1",
+          "evidenceId": "evi_1",
+          "swarmRunId": "swarm_gv1",
+          "delegationPath": [
+            "d1",
+            "d2"
+          ],
+          "delegationDepth": 2,
+          "proposerAgentId": "agent-worker",
+          "executingAgentId": "agent-subworker",
+          "taskHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "createdAt": "2026-06-07T01:00:00.000Z",
+          "environment": "prod",
+          "tenantId": "tenant-acme"
+        }
+      },
+      "signature": "YkAS/n67MHcDmBxk+ElC2s7ZpiznF+h0CgYTPQKGNvCQQGWfLSbnNncc8nWNDJRGJL6QYmvn/+GjFZtIEjL5AA==",
+      "swarmActionId": "act_1",
+      "evidenceId": "evi_1",
+      "executingAgentId": "agent-subworker"
+    }
+  ],
+  "jwksUrl": "/.well-known/strix-jwks.json",
+  "verifyCommand": "npx @strixgov/verifier swarm swarm_gv1"
+}

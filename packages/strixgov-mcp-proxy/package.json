@@ -1,0 +1,59 @@
+{
+  "name": "@strixgov/mcp-proxy",
+  "version": "0.1.6",
+  "description": "Strix MCP Proxy — the distribution wedge for governed agent tool execution. Point your MCP client at the proxy instead of the underlying server; every callTool is intercepted, evaluated against policy, and emits a signed Ed25519 receipt. Designed so Mode 3 (capability-enforced) is the v0.2.0 upgrade path, not a rewrite.",
+  "license": "Elastic-2.0",
+  "type": "module",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./src/types.d.ts",
+      "import": "./src/index.mjs"
+    }
+  },
+  "bin": {
+    "strix-mcp-proxy": "bin/strix-mcp-proxy.mjs"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@strixgov/mcp-adapter": "^0.1.0",
+    "@strixgov/tool-gateway": "^0.4.1",
+    "@strixgov/capabilities-mcp-common": "^0.1.0",
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "keywords": [
+    "strix",
+    "mcp",
+    "model-context-protocol",
+    "proxy",
+    "gateway",
+    "governance",
+    "ai-agents",
+    "execution-control",
+    "signed-receipts",
+    "capability-enforcement"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/strixgov-mcp-proxy"
+  },
+  "files": [
+    "src/",
+    "bin/",
+    "examples/",
+    "README.md",
+    "CHANGELOG.md",
+    "COMMERCIAL.md",
+    "SECURITY.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

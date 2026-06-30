@@ -18,7 +18,7 @@
     "euAiActArticle28": false
   },
   "sourceApp": "strix-verifier-public-release-example",
-  "signature": "Ujug3fFDdVAzPrK7d4jY5k8GgAIZg8bHPAmIzu6Jv9oA03E7LhWqm6L8EJpWCp3vho73d-J2R9exLDJs7buEAA",
+  "signature": "nmYzPs6D7G4aPPqO0oTo7Xu2K0dVQ2b4UooHJ48QrJHC5_3_TG13ako7Aht6anZ18f4RTbyJv9DhKT_C1YmKDw",
   "_meta": {
     "description": "Sample VERIFIED record. Throwaway test key. Demonstrates byte-for-byte verification semantics, not production identity.",
     "expectedStatus": "VERIFIED",

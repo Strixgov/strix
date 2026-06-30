@@ -1,0 +1,51 @@
+{
+  "name": "@strixgov/healthcare-demo",
+  "version": "0.1.0",
+  "description": "30-second clinical AI agent governance demo for Strix. Generates a synthetic PHI-handling workflow, signs it with a throwaway test key, verifies it, and prints the HIPAA + EU AI Act compliance flag derivations. NO real PHI. Local-only — no Strix backend.",
+  "type": "module",
+  "main": "./src/index.mjs",
+  "bin": {
+    "strix-healthcare-demo": "./bin/demo.mjs"
+  },
+  "exports": {
+    ".": {
+      "import": "./src/index.mjs",
+      "default": "./src/index.mjs"
+    }
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "assets/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "strix",
+    "strixgov",
+    "healthcare",
+    "hipaa",
+    "phi",
+    "clinical",
+    "ai-governance",
+    "execution-control",
+    "demo",
+    "ed25519"
+  ],
+  "author": "Strixgov",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/strixgov-healthcare-demo"
+  },
+  "homepage": "https://verify.strixgov.com/healthcare",
+  "scripts": {
+    "demo": "node bin/demo.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

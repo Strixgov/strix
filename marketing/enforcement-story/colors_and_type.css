@@ -1,0 +1,243 @@
+/* ==========================================================================
+   STRIX · Design Tokens
+   Execution Control Layer for AI Systems
+   ========================================================================== */
+
+/* Fonts — Arial per brand. JetBrains Mono retained for code/hashes (can swap to Courier if needed). */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* ------------------------------------------------------------------------
+     COLOR — pulled verbatim from the Strix Governance Brief theme
+     Dark-first. Every surface is built on deep-navy; accent is a single bright blue.
+     ------------------------------------------------------------------------ */
+
+  /* Core surface (background stack) */
+  --bg-0:          #0B1120;  /* Page — near-black navy */
+  --bg-1:          #0E1629;  /* Elevated surface */
+  --bg-2:          #121C33;  /* Card */
+  --bg-3:          #17223E;  /* Card hover / input */
+  --bg-4:          #1E2A47;  /* Divider surface */
+
+  /* Foreground (text + icons) */
+  --fg-0:          #FFFFFF;  /* Pure white — logos + critical emphasis only */
+  --fg-1:          #E6EDF3;  /* Primary text */
+  --fg-2:          #B4C0CC;  /* Secondary text */
+  --fg-3:          #7D8590;  /* Muted / meta */
+  --fg-4:          #4B5563;  /* Disabled */
+
+  /* Accent — Strix Blue */
+  --accent:        #2F81F7;  /* Primary accent (links, active, focus) */
+  --accent-hover:  #4C92F8;
+  --accent-press:  #2A74DE;
+  --accent-soft:   rgba(47, 129, 247, 0.12);
+  --accent-line:   rgba(47, 129, 247, 0.32);
+  --accent-deep:   #1A4B8C;  /* Secondary deep blue (rails, headers) */
+
+  /* Semantic — decision tri-state (allow / deny / intercept) */
+  --allow:         #3FB950;  /* Green — allow */
+  --allow-soft:    rgba(63, 185, 80, 0.14);
+  --deny:          #F85149;  /* Red — deny / fail-closed */
+  --deny-soft:     rgba(248, 81, 73, 0.14);
+  --intercept:     #D29922;  /* Amber — intercept / approval required */
+  --intercept-soft:rgba(210, 153, 34, 0.14);
+  --verified:      #3FB950;  /* Signature valid */
+  --unsigned:      #7D8590;  /* No signature (legacy) */
+
+  /* Risk classification (from compliance matrix) */
+  --risk-critical: #F85149;
+  --risk-high:     #F79232;
+  --risk-medium:   #D29922;
+  --risk-low:      #3FB950;
+
+  /* Borders */
+  --border-1:      #1E2A47;  /* Subtle — card outlines */
+  --border-2:      #2A3A5C;  /* Standard — inputs, dividers */
+  --border-3:      #3A4D73;  /* Emphasis — active */
+
+  /* Shadow — dark UI uses luminous glow rather than drop shadow */
+  --shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md:     0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-lg:     0 12px 32px rgba(0, 0, 0, 0.5);
+  --glow-accent:   0 0 0 1px var(--accent-line), 0 0 24px rgba(47, 129, 247, 0.25);
+  --glow-verified: 0 0 0 1px rgba(63, 185, 80, 0.3), 0 0 20px rgba(63, 185, 80, 0.2);
+
+  /* Radii — sharp by default. Strix is engineering-serious, not friendly-rounded. */
+  --radius-xs:     2px;
+  --radius-sm:     4px;
+  --radius-md:     6px;
+  --radius-lg:     8px;
+  --radius-xl:     12px;
+  --radius-round:  999px;
+
+  /* Spacing (4px base) */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* ------------------------------------------------------------------------
+     TYPOGRAPHY
+     Arial for UI + body (per brand). JetBrains Mono for code, hashes,
+     evidence IDs. No serif — Strix is an engineering product.
+     ------------------------------------------------------------------------ */
+  --font-sans:    Arial, 'Helvetica Neue', Helvetica, sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', 'Menlo', 'Consolas', monospace;
+  --font-display: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+
+  /* Base size scale */
+  --text-xs:   11px;
+  --text-sm:   12px;
+  --text-base: 14px;
+  --text-md:   15px;
+  --text-lg:   17px;
+  --text-xl:   20px;
+  --text-2xl:  24px;
+  --text-3xl:  32px;
+  --text-4xl:  42px;
+  --text-5xl:  56px;
+  --text-6xl:  72px;
+
+  /* Weights */
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+  --weight-black:    800;
+
+  /* Line heights */
+  --lh-tight:  1.1;
+  --lh-snug:   1.3;
+  --lh-normal: 1.5;
+  --lh-loose:  1.7;
+
+  /* Tracking — critical: Strix headers use WIDE tracking + uppercase. This is a
+     signature of the brand (see "WHAT STRIX IS", "HOW IT WORKS" in the deck). */
+  --track-tight:  -0.02em;
+  --track-normal: 0;
+  --track-wide:   0.08em;   /* Eyebrow labels */
+  --track-wider:  0.16em;   /* Section headers — THE signature move */
+}
+
+/* ==========================================================================
+   SEMANTIC TYPE ROLES — use these in components, not raw size vars
+   ========================================================================== */
+
+.t-eyebrow {
+  font: var(--weight-semibold) var(--text-xs)/1.3 var(--font-sans);
+  letter-spacing: var(--track-wider);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.t-section-label {
+  /* "WHAT STRIX IS", "HOW IT WORKS" — the signature Strix header treatment */
+  font: var(--weight-bold) var(--text-sm)/1.2 var(--font-sans);
+  letter-spacing: var(--track-wider);
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+.t-display {
+  /* Hero / title-slide — "A runtime kernel between AI intent and side-effect." */
+  font: var(--weight-bold) var(--text-5xl)/1.05 var(--font-display);
+  letter-spacing: var(--track-tight);
+  color: var(--fg-1);
+}
+
+.t-h1 {
+  font: var(--weight-bold) var(--text-4xl)/1.1 var(--font-display);
+  letter-spacing: var(--track-tight);
+  color: var(--fg-1);
+}
+
+.t-h2 {
+  font: var(--weight-semibold) var(--text-3xl)/1.2 var(--font-display);
+  letter-spacing: var(--track-tight);
+  color: var(--fg-1);
+}
+
+.t-h3 {
+  font: var(--weight-semibold) var(--text-xl)/1.3 var(--font-sans);
+  color: var(--fg-1);
+}
+
+.t-h4 {
+  font: var(--weight-semibold) var(--text-md)/1.4 var(--font-sans);
+  color: var(--fg-1);
+}
+
+.t-body {
+  font: var(--weight-regular) var(--text-base)/1.6 var(--font-sans);
+  color: var(--fg-2);
+}
+
+.t-body-lg {
+  font: var(--weight-regular) var(--text-lg)/1.6 var(--font-sans);
+  color: var(--fg-2);
+}
+
+.t-caption {
+  font: var(--weight-regular) var(--text-sm)/1.4 var(--font-sans);
+  color: var(--fg-3);
+}
+
+.t-meta {
+  font: var(--weight-medium) var(--text-xs)/1.3 var(--font-sans);
+  letter-spacing: var(--track-wide);
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+.t-mono {
+  font: var(--weight-regular) var(--text-sm)/1.5 var(--font-mono);
+  color: var(--fg-2);
+}
+
+.t-mono-sm {
+  font: var(--weight-regular) var(--text-xs)/1.4 var(--font-mono);
+  color: var(--fg-3);
+}
+
+.t-hash {
+  /* SHA-256 / Ed25519 — core Strix visual vocabulary */
+  font: var(--weight-regular) var(--text-xs)/1.4 var(--font-mono);
+  color: var(--accent);
+  letter-spacing: 0;
+  word-break: break-all;
+}
+
+.t-stat {
+  /* Big numbers: "127", "58", "0 bypasses" */
+  font: var(--weight-bold) var(--text-5xl)/1 var(--font-display);
+  letter-spacing: var(--track-tight);
+  color: var(--fg-1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   BASE RESETS (opt-in — apply to .strix-surface)
+   ========================================================================== */
+
+.strix-surface {
+  background: var(--bg-0);
+  color: var(--fg-1);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.strix-surface *,
+.strix-surface *::before,
+.strix-surface *::after {
+  box-sizing: border-box;
+}

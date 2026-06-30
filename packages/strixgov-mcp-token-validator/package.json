@@ -1,0 +1,46 @@
+{
+  "name": "@strixgov/mcp-token-validator",
+  "version": "0.1.0",
+  "description": "Independent validator for Strix execution_authorization_v1 tokens. Drop into your first-party MCP server, network proxy, or credential-broker wrap to enforce Mode 3 (capability-enforced) governance — no Strix runtime dependency, no network calls. Verifies Ed25519 signatures against your trusted JWKS using only node:crypto.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./src/types.d.ts",
+      "import": "./src/index.mjs"
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "keywords": [
+    "strix",
+    "mcp",
+    "model-context-protocol",
+    "governance",
+    "execution-token",
+    "ed25519",
+    "verifier",
+    "capability-enforcement",
+    "ai-agents",
+    "agent-security"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/strixgov-mcp-token-validator"
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

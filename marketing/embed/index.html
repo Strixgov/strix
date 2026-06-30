@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>&lt;strix-verify&gt; · embeddable verification web component</title>
+  <meta name="description" content="One-line embed for cryptographic verification of Strix-governed AI agent evidence. Drop &lt;strix-verify evidence-id=&quot;...&quot;&gt; on any HTTPS page. No backend, no Strix runtime, no account.">
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    .embed-doc { max-width: 820px; margin: 0 auto; padding: 36px 24px 80px; }
+    .embed-doc h1 { font: 600 32px/1.2 var(--font-sans); letter-spacing: -0.02em; margin: 0 0 12px 0; }
+    .embed-doc h1 code { font-family: var(--font-mono); font-size: 28px; color: var(--accent); background: none; padding: 0; }
+    .embed-doc .lede { font: 400 17px/1.5 var(--font-sans); color: var(--fg-muted); margin: 0 0 36px 0; max-width: 680px; }
+    .embed-doc h2 { font: 600 18px/1.3 var(--font-sans); margin: 40px 0 12px; letter-spacing: -0.01em; }
+    .embed-doc h2:first-of-type { margin-top: 8px; }
+    .embed-doc p { font: 400 14px/1.55 var(--font-sans); color: var(--fg-muted); margin: 0 0 14px 0; }
+    .embed-doc p strong { color: var(--fg); }
+    .embed-doc code { font-family: var(--font-mono); font-size: 13px; background: var(--surface-lifted); padding: 1px 6px; border-radius: 3px; color: var(--fg); }
+    .embed-doc pre {
+      background: var(--surface-lifted);
+      border: 1px solid rgba(255,255,255,0.06);
+      padding: 14px 16px;
+      border-radius: 7px;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.55;
+      margin: 0 0 18px 0;
+    }
+    .embed-doc pre code { background: none; padding: 0; font-size: 13px; }
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 20px 0 32px;
+    }
+    .demo-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--fg-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .attr-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin: 12px 0 18px;
+    }
+    .attr-table th,
+    .attr-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      text-align: left;
+      vertical-align: top;
+    }
+    .attr-table th {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--fg-dim);
+      background: var(--surface-lifted);
+    }
+    .attr-table code {
+      font-size: 12px;
+    }
+    .nav-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--fg-dim);
+      text-decoration: none;
+      margin-bottom: 24px;
+    }
+    .nav-back:hover { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+  <main class="embed-doc">
+    <a href="../" class="nav-back">← back to strix-verify</a>
+
+    <h1>&lt;<code>strix-verify</code>&gt;</h1>
+    <p class="lede">
+      One-line embeddable verification card for Strix-governed AI agent evidence.
+      Drop it on any HTTPS page. WebCrypto Ed25519 runs in the visitor's browser.
+      <strong>No Strix backend in the trust path.</strong>
+    </p>
+
+    <h2>Quick start</h2>
+    <p>Two tags, anywhere on the page:</p>
+    <pre><code>&lt;script src="https://verify.strixgov.com/embed.js"&gt;&lt;/script&gt;
+&lt;strix-verify evidence-id="5686"&gt;&lt;/strix-verify&gt;</code></pre>
+
+    <p>The element fetches the evidence record from the public proof API, resolves the signing key from the public JWKS, runs Ed25519 verification client-side, and renders a self-contained card. Works in any modern browser (Chrome, Firefox, Safari, Edge). Bundle size: ~8.6 KB gzipped.</p>
+
+    <h2>Live demo — verified record</h2>
+    <div class="demo-label">&lt;strix-verify evidence-id="5686"&gt;</div>
+    <strix-verify evidence-id="5686"></strix-verify>
+
+    <h2>Live demo — compact mode</h2>
+    <div class="demo-label">&lt;strix-verify evidence-id="5686" compact&gt;</div>
+    <strix-verify evidence-id="5686" compact></strix-verify>
+
+    <h2>Attributes</h2>
+    <table class="attr-table">
+      <thead>
+        <tr>
+          <th>Attribute</th>
+          <th>Required</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>evidence-id</code></td>
+          <td>yes</td>
+          <td>The evidence record ID to verify. Numeric or string.</td>
+        </tr>
+        <tr>
+          <td><code>compact</code></td>
+          <td>—</td>
+          <td>Boolean attribute. Renders a smaller card; hides the details block.</td>
+        </tr>
+        <tr>
+          <td><code>proof-base</code></td>
+          <td>—</td>
+          <td>Override the proof API base URL. Defaults to <code>https://www.strixgov.com</code>. Used for forks + testing.</td>
+        </tr>
+        <tr>
+          <td><code>jwks-url</code></td>
+          <td>—</td>
+          <td>Override the JWKS URL. Defaults to the canonical Strix JWKS endpoint. Used for forks + testing.</td>
+        </tr>
+        <tr>
+          <td><code>auto-refresh</code></td>
+          <td>—</td>
+          <td>Milliseconds between re-verifications. Minimum 30000 (30s). Useful for live dashboards.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Programmatic API</h2>
+    <p>The element exposes a <code>verifyNow()</code> method and dispatches a <code>strix-verify:result</code> custom event:</p>
+    <pre><code>const el = document.querySelector('strix-verify');
+
+// Trigger a verification (returns the result object directly)
+const result = await el.verifyNow();
+console.log(result.verificationStatus);
+// → "VERIFIED" | "COMPLIANCE_VIOLATION" | "UNSIGNED" |
+//   "LEGACY_UNSIGNED" | "NOT_FOUND" | "ERROR"
+
+// Or listen for results bubbling out of the shadow tree:
+el.addEventListener('strix-verify:result', (e) =&gt; {
+  console.log(e.detail);
+});</code></pre>
+
+    <h2>Why this exists</h2>
+    <p><strong>The trust model.</strong> Strix produces Ed25519-signed receipts for every governed agent action. The receipts are independently verifiable — anyone with the public JWKS can confirm that a specific action happened, was approved, and hasn't been tampered with, without trusting Strix's infrastructure at all.</p>
+    <p>Until now, that verification required either the Node CLI (<code>npx @strixgov/verifier@latest &lt;id&gt;</code>) or visiting verify.strixgov.com. The embed makes it a one-line drop-in — so any framework, blog post, audit report, or compliance dashboard can show verified Strix evidence inline.</p>
+    <p><strong>What you're embedding.</strong> A WebCrypto Ed25519 verifier that talks only to the public proof API and the public JWKS. No accounts, no API keys, no tracking. The bundle is MIT-licensed and the source is on the public Strixgov/strix mirror.</p>
+
+    <h2>Styling + customization</h2>
+    <p>The card lives in a Shadow DOM so the host page's CSS can't change its layout. To re-theme, override CSS custom properties on the element:</p>
+    <pre><code>strix-verify {
+  --sv-bg: #ffffff;        /* card background */
+  --sv-surface: #f7f7f9;
+  --sv-fg: #1a1a1a;
+  --sv-accent: #5b8def;
+  --sv-verified: #1f7e3d;  /* override the "VERIFIED" green */
+}</code></pre>
+
+    <h2>Versioning + provenance</h2>
+    <p>The bundle served at <code>verify.strixgov.com/embed.js</code> is built from the public <a href="https://github.com/Strixgov/strix/tree/main/packages/strixgov-verify-embed" target="_blank" rel="noopener"><code>@strixgov/verify-embed</code></a> package. It uses the same byte-for-byte canonical reconstruction as <code>@strixgov/verifier</code> — a mirror-invariant test in the package's test suite enforces it.</p>
+    <p>If you're integrating into a production system, pin the version by installing from npm instead of using the CDN:</p>
+    <pre><code>npm install @strixgov/verify-embed</code></pre>
+
+    <h2>License</h2>
+    <p>MIT. See the <a href="https://github.com/Strixgov/strix/blob/main/packages/strixgov-verify-embed/LICENSE" target="_blank" rel="noopener">LICENSE</a> file.</p>
+
+  </main>
+
+  <!-- Load the embed from the same origin so the demos above work. -->
+  <script src="/embed.js"></script>
+</body>
+</html>

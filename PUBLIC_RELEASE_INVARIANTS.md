@@ -37,17 +37,36 @@ exact path its published `package.json` declares in `repository.directory`:
 | Package | Path |
 |---|---|
 | `@strixgov/verifier` | `packages/strixgov-verifier/` |
+| `@strixgov/sdk` | `packages/governance-sdk/` |
 | `@strixgov/tool-gateway` | `packages/tool-gateway/` |
 | `@strixgov/capabilities-claude-code` | `packages/strixgov-capabilities-claude-code/` |
 | `@strixgov/capabilities-mcp-common` | `packages/strixgov-capabilities-mcp-common/` |
+| `@strixgov/mcp-token-validator` | `packages/strixgov-mcp-token-validator/` |
 | `@strixgov/mcp-adapter` | `packages/strixgov-mcp-adapter/` |
 | `@strixgov/mcp-proxy` | `packages/strixgov-mcp-proxy/` |
 | `@strixgov/verify-embed` | `packages/strixgov-verify-embed/` |
 | `@strixgov/healthcare-demo` | `packages/strixgov-healthcare-demo/` |
+| `@strixgov/rcm-reference` | `packages/strixgov-rcm-reference/` |
 
 Adding or removing a package is a deliberate change that updates this table
 **and** the locked `EXPECTED_PACKAGES` list in the upstream invariant lint
 in the same change.
+
+### Root surfaces beyond `packages/`
+
+These intentional surfaces sit at the repo root (outside `packages/`, so
+they are not part of the `EXPECTED_PACKAGES` set):
+
+| Surface | Path | Purpose |
+|---|---|---|
+| Claude Code marketplace | `.claude-plugin/marketplace.json` | Makes `/plugin marketplace add Strixgov/strix` resolve. |
+| Strix Verifier plugin | `plugins/strix-verifier/` | The plugin the marketplace installs; vendors `@strixgov/verifier`. |
+| Marketing bundles | `marketing/` | Public-source launch material. |
+
+The marketplace + plugin are mirrored by
+`scripts/sync-plugin-to-public-release.mjs` (verbatim copy; nothing
+rewritten). The manifest references its plugin by a path relative to the
+repo root (`./plugins/strix-verifier`), which is why both live at the root.
 
 ---
 

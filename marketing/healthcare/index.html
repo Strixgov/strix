@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Strix · Cryptographic execution control for healthcare AI agents</title>
+  <meta name="description" content="Strix governs every AI agent action that touches PHI. Cryptographic receipts at the moment of execution. HIPAA Technical Safeguards + EU AI Act compliance flags derived from the verification outcome — never asserted. One command demo: npx @strixgov/healthcare-demo">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Strix · Execution control for healthcare AI agents">
+  <meta property="og:description" content="Cryptographic governance for clinical AI workflows. HIPAA + EU AI Act flag derivations. One-line demo: npx @strixgov/healthcare-demo">
+  <meta property="og:url" content="https://verify.strixgov.com/healthcare/">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="./healthcare.css">
+</head>
+<body>
+
+  <header class="masthead">
+    <div class="mast-row">
+      <div class="mast-mark">
+        <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
+          <rect x="1" y="1" width="30" height="30" rx="6" fill="#0C1425" stroke="#00BCD4" stroke-opacity="0.6"/>
+          <circle cx="16" cy="16" r="9" fill="none" stroke="#00BCD4" stroke-width="1.5"/>
+          <path d="M11 16 L15 20 L22 12" fill="none" stroke="#00BCD4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>strix · healthcare</span>
+      </div>
+      <nav class="mast-nav">
+        <a href="../">strix-verify</a>
+        <a href="https://github.com/Strixgov/strix" target="_blank" rel="noopener">github</a>
+        <a href="https://www.npmjs.com/package/@strixgov/healthcare-demo" target="_blank" rel="noopener">npm</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="hc">
+
+    <!-- ───────────────────────────── HERO ───────────────────────────── -->
+
+    <section class="hc-hero">
+      <p class="hc-eyebrow">For Healthcare AI · Clinical, RCM, Medicaid, Population Health</p>
+      <h1 class="hc-h1">
+        Cryptographic execution control<br>
+        for AI agents handling <em>PHI</em>.
+      </h1>
+      <p class="hc-lede">
+        Every AI agent action that touches protected health information should leave a
+        cryptographic receipt at the moment it happens — provable to a regulator,
+        auditor, or BAA partner without trusting the platform that produced it.
+        That's Strix. Open-source verifier. No accounts. No vendor lock-in.
+      </p>
+      <div class="hc-cta">
+        <code class="hc-cta-cmd">npx @strixgov/healthcare-demo</code>
+        <span class="hc-cta-note">30-second demo · runs offline · no real PHI · no Strix backend</span>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────── DEMO STRIP ───────────────────────── -->
+
+    <section class="hc-demo-strip">
+      <div class="hc-demo-strip-label">Verified production receipt · live on this page:</div>
+      <strix-verify evidence-id="5686" compact></strix-verify>
+      <div class="hc-demo-strip-note">
+        ↑ This card runs Ed25519 verification in your browser, right now, against the public Strix proof API + JWKS.
+        Nothing on this page is asking you to trust us — it's asking your browser to do the cryptographic math itself.
+      </div>
+    </section>
+
+    <!-- ───────────────────────────── ACT 1 ─────────────────────────── -->
+
+    <section class="hc-section">
+      <p class="hc-eyebrow hc-eyebrow-blue">How it works · Act 1 of 2</p>
+      <h2 class="hc-h2">A clinician submits a patient note.<br>Strix governs the action <em>before the model sees it</em>.</h2>
+
+      <div class="hc-flow">
+        <div class="hc-flow-step">
+          <div class="hc-flow-num">1</div>
+          <div class="hc-flow-body">
+            <h3>Intake</h3>
+            <p>Dr. Rivera submits to the care-portal. Raw note contains patient name, DOB, MRN, clinical observations.</p>
+          </div>
+        </div>
+        <div class="hc-flow-step">
+          <div class="hc-flow-num">2</div>
+          <div class="hc-flow-body">
+            <h3>Classify</h3>
+            <p>The kernel identifies PHI fields and applies HIPAA Safe Harbor redaction (§164.514(b)(2)): patient name redacted, DOB bucketed to a 10-year age range, MRN tokenized.</p>
+          </div>
+        </div>
+        <div class="hc-flow-step">
+          <div class="hc-flow-num">3</div>
+          <div class="hc-flow-body">
+            <h3>Evaluate + Sign</h3>
+            <p>Policy evaluates the redacted action. If allowed, Strix Ed25519-signs the SE v1 canonical payload. The receipt is final before the model ever sees the redacted payload.</p>
+          </div>
+        </div>
+        <div class="hc-flow-step">
+          <div class="hc-flow-num">4</div>
+          <div class="hc-flow-body">
+            <h3>Verify</h3>
+            <p>Any party — regulator, BAA partner, internal auditor — can cryptographically verify the receipt using <code>npx @strixgov/verifier</code>. No Strix infrastructure in the trust path.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="hc-act-cta">
+        See the full clinical workflow run locally on your machine:
+        <code>npx @strixgov/healthcare-demo</code>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── REGULATORY MAPPING ──────────────────── -->
+
+    <section class="hc-section">
+      <p class="hc-eyebrow hc-eyebrow-green">Regulatory mapping</p>
+      <h2 class="hc-h2">Three frameworks. One receipt. Every flag <em>derived</em>, never asserted.</h2>
+
+      <p class="hc-prose">
+        Strix doesn't let the producer claim compliance. The signing host can't write <code>article28_audit_ready: true</code> into a record and have the verifier honor it. Every flag below is derived by the verifier from independently-checkable cryptographic evidence — that asymmetry is the load-bearing trust property.
+      </p>
+
+      <div class="hc-table-wrap">
+        <table class="hc-mapping">
+          <thead>
+            <tr>
+              <th>Framework</th>
+              <th>Article / §</th>
+              <th>Derived flag</th>
+              <th>Verification primitives required</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td rowspan="4" class="hc-fwk hc-fwk-eu">EU AI Act</td>
+              <td>Article 12</td>
+              <td><code>article12_traceable</code></td>
+              <td>trace fields present + hash valid</td>
+            </tr>
+            <tr>
+              <td>Article 12</td>
+              <td><code>article12_tamper_resistant</code></td>
+              <td>hash + chain + signature all valid</td>
+            </tr>
+            <tr>
+              <td>Article 14</td>
+              <td><code>article14_oversight_supported</code></td>
+              <td>trace fields present</td>
+            </tr>
+            <tr>
+              <td>Article 28</td>
+              <td><code>article28_audit_ready</code></td>
+              <td>all of the above</td>
+            </tr>
+            <tr>
+              <td rowspan="3" class="hc-fwk hc-fwk-hipaa">HIPAA Technical Safeguards · 45 CFR §164.312</td>
+              <td>§164.312(b)</td>
+              <td><code>hipaa_audit_log_present</code></td>
+              <td>signature present + trace fields present</td>
+            </tr>
+            <tr>
+              <td>§164.312(c)(1)</td>
+              <td><code>hipaa_integrity_assured</code></td>
+              <td>signature valid (authenticates canonical bytes)</td>
+            </tr>
+            <tr>
+              <td>§164.312(d)</td>
+              <td><code>hipaa_access_authenticated</code></td>
+              <td>actor identified + signature valid</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="hc-footnote">
+        Strix asserts only the three HIPAA Technical Safeguards that derive from cryptographic evidence. Administrative safeguards (§164.308) and Physical safeguards (§164.310) are covered-entity responsibilities outside the per-record evidence surface. Workforce training and workstation security require organizational programs, not cryptographic primitives.
+      </p>
+    </section>
+
+    <!-- ────────────────────────── USE CASES ────────────────────────── -->
+
+    <section class="hc-section">
+      <p class="hc-eyebrow">Where this lives in your stack</p>
+      <h2 class="hc-h2">Three healthcare AI patterns Strix governs today</h2>
+
+      <div class="hc-cases">
+        <article class="hc-case">
+          <h3>Revenue Cycle Management</h3>
+          <p>AI agents handling eligibility checks, prior-auth, denial management, appeals. Every payer-facing action signs a receipt with the actor's role, the patient's de-identified eligibility, and the policy decision. Audit-ready before the auditor asks.</p>
+          <code class="hc-case-cap">capability: rcm.eligibility.check</code>
+        </article>
+        <article class="hc-case">
+          <h3>Medicaid Enrollment Platforms</h3>
+          <p>Auto-fill, eligibility determination, application submission to state systems. Strix signs each state-facing call with the applicant's de-identified profile and the verified third-party data sources used. Improper-payment audits become a verifier query.</p>
+          <code class="hc-case-cap">capability: medicaid.application.submit</code>
+        </article>
+        <article class="hc-case">
+          <h3>Clinical Decision Support</h3>
+          <p>AI suggestions for diagnosis, medication, treatment paths. The agent's recommendation is signed alongside the de-identified case context and the model version that produced it. Reproducibility, transparency, and Article 14 oversight in one cryptographic receipt.</p>
+          <code class="hc-case-cap">capability: clinical.decision.suggest</code>
+        </article>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────── CLOSE ──────────────────────────── -->
+
+    <section class="hc-section hc-close">
+      <h2 class="hc-h2">Run the demo. Verify a real production record. Compare.</h2>
+      <div class="hc-close-grid">
+        <div class="hc-close-cell">
+          <p class="hc-eyebrow">1. Run the synthetic clinical workflow locally</p>
+          <code class="hc-close-cmd">npx @strixgov/healthcare-demo</code>
+          <p class="hc-close-note">~3 seconds. No real PHI. No Strix backend. Prints the full flag derivation.</p>
+        </div>
+        <div class="hc-close-cell">
+          <p class="hc-eyebrow">2. Verify a real production record</p>
+          <code class="hc-close-cmd">npx @strixgov/verifier@latest 12537</code>
+          <p class="hc-close-note">Compare the field-by-field output. Same primitives, same flag derivations.</p>
+        </div>
+        <div class="hc-close-cell">
+          <p class="hc-eyebrow">3. Embed verification on your own site</p>
+          <code class="hc-close-cmd">&lt;strix-verify evidence-id="…"&gt;&lt;/strix-verify&gt;</code>
+          <p class="hc-close-note">One-line drop-in via the <a href="../embed/">embed component</a>. No backend.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="hc-foot">
+      <p>
+        <strong>Strix</strong> · execution control for AI agents · MIT-licensed · open-source on
+        <a href="https://github.com/Strixgov/strix" target="_blank" rel="noopener">Strixgov/strix</a>
+      </p>
+      <p class="hc-foot-note">
+        This page is publication-ready evidence of the architecture, not a sales surface.
+        For partnerships and integration conversations contact via the GitHub repo or the
+        operator's LinkedIn.
+      </p>
+    </footer>
+
+  </main>
+
+  <!-- Load the <strix-verify> embed (lives at /embed.js) -->
+  <script src="/embed.js"></script>
+</body>
+</html>

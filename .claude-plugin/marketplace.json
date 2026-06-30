@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "strixgov",
+  "description": "Strix governance tooling for Claude Code — open, independent verification of AI execution-control evidence.",
+  "owner": {
+    "name": "Strix",
+    "email": "hello@strixgov.com"
+  },
+  "plugins": [
+    {
+      "name": "strix-verifier",
+      "source": "./plugins/strix-verifier",
+      "description": "Independently verify Strix governance evidence, approval artifacts, quorums, tool-gateway receipts, CT proofs, and agent-swarm runs. Ed25519 + JWKS, offline-capable, no Strix account required.",
+      "version": "1.11.1",
+      "category": "security",
+      "tags": ["governance", "verification", "ed25519", "proof", "ai-governance", "audit"],
+      "license": "MIT",
+      "homepage": "https://www.strixgov.com",
+      "author": {
+        "name": "Strix",
+        "email": "hello@strixgov.com"
+      }
+    },
+    {
+      "name": "strix-proof-room",
+      "source": "./plugins/strix-proof-room",
+      "description": "Render a Strix Proof Room manifest into a self-verifying HTML page — live <strix-verify> embeds per record, claim binding (PROVEN/ROADMAP) enforced, no Strix account required.",
+      "version": "0.1.0",
+      "category": "security",
+      "tags": ["governance", "proof-fabric", "proof-room", "verification", "ai-governance"],
+      "license": "MIT",
+      "homepage": "https://www.strixgov.com",
+      "author": {
+        "name": "Strix",
+        "email": "hello@strixgov.com"
+      }
+    }
+  ]
+}

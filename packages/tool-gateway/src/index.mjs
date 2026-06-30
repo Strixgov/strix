@@ -77,6 +77,9 @@ export {
   saveCapabilityRegistry,
   loadCapabilityRegistry,
   watchCapabilityRegistry,
+  loadCompanionPackManifest,
+  CompanionManifestError,
+  COMPANION_MANIFEST_ERROR,
   REGISTRY_SCHEMA_VERSION,
   DEFAULT_REGISTRY_PATH,
 } from "./registry.mjs";

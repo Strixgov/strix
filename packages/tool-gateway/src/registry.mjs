@@ -253,3 +253,148 @@ export async function watchCapabilityRegistry(args) {
 }
 
 export { DEFAULT_REGISTRY_PATH };
+
+// ─── Companion-pack manifest loading (fail-closed) ────────────────────────────
+
+/**
+ * Typed reason codes for companion-pack manifest failures.
+ * All five codes map to distinct throw paths inside loadCompanionPackManifest.
+ */
+export const COMPANION_MANIFEST_ERROR = Object.freeze({
+  /** Manifest file does not exist at the given path. */
+  NOT_FOUND: "COMPANION_MANIFEST_NOT_FOUND",
+  /** Manifest is present but carries no signature (missing signingKeyId or signature field). */
+  UNSIGNED: "COMPANION_MANIFEST_UNSIGNED",
+  /** schemaVersion is present but not in SUPPORTED_REGISTRY_VERSIONS. */
+  SCHEMA_UNKNOWN: "COMPANION_MANIFEST_SCHEMA_UNKNOWN",
+  /** signingKeyId is not in the caller's keyring — unknown or rotated key. */
+  KID_UNKNOWN: "COMPANION_MANIFEST_KID_UNKNOWN",
+  /** Signature is present and kid is known but the signature does not verify. */
+  SIG_INVALID: "COMPANION_MANIFEST_SIG_INVALID",
+});
+
+/**
+ * Typed error for companion-pack manifest failures.
+ * `err.code` is one of the `COMPANION_MANIFEST_ERROR` values.
+ */
+export class CompanionManifestError extends Error {
+  /**
+   * @param {string} code — one of COMPANION_MANIFEST_ERROR values
+   * @param {string} message
+   */
+  constructor(code, message) {
+    super(message);
+    this.name = "CompanionManifestError";
+    this.code = code;
+  }
+}
+
+/**
+ * Load and cryptographically verify a companion-pack manifest (fail-closed).
+ *
+ * Unlike `loadCapabilityRegistry` (which defaults to a well-known path and
+ * surfaces generic errors), this function is purpose-built for the companion-
+ * pack surface: it ALWAYS requires an explicit `path`, uses typed error codes
+ * for each distinct failure class, and has no watch variant.
+ *
+ * Throws `CompanionManifestError` with a `code` from `COMPANION_MANIFEST_ERROR`
+ * for every possible failure — callers MUST NOT consume capabilities from a
+ * manifest that throws.
+ *
+ * @param {{
+ *   path: string,
+ *   resolvePublicKey: (kid: string) => import("node:crypto").KeyObject | null,
+ * }} args
+ * @returns {Promise<{ schemaVersion: string, capabilities: object[], updatedAt: string, signingKeyId: string, signature: string }>}
+ */
+export async function loadCompanionPackManifest(args) {
+  if (!args || typeof args.path !== "string" || !args.path) {
+    throw new CompanionManifestError(
+      COMPANION_MANIFEST_ERROR.NOT_FOUND,
+      "loadCompanionPackManifest: path is required",
+    );
+  }
+
+  // ── Step 1: read file (ENOENT → NOT_FOUND) ────────────────────────
+  let raw;
+  try {
+    raw = await fs.readFile(args.path, "utf8");
+  } catch (err) {
+    if (err && err.code === "ENOENT") {
+      throw new CompanionManifestError(
+        COMPANION_MANIFEST_ERROR.NOT_FOUND,
+        `loadCompanionPackManifest: manifest not found at ${args.path}`,
+      );
+    }
+    throw err;
+  }
+
+  // ── Step 2: parse JSON (invalid JSON → UNSIGNED, not SCHEMA_UNKNOWN) ─
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new CompanionManifestError(
+      COMPANION_MANIFEST_ERROR.UNSIGNED,
+      "loadCompanionPackManifest: manifest is not valid JSON",
+    );
+  }
+
+  // ── Step 3: schema version ─────────────────────────────────────────
+  if (!SUPPORTED_REGISTRY_VERSIONS.has(parsed.schemaVersion)) {
+    throw new CompanionManifestError(
+      COMPANION_MANIFEST_ERROR.SCHEMA_UNKNOWN,
+      `loadCompanionPackManifest: unsupported schemaVersion '${parsed.schemaVersion}'`,
+    );
+  }
+
+  // ── Step 4: signature fields present (UNSIGNED) ────────────────────
+  if (typeof parsed.signingKeyId !== "string" || !parsed.signingKeyId) {
+    throw new CompanionManifestError(
+      COMPANION_MANIFEST_ERROR.UNSIGNED,
+      "loadCompanionPackManifest: manifest is unsigned (missing signingKeyId)",
+    );
+  }
+  if (typeof parsed.signature !== "string" || !parsed.signature) {
+    throw new CompanionManifestError(
+      COMPANION_MANIFEST_ERROR.UNSIGNED,
+      "loadCompanionPackManifest: manifest is unsigned (missing signature)",
+    );
+  }
+
+  // ── Step 5: resolve public key (KID_UNKNOWN) ───────────────────────
+  const publicKey = args.resolvePublicKey(parsed.signingKeyId);
+  if (!publicKey) {
+    throw new CompanionManifestError(
+      COMPANION_MANIFEST_ERROR.KID_UNKNOWN,
+      `loadCompanionPackManifest: signing kid not in keyring: ${parsed.signingKeyId}`,
+    );
+  }
+
+  // ── Step 6: re-canonicalise + verify signature (SIG_INVALID) ──────
+  // Re-sort capabilities so a hand-reordered manifest with otherwise-valid
+  // signature still verifies if the operator only reshuffled keys. A real
+  // content edit breaks the hash.
+  const capabilities = normaliseCapabilities(parsed.capabilities);
+  const subset = {
+    schemaVersion: parsed.schemaVersion,
+    capabilities,
+    updatedAt: parsed.updatedAt,
+    signingKeyId: parsed.signingKeyId,
+  };
+  const payload = canonicalManifestPayload(subset);
+  const sigOk = crypto.verify(
+    null,
+    Buffer.from(payload, "utf8"),
+    publicKey,
+    Buffer.from(parsed.signature, "base64url"),
+  );
+  if (!sigOk) {
+    throw new CompanionManifestError(
+      COMPANION_MANIFEST_ERROR.SIG_INVALID,
+      "loadCompanionPackManifest: signature does not verify — manifest may be tampered",
+    );
+  }
+
+  return { ...parsed, capabilities };
+}
