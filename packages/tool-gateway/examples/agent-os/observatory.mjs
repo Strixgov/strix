@@ -6,12 +6,10 @@
  * the refund vs the gateway arm denying it, plus the signed receipt chain with
  * each receipt's verify verdict. Open it in any browser.
  *
- * This is the demo-local, dependency-free visual. The receipt → observatory-
- * event adapter now also exists in the console
- * (apps/strix-console/src/lib/swarm/tool-gateway-to-observatory.ts), so the same
- * receipt chain can render through the live Observatory client. The only piece
- * left is the SSE route + how a local agent's chain crosses into the hosted
- * surface (a trust-boundary decision, not more adapter code).
+ * This is the demo-local, dependency-free visual. Wiring these receipts into
+ * the live Swarm Observatory surface (apps/strix-console .../proof/swarm/
+ * observatory) needs a tool-gateway-receipt → observatory-event adapter — that
+ * is the genuine remaining integration, noted but out of scope for v1.
  */
 
 import { writeFileSync } from "node:fs";
@@ -69,8 +67,7 @@ export function writeObservatory({ outPath, armA, armBReceipts, armBVerify }) {
   </div>
 </div>
 <p class="note">Modeled side effects only. Proves authorization + signed decision, not execution result.
-The receipt→event adapter for the live Swarm Observatory now exists in the console
-(apps/strix-console/src/lib/swarm/tool-gateway-to-observatory.ts); the SSE route + ingestion path is the remaining piece.</p>
+Wiring these receipts into the live Swarm Observatory needs a receipt→event adapter (out of scope for v1).</p>
 </body></html>`;
 
   writeFileSync(outPath, html);

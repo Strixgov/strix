@@ -20,20 +20,6 @@
         "name": "Strix",
         "email": "hello@strixgov.com"
       }
-    },
-    {
-      "name": "strix-proof-room",
-      "source": "./plugins/strix-proof-room",
-      "description": "Render a Strix Proof Room manifest into a self-verifying HTML page — live <strix-verify> embeds per record, claim binding (PROVEN/ROADMAP) enforced, no Strix account required.",
-      "version": "0.1.0",
-      "category": "security",
-      "tags": ["governance", "proof-fabric", "proof-room", "verification", "ai-governance"],
-      "license": "MIT",
-      "homepage": "https://www.strixgov.com",
-      "author": {
-        "name": "Strix",
-        "email": "hello@strixgov.com"
-      }
     }
   ]
 }

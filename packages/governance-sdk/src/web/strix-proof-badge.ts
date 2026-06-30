@@ -109,45 +109,19 @@ export async function verifyBundleClientSide(
  * caller supplies the `PlanResolver` (a public verify endpoint typically pins
  * the plan envelope's allowed-intents/cap so the client can re-check scope).
  */
-// Minimal structural views of the browser globals this component touches. The
-// package targets `lib: ["ES2022"]` (no DOM lib), so the DOM types are declared
-// narrowly here rather than pulled from `lib.dom`.
-interface BadgeElement {
-  getAttribute(name: string): string | null;
-  setAttribute(name: string, value: string): void;
-  textContent: string | null;
-}
-type BadgeElementCtor = new () => BadgeElement;
-interface BadgeBundleResponse {
-  record: unknown;
-  jwksByOrigin: Record<string, JwksDocument>;
-  boundEvidenceOccurredAt?: string | null;
-}
-interface BadgeGlobals {
-  customElements?: {
-    get(name: string): unknown;
-    define(name: string, ctor: BadgeElementCtor): void;
-  };
-  HTMLElement?: BadgeElementCtor;
-  fetch?: (input: string) => Promise<{ json(): Promise<BadgeBundleResponse> }>;
-}
-
 export function defineStrixProofBadge(planResolver: PlanResolver): void {
-  const g = globalThis as unknown as BadgeGlobals;
-  const Base = g.HTMLElement;
-  if (typeof g.customElements === "undefined" || typeof Base === "undefined" || typeof g.fetch === "undefined") return;
-  // Capture the narrowed (non-undefined) fetch so the nested closure keeps the type.
-  const fetchFn: (input: string) => Promise<{ json(): Promise<BadgeBundleResponse> }> = g.fetch;
+  const g = globalThis as any;
+  if (typeof g.customElements === "undefined" || typeof g.HTMLElement === "undefined") return;
   if (g.customElements.get("strix-proof-badge")) return;
 
-  class StrixProofBadge extends Base {
+  class StrixProofBadge extends g.HTMLElement {
     async connectedCallback(): Promise<void> {
       const evidenceId = this.getAttribute("evidence-id");
       const endpoint = this.getAttribute("endpoint");
       this.paint({ label: "Verifying…", state: "pending" });
       if (!evidenceId || !endpoint) return this.paint({ label: "Misconfigured", state: "invalid" });
       try {
-        const res = await fetchFn(`${endpoint}?evidenceId=${encodeURIComponent(evidenceId)}`);
+        const res = await g.fetch(`${endpoint}?evidenceId=${encodeURIComponent(evidenceId)}`);
         const { record, jwksByOrigin, boundEvidenceOccurredAt } = await res.json();
         const block = await verifyBundleClientSide(record, jwksByOrigin, planResolver, { boundEvidenceOccurredAt });
         this.paint(badgeView(block));
