@@ -10,8 +10,8 @@
  *
  * Claim discipline: the receipt is signed BEFORE the executor runs. It attests
  * the authorization decision and the bound invocation — NOT that the side
- * effect's result is correct. (Post-hoc execution result is CP-K-001's
- * execution_receipt, a separate artifact.)
+ * effect's result is correct. (Post-hoc execution result is a separate,
+ * independently signed execution_receipt artifact.)
  */
 
 import {

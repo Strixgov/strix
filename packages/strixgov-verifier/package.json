@@ -1,6 +1,6 @@
 {
   "name": "@strixgov/verifier",
-  "version": "1.11.0",
+  "version": "1.16.0",
   "description": "Public cryptographic verification primitive for Signed Evidence v1. Independent Ed25519 + JWKS verification of Strix governance evidence, approval artifacts, linked attestations, and tool-gateway receipts. Zero runtime dependencies. No Strix account, SDK, or API key required.",
   "license": "MIT",
   "bin": {

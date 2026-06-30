@@ -88,8 +88,8 @@ node examples/agent-os/run.mjs --observatory out.html  # write a visual of the i
 
 - The gateway signs the receipt **before** the executor runs. This proves the
   **authorization decision and the bound invocation** — **not** that the side
-  effect's result is correct. Post-hoc execution result is a separate artifact
-  (CP-K-001 `execution_receipt`).
+  effect's result is correct. Post-hoc execution result is a separate,
+  independently signed `execution_receipt` artifact.
 - Side effects are **modeled** — no real money, no real sends.
 - Verification here uses the package's exported `verifyReceipt` so the example
   runs with zero install. `npx @strixgov/verifier <receiptId>` is a

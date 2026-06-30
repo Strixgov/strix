@@ -18,7 +18,7 @@
     "euAiActArticle28": false
   },
   "sourceApp": "strix-verifier-public-release-example",
-  "signature": "n2YzPs6D7G4aPPqO0oTo7Xu2K0dVQ2b4UooHJ48QrJHC5_3_TG13ako7Aht6anZ18f4RTbyJv9DhKT_C1YmKDw",
+  "signature": "DI2J1qEQcMWXL_EqQ_LF3AwbnJ0MmNeMhnWJtCotoLRdf2ZM9SZfu1mZgCpqCRSd6Ia55i8eiw-7xKhdeOJ6Ag",
   "_meta": {
     "description": "Sample MUTATED-SIGNATURE record. Canonical payload unchanged from verified.json, but the first signature byte has one bit flipped. Demonstrates SIGNATURE_INVALID detection at the cryptographic layer.",
     "expectedStatus": "SIGNATURE_INVALID",

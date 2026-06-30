@@ -2,8 +2,12 @@
 
 This repository is the **public release surface** for the open-source
 pieces of [Strix](https://www.strixgov.com), an execution-control system
-for AI agents. Everything here is MIT-licensed, runs locally, and needs
-no Strix account.
+for AI agents. Everything here runs locally and needs no Strix account.
+The trust primitives — the verifier, the tool-gateway, and the capability
+packs — are **MIT-licensed**; the one MCP runtime adapter
+(`@strixgov/mcp-adapter`) is source-available under **Elastic License 2.0**
+(free to use, not to resell as a competing managed service). See
+[LICENSING_BOUNDARY.md](LICENSING_BOUNDARY.md).
 
 It is a mirror, not the source of truth — the canonical code lives
 upstream in the Strix monorepo and synchronizes here at release time.
@@ -107,4 +111,10 @@ cd packages/strixgov-verifier && npm test
 
 ## License
 
-MIT. See [LICENSE](LICENSE) and each package's own `LICENSE`.
+Two-tier, and frozen in CI (`scripts/lint-license-parity.mjs`). The open
+trust primitives — `@strixgov/verifier`, `@strixgov/tool-gateway`, and the
+two `@strixgov/capabilities-*` packs — are **MIT**; the MCP runtime adapter
+`@strixgov/mcp-adapter` is **Elastic License 2.0** (source-available; free
+to use, not to resell as a competing managed service). The repository root
+is MIT. Each package declares its own license — see [LICENSE](LICENSE), each
+package's own `LICENSE`, and [LICENSING_BOUNDARY.md](LICENSING_BOUNDARY.md).

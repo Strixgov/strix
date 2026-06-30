@@ -5,6 +5,143 @@ All notable changes to `@strixgov/verifier` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.0] — 2026-06-26
+
+### Fixed
+
+- **Case-insensitive kid resolution (issue #1306).** A historical signer-config
+  defect minted ~727 production records under an uppercase env segment in the
+  kid (`strix-PROD-2026-05`) while the JWKS endpoint only ever advertises the
+  canonical lowercase form (`strix-prod-2026-05`). The verifier's first-match
+  resolver returned zero candidates → "Key not found in JWKS" → `UNVERIFIABLE`
+  for every such record. `resolveJwksByKid` now falls back to a case-insensitive
+  kid match (between the exact match and the redacted-suffix branch), bringing
+  the verifier into parity with the runtime resolver
+  (`apps/strix-console/src/lib/signing.ts` `getPublicKeyJwks`), which already
+  matched case-insensitively. The kid casing never enters the signed canonical
+  payload — it only selects which public key to try — so this changes key
+  *selection* only; canonical bytes and signature checks are untouched. Exact
+  matches still take precedence, and kid collisions still return all candidates.
+
+### Added
+
+- `resolveJwksByKid` is now exported (pure helper) so the resolution contract is
+  directly testable. Regression coverage in `test/kid-case-insensitive.test.mjs`.
+
+## [1.15.0] — 2026-06-18
+
+### Added
+
+- **Independent rule-9 coverage for TM-1 (`trust_mark_grant_v1` 0.7.0).**
+  `verifyTrustMark` / `strix-verify trustmark` now re-derive coverage themselves
+  instead of echoing the server's advisory: they fetch the licensee heartbeat
+  from the grant's **signed** `surface_origin`, verify it against the grant's
+  **signed** `heartbeat_key`, and check freshness + policy-match against the two
+  newly **signed** comparands — `kernel_policy_hash` and `coverage_window_seconds`
+  (the grant payload grows 12 → 14 fields, contract 0.7.0). The verdict trusts
+  nothing but the Strix authority signature already checked at rules 1–8 plus the
+  licensee heartbeat-key custody. New export `resolveTrustMarkCoverageFromGrant`;
+  new `COVERAGE_STATUS` + `TRUST_MARK_WELL_KNOWN_HEARTBEAT_PATH`; new CLI flag
+  `--no-coverage` (grant-only / offline). The CLI prints the coverage line as
+  "independently re-derived" and **names the residual trust boundary** (a holder
+  of the licensee key can emit fresh heartbeats with a dead kernel — TEE
+  attestation is out of scope), never "trust nothing".
+- Conformance corpus regenerated to **21 vectors** (14-field payload; +2
+  construction negatives: invalid `kernel_policy_hash`, non-positive
+  `coverage_window_seconds`). New suite `test/trust-mark-coverage.test.mjs`
+  (independent resolver covered/not_covered/unavailable + 0.6.0↔0.7.0 schema
+  tolerance), all real Ed25519, no network.
+
+### Changed
+
+- **Transitional 0.6.0 ↔ 0.7.0 schema tolerance.** This verifier accepts a
+  14-field (0.7.0) grant AND the single pre-existing 12-field (legacy 0.6.0)
+  grant, so publishing 1.15.0 does not break the live badge in the window before
+  that grant is re-minted (publish-then-re-mint, the publish-then-flip
+  discipline). A legacy grant verifies rules 1–8 but has no signed comparands, so
+  its coverage stays **server-advisory** and the CLI says so (`coverageIndependent:
+  false`) — the honest interim state until re-mint. The comparand pair is
+  present-together (0.7.0) or absent-together (legacy); exactly one present, or a
+  malformed comparand, is a schema failure. This tolerance is removed at schema
+  freeze.
+
+## [1.14.0] — 2026-06-17
+
+### Changed
+
+- **TM-1 capability promoted RESERVED → ACTIVE (ADR-029 §6).**
+  `TM1_CAPABILITY_STATUS` is now `"ACTIVE"`, so `verifyTrustMarkGrant` /
+  `verifyTrustMark` / `strix-verify trustmark` treat TM-1 as active by default:
+  a fully-valid grant with fresh rule-9 coverage now reports **VERIFIED**
+  instead of `tm1_capability_not_active`. This is published in lockstep with the
+  runtime `STRIX_TRUST_MARK_V1` flip so the live badge and this independent
+  verifier agree — a badge reading GREEN while the published CLI reported
+  "not active" would be the exact overclaim the capability gate exists to
+  prevent. **Behavior change, not an API change:** the rule-4 fail-closed logic
+  is unchanged — it still fires for `capability_id !== "TM-1"` and when a caller
+  explicitly passes `capabilityActive: false`; ACTIVE is simply the new shipped
+  default. No signed bytes, canonical forms, signatures, or golden vectors
+  change (capability status is a verifier config, not part of the signed
+  payload — the corpus already verifies with `capabilityActive: true`).
+
+### Note
+
+- The cross-repo companion is the schema authority: `tarshann/solo-builder-core`
+  must promote TM-1 RESERVED → ACTIVE in its capability registry + corpus README
+  "Conformance contract" point 5, mirroring this release.
+
+## [1.13.0] — 2026-06-16
+
+### Added
+
+- **TM-1 rule 10 (revocation) — `trust_mark_revocation_list_v1`.** The
+  grant_id-keyed, authority-signed revocation surface (ADR-029 §8). New exports:
+  `buildTrustMarkRevocationPayload`, `signTrustMarkRevocationList`,
+  `parseTrustMarkRevocationList`, `verifyTrustMarkRevocationSignature`,
+  `resolveGrantRevocation` (tri-state, fail-closed: a missing/malformed/wrong-key
+  list → `unavailable`, never a silent `not_revoked`). Nested envelope
+  `{ payload, signature, kid }`, hex Ed25519 over SCJ v1 (the grant's encoding).
+- **`strix-verify trustmark --revocations <url>`** + automatic rule-10 check
+  against `…/api/public/proof/trustmark/revocations`. Opt-in: a 404 at the
+  default endpoint means "no source configured" (rule skipped); an explicit
+  `--revocations` that can't be fetched/verified is `tm1_revocation_check_unavailable`.
+  Locked by `test/trust-mark-revocation.test.mjs` (round-trip + tri-state +
+  rule-10 integration).
+
+### Note
+
+- `TM1_CAPABILITY_STATUS` stays `"RESERVED"` — promotion to ACTIVE (+ the
+  republish that makes the CLI read VERIFIED) is the separate ADR-029 §6 flip.
+
+## [1.12.0] — 2026-06-16
+
+### Added
+
+- **`strix-verify trustmark <grantId>` — independent Consumer Trust Mark (TM-1)
+  verification.** Fetches the published `trust_mark_grant_v1` grant from
+  `GET /api/public/proof/trustmark/<grantId>` and re-derives the verdict with the
+  verifier's OWN SCJ v1 canonicalization + Ed25519 check — zero shared code with
+  the producer. Cross-repo TS port of the schema authority
+  (`solo-builder-core` ADR-029): the 10 fixed-order rules
+  (`schema → signature → jwks_resolution → capability → mark_class →
+  surface_origin → heartbeat_key → validity_window → coverage → revocation`)
+  and the 16 `tm1_*` reason codes, with tri-state opt-in coverage (rule 9) and
+  revocation (rule 10) and the rule-6 grant/surface binding cross-checks. New
+  exports: `verifyTrustMarkGrant` (pure, offline), `verifyTrustMark`
+  (fetch-and-verify), `renderTrustMarkBlock`, `ed25519PublicKeyFromRawHex`,
+  `TM1_REASON`, `TM1_RULE`, `TM1_CAPABILITY_STATUS`.
+- **Conformance-locked to `vectors/trust_mark_grant_v1/`** (19-vector corpus):
+  every positive vector's `canonical_bytes_hex` is reproduced byte-for-byte,
+  every verify-time negative emits the named `failing_rule` + `reason`, and a
+  **real Ed25519 vector** (`pos-07`) is checked against the pinned public key
+  (`test/trust-mark-v1-golden-vectors.test.mjs`).
+
+### Note
+
+- **TM-1 is RESERVED.** `TM1_CAPABILITY_STATUS` ships `"RESERVED"`, so `trustmark`
+  honestly reports `tm1_capability_not_active` (rule 4) for every grant until the
+  ADR-029 §6 promotion — the mirror of the dormant `STRIX_TRUST_MARK_V1` runtime.
+
 ## [1.11.0] — 2026-06-07
 
 ### Added
