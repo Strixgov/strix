@@ -48,7 +48,7 @@ const DEFAULT_JWKS_BASE = "https://www.strixgov.com";
  *
  * Returns the matching JWK or null.
  */
-function resolveJwksByKid(kidOrRedacted, jwks) {
+export function resolveJwksByKid(kidOrRedacted, jwks) {
   // Return ALL JWKs matching the given kid (including redacted-form matches).
   // RFC 7517 declares kid a hint, not a unique index — and the Phase 2
   // closure scenario (Academy's retired key + strix-platform's active key
@@ -57,6 +57,23 @@ function resolveJwksByKid(kidOrRedacted, jwks) {
   // the other side and yields SIGNATURE_INVALID for half the records.
   const exact = (jwks.keys ?? []).filter((k) => k.kid === kidOrRedacted);
   if (exact.length > 0) return exact;
+
+  // Case-insensitive fallback. A kid is conventionally lowercase
+  // ("strix-{env}-{YYYY-MM}"), but a historical signer-config defect minted
+  // records under an uppercase env segment (strix-PROD-2026-05, issue #1306).
+  // The kid casing never enters the signed canonical payload — it only selects
+  // WHICH public key to try — so resolving strix-PROD-2026-05 against a JWKS
+  // that advertises "strix-prod-2026-05" tries the same key bytes and is
+  // signature-equivalent. This mirrors the runtime resolver
+  // (apps/strix-console/src/lib/signing.ts getPublicKeyJwks), which already
+  // matches kids case-insensitively. NOT applied to the redacted-suffix branch:
+  // a redacted kid only ever derives from a real one, and the YYYY-MM digits
+  // carry no case.
+  const lower = kidOrRedacted.toLowerCase();
+  const ci = (jwks.keys ?? []).filter(
+    (k) => typeof k.kid === "string" && k.kid.toLowerCase() === lower,
+  );
+  if (ci.length > 0) return ci;
 
   // Redacted form: strix-***-YYYY-MM. Match by suffix.
   const m = kidOrRedacted.match(/^strix-\*\*\*-(\d{4}-\d{2})$/);
@@ -2286,3 +2303,32 @@ export async function verifySwarm(swarmRunId, opts = {}) {
     agreesWithServer: proof.verification_status ? proof.verification_status === overall : null,
   };
 }
+
+// ─── Consumer Trust Mark v1 (TM-1) ─────────────────────────────────────────
+// The trust_mark_grant_v1 verifier + CLI fetch + public block live in their
+// own module (port of solo-builder-core ADR-029 schema authority,
+// conformance-locked to vectors/trust_mark_grant_v1/). Re-exported here so the
+// published @strixgov/verifier surface and bin/verify.mjs resolve them. The
+// import inside trust-mark.mjs (scjCanonicalize, fetchPublicKeys) is a runtime
+// circular reference resolved by function hoisting — both are declared above.
+export {
+  verifyTrustMark,
+  verifyTrustMarkGrant,
+  renderTrustMarkBlock,
+  resolveTrustMarkCoverageFromGrant,
+  ed25519PublicKeyFromRawHex,
+  TRUST_MARK_WELL_KNOWN_HEARTBEAT_PATH,
+  COVERAGE_STATUS,
+  TM1_REASON,
+  TM1_RULE,
+  TM1_CAPABILITY_STATUS,
+} from "./trust-mark.mjs";
+export {
+  buildTrustMarkRevocationPayload,
+  canonicalizeTrustMarkRevocation,
+  signTrustMarkRevocationList,
+  parseTrustMarkRevocationList,
+  verifyTrustMarkRevocationSignature,
+  resolveGrantRevocation,
+  TRUST_MARK_REVOCATION_SCHEMA_VERSION,
+} from "./trust-mark-revocation.mjs";
