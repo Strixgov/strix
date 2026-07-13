@@ -29,6 +29,7 @@ import {
   verifyCtInclusion,
   verifyCtConsistency,
   verifySwarm,
+  verifyTrustMark,
 } from "../src/index.mjs";
 
 /**
@@ -101,6 +102,7 @@ Usage:
   strix-verify ct inclusion <evidenceHash> [--ct-base <url>] [--proof <file>]
   strix-verify ct consistency <sth1.json> <sth2.json> [--ct-base <url>] [--proof <file>]
   strix-verify swarm <swarmRunId> [--base <url>] [--proof <file>] [--json]
+  strix-verify trustmark <grantId> [--proof-base <url>] [--jwks-base <url>] [--revocations <url>] [--json]
 
 Options:
   --proof-base <url>      Base URL for proof API (default: https://www.strixgov.com)
@@ -530,6 +532,69 @@ if (args[0] === "approval" || args[0] === "quorum") {
     process.exit(ok ? 0 : 1);
   } catch (err) {
     console.error(`Fatal error: ${err.message}`);
+    process.exit(2);
+  }
+}
+
+// Consumer Trust Mark v1 — independent grant verification.
+// Fetches the published grant from GET /api/public/proof/trustmark/<grantId>
+// and re-derives rules 1–8 offline against the live Strix authority JWKS. Per
+// docs/architecture/consumer-trust-mark-v1.md (ADR-029). TM-1 is ACTIVE (the
+// §6 promotion), so a fully-valid grant + fresh coverage reports VERIFIED.
+// For a 0.7.0 grant (signed kernel_policy_hash + coverage_window_seconds) rule 9
+// (coverage) is ALSO re-derived here from the licensee heartbeat — trusting only
+// the authority signature + the licensee key custody. `--no-coverage` skips it.
+if (args[0] === "trustmark") {
+  const grantId = args[1];
+  if (!grantId) {
+    console.error("Missing grantId. Usage: strix-verify trustmark <grantId> [--proof-base <url>] [--jwks-base <url>] [--json]");
+    process.exit(2);
+  }
+  const opts = {};
+  let jsonOut = false;
+  for (let i = 2; i < args.length; i++) {
+    if (args[i] === "--proof-base" && args[i + 1]) opts.proofBase = args[++i];
+    else if (args[i] === "--jwks-base" && args[i + 1]) opts.jwksBase = args[++i];
+    else if (args[i] === "--revocations" && args[i + 1]) opts.revocationsUrl = args[++i];
+    else if (args[i] === "--no-coverage") opts.coverage = false;
+    else if (args[i] === "--json") jsonOut = true;
+  }
+
+  try {
+    const r = await verifyTrustMark(grantId, opts);
+    if (jsonOut) {
+      console.log(JSON.stringify(r, null, 2));
+    } else {
+      console.log();
+      console.log(`@strixgov/verifier — Consumer Trust Mark (TM-1) ${grantId}`);
+      console.log("─".repeat(64));
+      if (r.error) {
+        console.log(`  Error:             ${r.error}`);
+      } else {
+        console.log(`  Licensee:          ${r.licenseeId ?? "—"}`);
+        console.log(`  Mark class:        ${r.markClass ?? "—"}`);
+        console.log(`  Surface origin:    ${r.surfaceOrigin ?? "—"}`);
+        console.log(`  Capability active: ${r.capabilityActive}${r.capabilityActive ? "" : "  (TM-1 not ACTIVE)"}`);
+        console.log(`  Grant verified:    ${r.valid}  (rules 1–8: schema · signature · capability · mark_class · surface_origin · heartbeat_key · validity_window)`);
+        if (!r.valid && r.reason) console.log(`  Reason:            ${r.reason}`);
+        if (r.coverageIndependent) {
+          // Rule 9 re-derived here from the grant's signed comparands + the licensee
+          // heartbeat — trusting only the authority signature + the licensee key custody.
+          console.log(`  Coverage (rule 9): ${r.coverageStatus}${r.coverageReason ? `  (${r.coverageReason})` : ""}  — independently re-derived`);
+          console.log(`                     trusting the grant's authority signature + the licensee heartbeat-key custody`);
+          console.log(`                     (a holder of that key can emit fresh heartbeats with a dead kernel — TEE attestation is out of scope)`);
+        } else if (r.serverReported) {
+          console.log(`  Coverage (rule 9): ${r.serverReported.coverage ?? "—"}  ·  badge ${r.serverReported.badge ?? "—"}  (server advisory — legacy 0.6.0 grant has no signed comparands; re-mint to 0.7.0 for independent coverage)`);
+        }
+        console.log(`  Revocation (r10):  ${r.revocationStatus ?? "not checked (no list source)"}`);
+        console.log(`  Status:            ${r.valid ? "VERIFIED" : "NOT VERIFIED"}`);
+      }
+      console.log();
+    }
+    if (r.error) process.exit(2);
+    process.exit(r.valid ? 0 : 1);
+  } catch (err) {
+    console.error(`strix-verify trustmark: ${err.message}`);
     process.exit(2);
   }
 }

@@ -217,6 +217,7 @@ were originally signed. The CLI also runs a similar (but distinct)
 | Tool-gateway receipts | `strix-verify receipt <file.json> --jwks <jwks.json>` | Offline (local file) |
 | Receipt chains | `strix-verify chain <file.jsonl> --jwks <jwks.json>` | Offline (local file) |
 | Visual Artifacts v1 (signed SVG cards) | `strix-verify visual <file.svg> [--jwks <jwks.json>]` | Offline / online (mixed) |
+| Agent Swarm v1 delegation graphs | `strix-verify swarm <swarmRunId> [--proof <file>] [--json]` | Online (proof API) / offline (`--proof`) |
 | Connected-mode wire envelopes | Programmatic: `verifyConnectedWireEnvelope(...)` | Inbound HTTP (server-side) |
 
 **Mode legend:**
@@ -250,6 +251,16 @@ strix-verify approval <approval-artifact-id>
 # decisionId is also a cuid string, identifying the underlying decision
 # whose approval chain you want to walk.
 strix-verify quorum <decision-id>
+
+# Online: independently verify an Agent Swarm v1 delegation graph.
+# Fetches GET /api/public/proof/swarm/<swarmRunId> and re-derives the swarm
+# integrity verdict with the verifier's OWN SCJ v1 canonicalization, Ed25519
+# edge-signature checks, and SW-2/SW-5 attenuation algebra (zero shared code
+# with @strixgov/sdk). Reports agreesWithServer.
+strix-verify swarm <swarm-run-id>
+
+# Offline: verify a swarm run from a saved proof JSON (no network)
+strix-verify swarm <swarm-run-id> --proof ./swarm-proof.json --json
 
 # Offline: verify a local tool-gateway receipt
 # `receipt.json` is produced by your local @strixgov/tool-gateway —
