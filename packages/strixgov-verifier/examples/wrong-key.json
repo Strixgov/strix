@@ -18,7 +18,7 @@
     "euAiActArticle28": false
   },
   "sourceApp": "strix-verifier-public-release-example",
-  "signature": "I5WjrN9Q5eTXdywOAHVaKIxlpG8qI9FiQz-4Uhk4pHqPs08Cys5peHx_WrrmoUr-DMeV76f8_CxfPV9XLnMlDw",
+  "signature": "KdEv398ahMwDfRHyFBvZXd9I2fZobP6CCie_hZTkyce1X1_ZXKiV0rShumr0jxBgx66J1BCRMqkNHJ0U9BpaBQ",
   "_meta": {
     "description": "Sample WRONG-KEY record: signingKeyId is 'strix-test-9999-12' which is not present in examples/test-jwks.json. Demonstrates SIGNING_KEY_UNKNOWN detection.",
     "expectedStatus": "SIGNING_KEY_UNKNOWN",

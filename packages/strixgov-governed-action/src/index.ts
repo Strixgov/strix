@@ -41,6 +41,16 @@ export {
   type CapabilityClassification,
 } from './capabilities.js';
 
+export {
+  isTraceOptionEnabled,
+  resolveRunId,
+  type TraceOption,
+  type TraceHistoryEvent,
+  type TraceSignalsWireSlot,
+} from './trace-history.js';
+
+import { recordAttemptAndBuildSlot, type TraceOption } from './trace-history.js';
+
 const DEFAULT_URL = 'https://www.strixgov.com';
 const EVALUATE_PATH = '/api/v1/evaluate';
 const EVIDENCE_PATH = '/api/v1/evidence/ingest';
@@ -186,6 +196,17 @@ export interface GovernedActionInput {
   tenantId?: string;
   strixUrl?: string;
   timeoutMs?: number;
+  /**
+   * Opt into Live Trace-Driven Revocation Phase-1 signal recording for this
+   * call: `true` uses every default (see trace-history.ts), or pass an
+   * object to override `runId` / `traceDir` / `maxEvents` / `declaredPairs`
+   * / `declaredBudgets` / `consumption`. Off by default; also enabled
+   * globally with `STRIX_TRACE_SIGNALS_SDK=true` (an explicit `trace: false`
+   * here always overrides that). Inert server-side unless the operator has
+   * separately enabled `STRIX_TRACE_SIGNALS_V1` — this only ever adds
+   * request-body content, never changes a verdict.
+   */
+  trace?: TraceOption;
 }
 
 export interface GovernedActionResult<T> {
@@ -238,13 +259,28 @@ export async function governedAction<T>(
   const headers = { Authorization: `Bearer ${apiKey}`, 'X-Tenant-Id': tenantId };
   const payloadHash = await sha256Hex(canonicalizeJSONScjV1Mirror(input.payload));
 
+  // Durable trace-signal participation (Live Trace-Driven Revocation, Phase
+  // 1 ADVISORY). Off by default; never throws; a null slot just means this
+  // call's evaluate() request carries no context.traceSignals field, exactly
+  // as if the feature did not exist. See trace-history.ts.
+  const traceSlot = await recordAttemptAndBuildSlot({
+    tenantId,
+    capabilityId: input.capabilityId,
+    payloadHash,
+    option: input.trace,
+  });
+
   // 1. Evaluate BEFORE running anything.
   const decision = await postJSON(
     `${base}${EVALUATE_PATH}`,
     {
       capabilityId: input.capabilityId,
       actor: { id: actor, role: 'operator' },
-      context: { payloadHash, source: 'governed-action' },
+      context: {
+        payloadHash,
+        source: 'governed-action',
+        ...(traceSlot !== null ? { traceSignals: traceSlot } : {}),
+      },
     },
     headers,
     timeout,

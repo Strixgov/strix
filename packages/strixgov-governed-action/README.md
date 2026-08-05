@@ -114,6 +114,31 @@ bound to a placeholder proves nothing.
 | `StrixUnreachable` | No |
 | your own error | Yes — recorded, then rethrown |
 
+## Trace-signal participation (optional)
+
+Every governed action can also feed Strix's trace-shape detectors (repeated
+calls, sequence patterns) with real, ongoing history instead of a one-off
+snapshot. Off by default — turn it on globally with one env var, or per call:
+
+```bash
+export STRIX_TRACE_SIGNALS_SDK=true   # every governedAction call opts in
+```
+
+```ts
+await governedAction(
+  { ...input, trace: true },          // or { runId, traceDir, maxEvents, ... }
+  operation,
+);
+```
+
+History for a run is durable (persisted under `.strix/trace/` by default, or
+`STRIX_TRACE_DIR`) so a CI job or long-running agent that restarts between
+calls keeps contributing to the same run instead of resetting it. This never
+changes a verdict and never blocks or fails your action — the server only
+acts on it if the operator has separately enabled trace-signal recording on
+their side, and any failure here (disk unavailable, corrupt state) silently
+degrades to sending nothing.
+
 ## Notes
 
 Canonicalization is imported from `@strixgov/sdk`, never re-implemented — one
