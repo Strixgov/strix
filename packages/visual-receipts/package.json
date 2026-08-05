@@ -1,0 +1,32 @@
+{
+  "name": "@strixgov/visual-receipts",
+  "version": "0.1.0",
+  "description": "Visual Receipts — the human-readable projection of a Strix verification result. Renders from signed evidence after verification; never the source of truth.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node --import tsx --test test/visual-receipts.test.ts test/slice2.test.ts test/emit.test.ts",
+    "dogfood": "node --import tsx --test test/dogfood-mc1.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.0"
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/visual-receipts"
+  },
+  "keywords": ["strix", "verification", "proof", "visual-receipt", "governance"]
+}

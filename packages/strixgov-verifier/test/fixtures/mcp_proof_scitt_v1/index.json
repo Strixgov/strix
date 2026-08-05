@@ -1,0 +1,50 @@
+{
+  "schema_version": "mcp_proof_scitt_v1",
+  "type": "Mc1ScittSignedStatement",
+  "status": "GOLDEN_CANDIDATE",
+  "description": "MC-1 → SCITT Signed Statement (COSE_Sign1) conformance corpus (E2). Every independent implementation MUST agree with `expected_status` on every vector. Bytes are locked via `cose_sha256`. Profile: application/mcp-proof-scitt+cose. Pre-ship: no public SCITT claim until IANA media-type registration + THREAT-MODEL §9 row.",
+  "test_key_only": true,
+  "vector_count": {
+    "positive": 1,
+    "negative": 3,
+    "total": 4
+  },
+  "vectors": [
+    {
+      "vector_id": "mcp1-scitt-pos-01-valid",
+      "category": "positive",
+      "description": "valid MC-1 SCITT Signed Statement (wrap encoding; capability_id as CWT sub feed)",
+      "relative_path": "positive/mcp1-scitt-pos-01-valid.json",
+      "expected_valid": true,
+      "expected_status": "VERIFIED",
+      "cose_sha256": "533a0f34bb818e4b4eb8ea14aa65b88fdfb6f02188d6a4ceeea2a71517b26c88"
+    },
+    {
+      "vector_id": "mcp1-scitt-neg-01-tampered-payload",
+      "category": "negative",
+      "description": "payload byte flipped after signing → signature no longer covers the bytes",
+      "relative_path": "negative/mcp1-scitt-neg-01-tampered-payload.json",
+      "expected_valid": false,
+      "expected_status": "SIGNATURE_INVALID",
+      "cose_sha256": "0fe7f8b70bec07672f1d8a0977900f611f8c55dbfa81139dc9059e45029011b6"
+    },
+    {
+      "vector_id": "mcp1-scitt-neg-02-bad-signature",
+      "category": "negative",
+      "description": "signature byte flipped",
+      "relative_path": "negative/mcp1-scitt-neg-02-bad-signature.json",
+      "expected_valid": false,
+      "expected_status": "SIGNATURE_INVALID",
+      "cose_sha256": "20ebc7828fa165424d66a1d42888d8a00c9029911cfd5923ac8cd3c15a6e1b3a"
+    },
+    {
+      "vector_id": "mcp1-scitt-neg-03-wrong-typ",
+      "category": "negative",
+      "description": "validly signed but protected-header typ is not the MC-1 SCITT profile → discriminator reject",
+      "relative_path": "negative/mcp1-scitt-neg-03-wrong-typ.json",
+      "expected_valid": false,
+      "expected_status": "WRONG_PROFILE",
+      "cose_sha256": "d4246ba03c35a774ad36dd4d8891ef33afa561522fd8194c4fffc2d76d9d7e8e"
+    }
+  ]
+}

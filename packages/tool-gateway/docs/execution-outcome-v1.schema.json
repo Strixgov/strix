@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.strixgov.com/schemas/execution-outcome-v1.schema.json",
+  "title": "Strix Signed Execution Outcome v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "outcomeId",
+    "authorizationReceiptId",
+    "authorizationProofChainHash",
+    "capabilityId",
+    "action",
+    "decision",
+    "executionAttempted",
+    "executionStatus",
+    "invocationHash",
+    "resultHash",
+    "errorCode",
+    "policyVersion",
+    "tenantId",
+    "environment",
+    "completedAt",
+    "signingKeyId",
+    "signatureAlgorithm",
+    "outcomeHash",
+    "signature"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1" },
+    "outcomeId": { "type": "string", "pattern": "^out_[A-Za-z0-9._-]+$" },
+    "authorizationReceiptId": { "type": "string", "minLength": 1 },
+    "authorizationProofChainHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "capabilityId": { "type": "string", "minLength": 1 },
+    "action": { "type": "string", "minLength": 1 },
+    "decision": { "const": "ALLOW" },
+    "executionAttempted": { "const": true },
+    "executionStatus": { "enum": ["SUCCEEDED", "FAILED", "UNKNOWN"] },
+    "invocationHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "resultHash": {
+      "type": "string",
+      "pattern": "^(|sha256:[0-9a-f]{64})$"
+    },
+    "errorCode": { "type": "string" },
+    "policyVersion": { "type": "string", "minLength": 1 },
+    "tenantId": { "type": "string", "minLength": 1 },
+    "environment": { "type": "string", "minLength": 1 },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "signingKeyId": { "type": "string", "minLength": 1 },
+    "signatureAlgorithm": { "const": "Ed25519" },
+    "outcomeHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "signature": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "executionStatus": { "const": "SUCCEEDED" } },
+        "required": ["executionStatus"]
+      },
+      "then": {
+        "properties": {
+          "resultHash": { "pattern": "^sha256:[0-9a-f]{64}$" },
+          "errorCode": { "const": "" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "executionStatus": { "const": "FAILED" } },
+        "required": ["executionStatus"]
+      },
+      "then": {
+        "properties": {
+          "resultHash": { "const": "" },
+          "errorCode": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "executionStatus": { "const": "UNKNOWN" } },
+        "required": ["executionStatus"]
+      },
+      "then": {
+        "properties": {
+          "resultHash": { "const": "" },
+          "errorCode": { "const": "" }
+        }
+      }
+    }
+  ]
+}

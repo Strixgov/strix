@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="168" height="20" role="img" aria-label="governed by: Strix">
+  <title>governed by: Strix</title>
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <clipPath id="r"><rect width="168" height="20" rx="3" fill="#fff"/></clipPath>
+  <g clip-path="url(#r)">
+    <rect width="83" height="20" fill="#0a0e14"/>
+    <rect x="83" width="85" height="20" fill="#3BB5C9"/>
+    <rect width="168" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+    <text x="42" y="15" fill="#010101" fill-opacity=".3">governed by</text>
+    <text x="42" y="14">governed by</text>
+    <text x="124" y="15" fill="#010101" fill-opacity=".3">Strix ✓</text>
+    <text x="124" y="14">Strix ✓</text>
+  </g>
+</svg>

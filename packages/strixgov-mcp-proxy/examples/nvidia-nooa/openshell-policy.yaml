@@ -1,0 +1,43 @@
+version: 1
+
+# Static controls. Paths not listed are inaccessible.
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /usr
+    - /lib
+    - /proc
+    - /dev/urandom
+    - /etc
+    - /app
+    - /var/log
+  read_write:
+    - /sandbox
+    - /tmp
+    - /dev/null
+
+landlock:
+  compatibility: best_effort
+
+process:
+  run_as_user: sandbox
+  run_as_group: sandbox
+
+# Dynamic network controls. The Python NOOA process receives no ordinary
+# outbound network permission here. A production deployment should route model
+# inference through OpenShell's configured inference provider. Only the Node
+# proxy process receives read-only GitHub API access in this example; mutating
+# methods remain blocked at OpenShell even if application policy is bypassed.
+network_policies:
+  strix_proxy_github_readonly:
+    name: strix-proxy-github-readonly
+    endpoints:
+      - host: api.github.com
+        port: 443
+        protocol: rest
+        tls: terminate
+        enforcement: enforce
+        access: read-only
+    binaries:
+      - path: /usr/bin/node
+      - path: /usr/local/bin/node

@@ -5,6 +5,239 @@ All notable changes to `@strixgov/verifier` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.22.0] — 2026-08-01
+
+### Added
+
+- **Complete verification contract on `verify()` and the default CLI output.**
+  The result previously carried three booleans and one status word — enough to
+  answer *did this pass?*, not enough to answer *why not?*. New fields, all
+  present on every result:
+
+  | Field | Meaning |
+  |---|---|
+  | `verificationReason` | Machine-readable code from `VERIFICATION_REASONS` (new export). |
+  | `verificationReasonText` | The registry's human sentence for that code. |
+  | `signatureAlgorithm` | `"Ed25519"` when a signature was actually checked, `null` when none was. |
+  | `schemaVersion` | The record's signed schema version. |
+  | `recordType` | `"signed_evidence_v1"` or `"legacy_unsigned"`. |
+  | `payloadSelfConsistent` | **Diagnostic only.** Whether `evidenceHash` happens to equal `sha256(canonical payload)`. For SE v1 this is normally `false` and that is correct — see "Not changed" below. `--json` only; never rendered as a check. |
+  | `chainReason` | Why `chainValid` is `null`, from `CHAIN_REASONS` (new export). |
+
+  `--json` already existed and now emits all of the above; the human-readable
+  output gained a Record block and prints the reason under the status.
+
+### Changed — behaviour
+
+- **An unresolvable signing key is now `UNVERIFIABLE`, not `ERROR`.** It was
+  previously indistinguishable from a network failure, and the CLI printed
+  *"the record may have been tampered with"* for it. An unknown kid means this
+  verifier was handed a JWKS without the key — the record may be entirely
+  valid against a JWKS it has never seen. Cannot-verify is not proven-wrong,
+  and reporting it as tampering is a false accusation. `UNVERIFIABLE` renders
+  amber, never red, matching the Proof Explorer's four-state vocabulary.
+
+  A non-Ed25519 candidate key is likewise `UNVERIFIABLE` /
+  `UNSUPPORTED_ALGORITHM` rather than a failed signature check, because no
+  signature check runs.
+
+- **`ERROR` now splits by reason:** `RECORD_NOT_FOUND` (the record does not
+  exist) versus `TRANSPORT_ERROR` (the endpoint was unreachable, so nothing is
+  established either way). `verificationStatus` stays `ERROR` for both.
+
+- **The CLI's failure text no longer says "may have been tampered with" for
+  every non-VERIFIED outcome.** A genuine `SIGNATURE_INVALID` now states what
+  actually happened: a key resolved and the signature did not verify.
+
+### Not changed
+
+- `hashValid` keeps its long-standing meaning. In SE v1 `evidenceHash` is a
+  field *inside* the signed canonical payload, authenticated by the signature —
+  it is **not** `sha256(signing envelope)`, and was never claimed to be. So the
+  arithmetic check (`payloadSelfConsistent`) is expected to be `false` on a
+  perfectly valid record, and is therefore reported as a `--json` diagnostic
+  rather than as a pass/fail line. Rendering it as a failed check beside a
+  `VERIFIED` status would train readers to distrust valid records.
+
+  In the human output, `Hash valid` now reads `not checked` when no signing key
+  resolved, rather than a red `false` — nothing was evaluated.
+- `chainValid` stays `null` for single-record verification, now with a reason.
+  Chain linkage is a property of a record *pair*; a `false` meaning "we did not
+  look" would be worse than the gap. Walk the chain with
+  `GET /api/public/verify/chain`.
+
+Tests: `test/verification-contract.test.mjs` — 10 cases over a real local HTTP
+server with real Ed25519 keys and real signatures, covering VERIFIED, tampered
+payload, unknown key, non-Ed25519 key, legacy unsigned, mixed legacy/signed,
+key rotation with and without retention, record-not-found, and transport error.
+
+## [1.21.0] — 2026-07-30
+
+### Added
+
+- **`strix-verify agent-session <bundle.json> [--jwks <path>]` — independent
+  governed-agent-session verification** (`src/agent-session.mjs` + exported
+  `verifyAgentSessionBundle`, `computeSessionRoot`). Verifies a hash-chained
+  `agent_navigation_evidence_v1` session sealed under a `run_commitment_v1`
+  of runKind `agent_session`, entirely offline: re-derives every event's
+  content address from the SCJ v1 canonical bytes of its payload, walks the
+  `previousEventHash` chain, re-derives the RFC 6962 Merkle root from the
+  presented events, and checks the commitment's Ed25519 signature. Detects
+  edited, removed, reordered, duplicated, and inserted events — including a
+  fully **re-chained** forgery in which every local check passes and only
+  the signed root disagrees.
+
+  **Zero shared code with the producer**
+  (`solo-builder-core/src/agent-navigation-evidence-v1.ts`): its own
+  SCJ-v1-compatible canonicalization, its own content addressing, its own
+  chain walk, and its own Merkle implementation. Agreement is a conformance
+  result, not a shared-code artifact — pinned by replaying the producer's
+  locked golden bundle in `test/agent-session.test.mjs` (26 tests).
+
+  Two honesty boundaries print on **every** verdict and are structurally
+  present on every result object:
+  - `completeness: "NOT_PROVEN"` — the verdict proves the presented events
+    are the ones sealed under the signed root, in that order, unedited. It
+    cannot prove the agent recorded everything it did.
+  - `provesReviewCorrectness: false` — findings travelling in the bundle are
+    a model's opinion. They are re-checked for **binding** only (does each
+    finding cite a screen the agent actually visited, with that screen's own
+    screenshot digest?) and reported separately in `findingsBinding`. A
+    bogus finding never changes the session verdict, and a clean findings
+    set never rescues a tampered session.
+
+  Without `--jwks` the verdict caps at `UNVERIFIABLE`, never `INVALID`
+  (NAV-7 — "cannot verify" is not "proven wrong"). Exit codes: `0`
+  VERIFIED, `1` INVALID, `2` usage/IO error, `3` UNVERIFIABLE. The exit
+  code is the worst of session integrity and finding binding.
+
+- `./agent-session` subpath export in `package.json`, and
+  `src/agent-session.mjs` + its test + golden fixture registered in
+  `scripts/sync-verifier-to-public-release.mjs` `MIRROR_FILES` (a subcommand
+  the public tree cannot resolve is not mirrored).
+
+### Notes
+
+- No change to any existing canonicalization, verdict, or reason code. The
+  producer-side addition of `agent_session` to `run_commitment_v1`'s
+  `RUN_KINDS` does not alter the canonical bytes of any existing commitment
+  (`runKind` is a string field), and the locked `run_commitment_v1` goldens
+  are unchanged and still pass.
+
+## [1.20.0] — 2026-07-22
+
+### Added
+
+- **`strix-verify disclosure <bundle.json> [--jwks <path>]` — independent
+  selective-disclosure bundle verification** (`src/disclosure.mjs` +
+  exported `verifyDisclosureBundle`). Verifies a `run_commitment_v1`
+  disclosure bundle offline: re-derives the RFC 6962 Merkle root from each
+  disclosed leaf + its inclusion path, checks the commitment's Ed25519
+  signature, and re-verifies SE v1-shaped disclosed records through this
+  package's own SE v1 path. **Zero shared code with the producer**
+  (`solo-builder-core/src/run-commitment-v1.ts`): its own
+  SCJ-v1-compatible canonicalization and its own Merkle walk, so agreement
+  is a cross-implementation conformance result, not a shared-library
+  tautology. Locked against the producer's golden vectors by
+  `test/disclosure.test.mjs`.
+  - **Honesty boundaries, structural.** Every result carries
+    `completeness: "NOT_PROVEN"` — a commitment root proves inclusion +
+    consistency of the presented slice, never that the slice is the whole
+    run. Without `--jwks` the verdict is capped at `UNVERIFIABLE`, never
+    `INVALID` (SD-5). Planted `verified` fields anywhere in the bundle are
+    ignored — validity is always re-derived (SD-4). The CLI prints the
+    completeness line and the no-JWKS cap on every run, and exits 0 only on
+    `VERIFIED` (3 on `UNVERIFIABLE`, 1 on `INVALID`).
+  - Part of the Verifiable Traces workstream (strix-platform
+    `docs/strategy/traces-as-control-surface-v1.md` +
+    `specs/selective-disclosure-traces-scope-v1.md`). The
+    selective-disclosure substrate is verified end-to-end over production
+    records; a public "share slices with counterparties" claim still gates
+    on a first real cross-party disclosure.
+
+## [1.19.1] — 2026-07-13
+
+### Fixed
+
+- **Defensive CBOR parsing in the MC-1 SCITT (COSE) verifier
+  (`src/mcp-scitt.mjs`).** The minimal CBOR reader silently coerced
+  out-of-bounds reads (`buf[off]` → `undefined` → `0`) on empty/truncated
+  input, so a malformed COSE message fell through to `NOT_COSE_SIGN1` instead of
+  the precise `MALFORMED_CBOR`. `decode` now bounds-checks up front and on every
+  length read (uint8/16/32, byte/text strings), so truncated input fails as
+  `MALFORMED_CBOR`. **No behavior change for valid or already-rejected inputs**
+  — the verifier was already fail-closed (never a false VERIFIED); this only
+  sharpens the reason code and hardens the parser against untrusted bytes.
+  Locked by `test/mcp-scitt-golden-vectors.test.mjs` (empty / lone-tag /
+  mid-message truncation → MALFORMED_CBOR). Found by a 360 hardiness review.
+
+## [1.19.0] — 2026-07-12
+
+### Added
+
+- **`strix-verify proof export <evidenceId>` — customer-facing offline bundle
+  export.** New CLI subcommand + exported `exportOfflineBundle(evidenceId,
+  options)` (`src/index.mjs`). Fetches
+  `GET /api/public/proof/bundle/<evidenceId>` (live since the 2026-07-10
+  trust-anchor go-live) and writes the bundle to disk
+  (`evidence_v1_<id>.bundle.json` by default, `-o <path>` to override,
+  `--json` to print to stdout instead of writing a file). Deliberately does
+  **not** verify — export and verify stay two separate commands, matching
+  every other proof surface in this CLI; the follow-up step is
+  `node scripts/verify-offline-bundle.mjs <file>` (strix-platform) or the
+  offline bundle verifier in `solo-builder-core`. Non-200 responses (501
+  pending-trust-anchor, 404 not_found, 422 record_unsigned /
+  operational_key_not_attested / signing_key_not_in_jwks) are forwarded with
+  their real structured reason — never a fabricated bundle. Closes the CLI
+  half of `docs/architecture/offline-proof-bundle-v1.md` §"Export surface"
+  (the Console "Download proof bundle" button is the remaining half). Tests:
+  `test/offline-bundle-export.test.mjs` (real local HTTP server, no mocking
+  library, same pattern as the CT verifier's E2E tests).
+
+## [1.18.0] — 2026-07-09
+
+### Added
+
+- **MC-1 → SCITT Signed Statement (COSE_Sign1) verifier (E2 profile).** New
+  zero-dep, verify-only path: `verifyMcpScittStatement(bytes, { resolveKey })`
+  plus `detectMcpProofForm(bytes)`, `MCP_SCITT_PROFILE`, `MCP_PROOF_CTY`,
+  `MCP_SCITT_REASONS` (`src/mcp-scitt.mjs`). Verifies a governed-tool-action
+  record encoded as a COSE_Sign1 with protected-header
+  `typ=application/mcp-proof-scitt+cose`, resolving the key through the caller's
+  single trust-root path. Locked by `test/mcp-scitt-golden-vectors.test.mjs`
+  against the byte-locked corpus `conformance/corpus/mcp_proof_scitt_v1/` — this
+  verifier is now a THIRD independent implementation over that corpus (agreeing
+  with the Node reference + the zero-shared-code Python impl).
+- **Gated:** verifying the format is a capability, not a claim. This package
+  makes **no** public "SCITT-conformant" claim — that remains gated on IANA
+  media-type registration + the THREAT-MODEL §9 row
+  (`docs/security/scitt-public-claim-gate.md`). Additive; no existing path
+  changed. (Re-versioned from the original 1.17.0 branch after `main` took
+  1.17.0 for the #1628 kid-union fix.)
+
+## [1.17.0] — 2026-07-09
+
+### Fixed
+
+- **Union exact + case-insensitive kid candidates (issue #1628).** The 1.16.0
+  case-insensitive resolution (issue #1306) still short-circuited on the first
+  *exact* kid match. A production JWKS misconfiguration exposed the gap: the
+  endpoint served a **wrong** key under the exact (uppercase `strix-PROD-2026-05`)
+  kid a cohort of records carried, AND the **correct** signer key under the
+  canonical lowercase kid. Because the exact match won and returned only the wrong
+  key, every record in that cohort verified as `SIGNATURE_INVALID` even though its
+  key was actually served. `resolveJwksByKid` now **unions** the exact matches
+  with the case-variant matches (exact preferred first, case-variants appended)
+  instead of returning early, so a wrong-but-exact entry can no longer shadow the
+  correct case-variant. RFC 7517 declares `kid` a hint, not a unique index, so
+  multiple candidates under one case-folded kid is expected; the verifier already
+  tries each candidate and accepts on the first that validates, and an extra
+  non-matching key is harmless. This changes key *selection* only — kid casing
+  never enters the signed canonical payload, so canonical bytes and signature
+  checks are untouched. The redacted-suffix branch is unchanged (YYYY-MM digits
+  carry no case). Regression coverage in `test/kid-case-insensitive.test.mjs`
+  (the "wrong-but-exact kid does NOT shadow the correct case-variant" case).
+
 ## [1.16.0] — 2026-06-26
 
 ### Fixed

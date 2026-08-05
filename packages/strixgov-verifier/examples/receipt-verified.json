@@ -13,7 +13,7 @@
   "evidenceHash": "9cdd9396ccdd9932404b0781cf6f5258868b63276a75cee02248a27964000347",
   "proofChainHash": "9bcb4b3e16c2f1c8d37fb663dd6b03383a2b83f0113a6e72d96cb642aa6b4975",
   "timestamp": "2026-05-20T12:00:01.000Z",
-  "signature": "TF_EkuxbaTKe-xntKYS9DAs3uAdpWqJnXOyvbd49BAFk-Ghh-wtymshbCKvwFSUtNuJ4KHdWieEbrwY0hRqJDw",
+  "signature": "D1syzmAnjcTfiwzXIenOimww5SEehKAgHn_Dr2SWDbbtFdSKsMpCJWMhb3Y9wQAwOIcFGlOOqJP8a2xy-yNqAw",
   "signingKeyId": "strix-test-2026-05",
   "_meta": {
     "description": "Sample VERIFIED tool-gateway receipt (schema v2). Genesis receipt; proofChainHash = sha256('0'*64 | evidenceHash). Demonstrates a clean offline receipt verification.",

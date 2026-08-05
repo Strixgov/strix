@@ -23,7 +23,29 @@ for how changes flow.
 | [`@strixgov/capabilities-claude-code`](packages/strixgov-capabilities-claude-code/) | Pre-classified capability registry for Claude Code's built-in tools. Drop-in starter for the tool-gateway. | [`@strixgov/capabilities-claude-code`](https://www.npmjs.com/package/@strixgov/capabilities-claude-code) |
 | [`@strixgov/capabilities-mcp-common`](packages/strixgov-capabilities-mcp-common/) | Pre-classified capability registry for popular MCP servers (Slack, GitHub, Linear, Notion, Filesystem, Postgres, Email). Drop-in starter for the tool-gateway. | [`@strixgov/capabilities-mcp-common`](https://www.npmjs.com/package/@strixgov/capabilities-mcp-common) |
 | [`@strixgov/mcp-adapter`](packages/strixgov-mcp-adapter/) | One-call governance wrapper for any MCP server. Wraps every `callTool` with policy evaluation, signed execution receipts, and an optional approval gate — five-line integration, no changes to your tool implementations. `npx @strixgov/mcp-adapter demo` shows the full round-trip in under 20 seconds. | [`@strixgov/mcp-adapter`](https://www.npmjs.com/package/@strixgov/mcp-adapter) |
-| [`@strixgov/rcm-reference`](packages/strixgov-rcm-reference/) | Canonical governed-agent **reference architecture** for healthcare revenue-cycle management. The same prior-auth agent runs the same task ungoverned vs. governed across six real-world failure modes, on a real X12 278 surface, synthetic data only. Dependency-free; `node --test`, no install. | reference (not published) |
+| [`@strixgov/mcp-proxy`](packages/strixgov-mcp-proxy/) | Standalone governed proxy that wraps any stdio MCP server — no code change to the server. Persistent signing key, configurable approval gate, and a signed receipt per tool call. | [`@strixgov/mcp-proxy`](https://www.npmjs.com/package/@strixgov/mcp-proxy) |
+| [`@strixgov/sdk`](packages/governance-sdk/) | The open proof surface: verifiers and signers for the signed-evidence schemas (SE v1, MC-1, AC-1, AA-1, swarm, proof bundles) plus JWKS resolution. Verification helpers only — policy decisions and token minting stay in the control plane. | [`@strixgov/sdk`](https://www.npmjs.com/package/@strixgov/sdk) |
+| [`@strixgov/governed-action`](packages/strixgov-governed-action/) | `governedAction()` wraps any async function and `governedFetch()` wraps an HTTP call, so an arbitrary REST mutation becomes a governed action with an `npm install`-and-go path. Canonicalization is imported from `@strixgov/sdk`, never re-implemented. | [`@strixgov/governed-action`](https://www.npmjs.com/package/@strixgov/governed-action) |
+| [`@strixgov/swarm-adapter`](packages/strixgov-swarm-adapter/) | Governance binding for in-process orchestration frameworks (LangGraph first): a signed `delegate()` and a `governedTool()` that routes through the real swarm boundary. Imports nothing from LangChain. | [`@strixgov/swarm-adapter`](https://www.npmjs.com/package/@strixgov/swarm-adapter) |
+| [`@strixgov/guard`](packages/strixgov-guard/) | The seatbelt for MCP agents — one command wraps your MCP servers with Strix governance: writes require human approval, reads pass, and every action produces a signed receipt. | [`@strixgov/guard`](https://www.npmjs.com/package/@strixgov/guard) |
+| [`@strixgov/mcp-token-validator`](packages/strixgov-mcp-token-validator/) | Independent validator for Strix `execution_authorization_v1` tokens. Drop into your own MCP server, proxy, or credential broker to enforce capability-scoped governance — no Strix runtime dependency, no network calls, Ed25519 against your trusted JWKS using only `node:crypto`. | [`@strixgov/mcp-token-validator`](https://www.npmjs.com/package/@strixgov/mcp-token-validator) |
+| [`@strixgov/rcm-reference`](packages/strixgov-rcm-reference/) | Canonical governed-agent **reference architecture** for healthcare revenue-cycle management. The same prior-auth agent runs the same task ungoverned vs. governed across six real-world failure modes, on a real X12 278 surface, synthetic patients only. Dependency-free ESM; `node --test`, no install. | [`@strixgov/rcm-reference`](https://www.npmjs.com/package/@strixgov/rcm-reference) |
+
+### Source-available here, not yet on npm
+
+These ship their full source and tests in this repo so they can be read and
+run, but they are **not published to the npm registry** — `npm install` will
+not resolve them yet. Listed so the set is complete rather than flattering.
+
+| Package | What it is |
+|---|---|
+| [`@strixgov/claude-code`](packages/strixgov-claude-code/) | Claude Code Governance Pack. `npx @strixgov/claude-code init` adds a PreToolUse hook that governs the tool-execution surfaces Claude Code exposes and emits signed decision receipts — no fork, no workflow change. |
+| [`@strixgov/verify-embed`](packages/strixgov-verify-embed/) | One-line `<strix-verify>` web component — a browser WebCrypto SE v1 verifier. One of three independent SE v1 implementations held in conformance against a shared golden-vector corpus. |
+| [`@strixgov/visual-receipts`](packages/visual-receipts/) | Human-readable projection of a verification result. Renders **from** signed evidence after verification; never the source of truth. |
+| [`@strixgov/trust-mark-embed`](packages/strixgov-trust-mark-embed/) | One-line `<strix-trust-mark>` web component rendering the four-state Consumer Trust Mark (TM-1) from a licensee's public status surface. Render-only — re-derive independently with `npx @strixgov/verifier trustmark`. |
+| [`@strixgov/capabilities-odysseus`](packages/strixgov-capabilities-odysseus/) | Pre-classified capability registry for the Odysseus self-hosted AI workspace (shell, files, email, web, scheduler, memory, secrets, MCP passthrough). |
+| [`@strixgov/mcp-credentials`](packages/strixgov-mcp-credentials/) | OS-keychain credential store for upstream MCP server tokens. Store once, never re-paste. |
+| [`@strixgov/healthcare-demo`](packages/strixgov-healthcare-demo/) | Healthcare governance demo surface. Synthetic data only. |
 
 Each package is self-contained under `packages/<name>/`, at the exact
 path its published `package.json` declares in `repository.directory`, so

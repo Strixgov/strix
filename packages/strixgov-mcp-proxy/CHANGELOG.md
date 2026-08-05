@@ -5,7 +5,91 @@ All notable changes to `@strixgov/mcp-proxy` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.6]
+## [Unreleased]
+
+## [0.2.0]
+
+Minor, not a patch: this release carries the already-merged shadow-discovery
+feature (below) to npm for the first time, alongside a dependency-range fix.
+Neither has shipped to npm before this release — `0.1.8` predates both.
+
+### Added
+- **Shadow discovery (GSD-1 Phase 4)** — `src/shadow-discovery.mjs`,
+  on by default (opt out with `shadowDiscovery: false`). The proxy
+  already sits on the live tool-call path; this module records what the
+  upstream actually advertises and what the agent actually calls, and
+  reports the delta against the classified capability set — the action
+  surfaces static discovery (source scanners, Semgrep pack) structurally
+  cannot see. Strictly observation: it never changes a verdict and never
+  touches the policy / approval / receipt pipeline. Output is a
+  `snapshot()` on the `startProxy` handle plus an append-only JSONL log
+  at `<storagePath>/shadow-discovery.jsonl`; every snapshot and log line
+  carries the mandatory `measurement` disclaimer (**unsigned
+  measurement, never proof**) and nothing receipt-shaped. New exports:
+  `createShadowDiscovery`, `SHADOW_LOG_BASENAME`,
+  `SHADOW_MEASUREMENT_DISCLAIMER`; new handle fields `shadowDiscovery`,
+  `shadowDiscoveryLogPath`. Program doc:
+  `solo-builder-core/docs/proposals/governed-surface-discovery-v1.md`.
+
+### Fixed
+- `dependencies["@strixgov/tool-gateway"]` was published (in `0.1.8`) as
+  `^0.4.1` — a hard, non-optional dependency, so a fresh `npm install
+  @strixgov/mcp-proxy` resolved the highest matching version, `0.4.1`,
+  never `0.5.0`. `0.5.0` fixed a real defect in `tool-gateway`'s
+  `terminalApprove()`: a non-interactive-session guard that could never
+  fire (`isTTY === false` — Node marks a real TTY `true` and leaves
+  everything else `undefined`, never `false`), so a headless approval
+  request fell through to writing a prompt banner onto `stdout`. For
+  this package specifically, `stdout` **is** the live MCP JSON-RPC
+  channel, so the stray banner corrupted the protocol stream a client
+  was mid-parse on. The in-repo dependency range was corrected to
+  `^0.5.0` when `tool-gateway@0.5.0` shipped, but this package was never
+  republished against it — every `npm install` of `0.1.8` (and, by the
+  same defect, of `0.1.5`–`0.1.7`) still pulled the buggy range. This
+  release is the republish; no other code changed for this fix.
+
+## [0.1.8]
+
+Republish of 0.1.7 with correct dependency specifiers — code is
+byte-identical. `0.1.7` was published with `npm publish`, which ships the
+monorepo's raw `workspace:^…` specifiers in the tarball's package.json;
+consumer installs (`npx -y @strixgov/mcp-proxy`) fail with
+`EUNSUPPORTEDPROTOCOL`. `pnpm publish` rewrites them to real semver at
+pack time (how 0.1.5/0.1.6 shipped correctly). 0.1.7 is deprecated on
+the registry.
+
+### Fixed
+- Published dependency specifiers (`@strixgov/mcp-adapter`,
+  `@strixgov/tool-gateway`, `@strixgov/capabilities-mcp-common`) resolve
+  again for consumers.
+
+### Added
+- `prepublishOnly` guard: publishing this package with npm now aborts
+  with instructions to use pnpm, so this defect class cannot ship again.
+
+## [0.1.7] — published 2026-07-06, DEPRECATED (broken consumer installs)
+
+Adds the webhook approval channel. No change to the receipt format or the
+signing flow. **Do not install this version** — see 0.1.8 above.
+
+(Version note: this feature was originally staged under 0.1.6, but
+`0.1.6` had already been published to npm on 2026-06-09 as the
+documentation + license-fidelity patch below — so the webhook channel
+ships as 0.1.7.)
+
+### Added
+- **`approval.type: "webhook"`** — Slack-compatible approval notifications
+  layered on the existing file approver (`src/webhook-approver.mjs`). Each
+  APPROVAL_REQUIRED call still writes the request file and awaits the
+  response file (timeout → DENY, unchanged); the webhook POSTs a
+  `{ text, strix }` payload telling a human what is blocked and how to
+  decide (`npx @strixgov/guard approve <requestId>`). Failure semantics are
+  load-bearing and tested: a failed notification never approves and never
+  auto-denies; a missing/invalid `webhookUrl` fails at startup, not at first
+  call. New config keys: `approval.webhookUrl` (required for the type),
+  `approval.requestDir`, `approval.pollIntervalMs`.
+
+## [0.1.6] — published 2026-06-09
 
 Documentation + license-fidelity patch. No functional change to the proxy,
 the receipt format, the signing flow, or any runtime behavior.

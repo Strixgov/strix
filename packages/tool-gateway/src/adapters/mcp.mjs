@@ -68,8 +68,28 @@ export function classifyMcpTool(tool) {
  * }} MinimalMcpClient
  */
 
+function unwrapMcpResult(name, result) {
+  if (!result.ok) {
+    const err = new Error(
+      `MCP tool '${name}' denied: ${result.error?.message ?? "policy denied"}`,
+    );
+    // @ts-expect-error attaching context
+    err.code = result.error?.code ?? "DENIED";
+    // @ts-expect-error
+    err.receipt = result.receipt;
+    // @ts-expect-error raw result is useful to outcome-aware wrappers
+    err.executeResult = result;
+    throw err;
+  }
+  return result.result;
+}
+
 /**
  * Wrap an MCP client so every callTool flows through the gateway.
+ *
+ * `executeTool` is the evidence-aware primitive: it returns the complete
+ * Gateway ExecuteResult, including the pre-execution authorization receipt.
+ * `callTool` remains the compatibility surface and unwraps/throws as before.
  *
  * @param {import("../gateway.mjs").Gateway} gateway
  * @param {MinimalMcpClient} client
@@ -126,32 +146,25 @@ export function governedMcpClient(gateway, client, opts = {}) {
     return tools;
   }
 
-  async function callTool(name, args) {
+  async function executeTool(name, args, callerCtx = {}) {
     const cap = await classifyAndRegister(name);
-    const result = await gateway.execute(
+    return gateway.execute(
       {
         capabilityId: cap.id,
         action: `mcp.callTool:${name}`,
         args,
-        actorId: opts.actorId,
-        actorRole: opts.actorRole,
+        actorId: callerCtx.actorId ?? opts.actorId,
+        actorRole: callerCtx.actorRole ?? opts.actorRole,
       },
-      () => client.callTool(name, args)
+      () => client.callTool(name, args),
     );
-    if (!result.ok) {
-      const err = new Error(
-        `MCP tool '${name}' denied: ${result.error?.message ?? "policy denied"}`
-      );
-      // @ts-expect-error attaching context
-      err.code = result.error?.code ?? "DENIED";
-      // @ts-expect-error
-      err.receipt = result.receipt;
-      throw err;
-    }
-    return result.result;
   }
 
-  return { listTools, callTool };
+  async function callTool(name, args, callerCtx = {}) {
+    return unwrapMcpResult(name, await executeTool(name, args, callerCtx));
+  }
+
+  return { listTools, callTool, executeTool };
 }
 
 /**
@@ -174,49 +187,47 @@ export function governedMcpServer(gateway, server, opts = {}) {
   const classify = opts.classify ?? classifyMcpTool;
   const overrides = opts.capabilityOverrides ?? {};
 
+  async function resolveCapability(name) {
+    const tools = await server.listTools();
+    const tool = tools.find((t) => t.name === name);
+    const baseCap = tool
+      ? classify({ ...tool, serverId })
+      : {
+          id: `mcp.${serverId}.${name}`,
+          name,
+          risk: "CRITICAL",
+          mode: "EXECUTE",
+          description: "Unknown MCP tool",
+        };
+    const cap = overrides[baseCap.id] ?? baseCap;
+    gateway.registerCapability(cap);
+    return cap;
+  }
+
+  async function executeTool(name, args, callerCtx = {}) {
+    const cap = await resolveCapability(name);
+    return gateway.execute(
+      {
+        capabilityId: cap.id,
+        action: `mcp.callTool:${name}`,
+        args,
+        actorId: callerCtx.actorId,
+        actorRole: callerCtx.actorRole,
+      },
+      () => server.handler(name, args),
+    );
+  }
+
   return {
     listTools: server.listTools,
+    executeTool,
     /**
      * @param {string} name
      * @param {unknown} args
      * @param {{ actorId?: string, actorRole?: string }} [callerCtx]
      */
     async callTool(name, args, callerCtx = {}) {
-      const tools = await server.listTools();
-      const tool = tools.find((t) => t.name === name);
-      const baseCap = tool
-        ? classify({ ...tool, serverId })
-        : {
-            id: `mcp.${serverId}.${name}`,
-            name,
-            risk: "CRITICAL",
-            mode: "EXECUTE",
-            description: "Unknown MCP tool",
-          };
-      const cap = overrides[baseCap.id] ?? baseCap;
-      gateway.registerCapability(cap);
-
-      const result = await gateway.execute(
-        {
-          capabilityId: cap.id,
-          action: `mcp.callTool:${name}`,
-          args,
-          actorId: callerCtx.actorId,
-          actorRole: callerCtx.actorRole,
-        },
-        () => server.handler(name, args)
-      );
-      if (!result.ok) {
-        const err = new Error(
-          `MCP tool '${name}' denied: ${result.error?.message ?? "policy denied"}`
-        );
-        // @ts-expect-error
-        err.code = result.error?.code ?? "DENIED";
-        // @ts-expect-error
-        err.receipt = result.receipt;
-        throw err;
-      }
-      return result.result;
+      return unwrapMcpResult(name, await executeTool(name, args, callerCtx));
     },
   };
 }

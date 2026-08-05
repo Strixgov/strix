@@ -1,0 +1,317 @@
+{
+  "$schema": "strix-loop-v1-conformance/1",
+  "description": "Governed Loop v1 conformance corpus. Signed by the solo-builder-core reference signer (signLoopIntent / signLoopIteration) with the fixed TEST-ONLY seed below; replayed by loop-verifier-conformance.test.mjs through verifyLoop, which re-implements the LP-9 hash chain and LP-7 worst-of terminal state with ZERO shared code. Regenerate with `node scripts/generate-loop-fixture.mjs` after any reference-signer change and review the diff.",
+  "publicJwk": {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "x": "BmeoCSD91sQnJIai6NbF8MNkVzwHbbZ0wpu1IzBMOoE",
+    "kid": "strix-dev-2026-07"
+  },
+  "signingKeySeedHex": "5354524958206c6f6f7020636f6e666f726d616e636520736565642076303031",
+  "signingKeyId": "strix-dev-2026-07",
+  "loopId": "loop_conf_0001",
+  "proofs": {
+    "chain3": {
+      "loopId": "loop_conf_0001",
+      "intent": {
+        "canonical": {
+          "payload": {
+            "schemaVersion": 1,
+            "loopId": "loop_conf_0001",
+            "tenantId": "tenant-acme",
+            "rootDecisionId": "dec_root_0001",
+            "ownerPrincipal": "user:founder",
+            "mission": "reconcile billing denials",
+            "successCriteria": "draft rate >= 0.9",
+            "capabilityCeiling": [
+              "rcm.denial.draft"
+            ],
+            "riskCeiling": "medium",
+            "scopeCeiling": {},
+            "environmentScope": [
+              "staging"
+            ],
+            "resourceBudgets": {
+              "iterations": 10
+            },
+            "maxIterations": 10,
+            "expiresAt": "2026-08-01T00:00:00Z",
+            "exitConditions": [],
+            "escalationPolicy": {
+              "notify": "oncall",
+              "requiresFreshDecision": true
+            },
+            "createdAt": "2026-07-12T00:00:00Z"
+          }
+        },
+        "signature": "rrY1hTdyZMBgSMLy31eBNj9d1p4eD0R7OXghMbqOpf39dXP4iMVaCHWbAscg2+Fhsj8lGdQO1JNodBkXzzPGCg==",
+        "signingKeyId": "strix-dev-2026-07"
+      },
+      "iterations": [
+        {
+          "canonical": {
+            "payload": {
+              "schemaVersion": 1,
+              "loopId": "loop_conf_0001",
+              "iterationIndex": 0,
+              "priorIterationHash": null,
+              "admissionVerdict": "ADMITTED",
+              "admissionReason": "ADMITTED",
+              "swarmRunId": "swarm_run_0",
+              "consumptionSnapshot": {
+                "actions": 0
+              },
+              "runTerminalState": "COMPLETED",
+              "verifierMetric": null,
+              "createdAt": "2026-07-12T00:00:00Z"
+            }
+          },
+          "signature": "+qiem9yu3CbEn7X9VFenlLphBWyyEmdYG2Y3fN9MytS2IQbtcEEH5qknQ7HObEzLXp2GrqSC+Dac2E5hGI2SBQ==",
+          "signingKeyId": "strix-dev-2026-07"
+        },
+        {
+          "canonical": {
+            "payload": {
+              "schemaVersion": 1,
+              "loopId": "loop_conf_0001",
+              "iterationIndex": 1,
+              "priorIterationHash": "sha256:8ebb9f6a4b2477aeb07b5a6af8aeef0b00ae1f10a57a9082318809a347281b76",
+              "admissionVerdict": "ADMITTED",
+              "admissionReason": "ADMITTED",
+              "swarmRunId": "swarm_run_1",
+              "consumptionSnapshot": {
+                "actions": 1
+              },
+              "runTerminalState": "COMPLETED",
+              "verifierMetric": null,
+              "createdAt": "2026-07-12T01:00:00Z"
+            }
+          },
+          "signature": "ejLc/o5f0GaooC7xjItRQ1Ru8SFk1alOfetkeddkaTSDOQQvxhLlqX94U3OQLc3TOUpHe2yzO8KW78y24T1/Dw==",
+          "signingKeyId": "strix-dev-2026-07"
+        },
+        {
+          "canonical": {
+            "payload": {
+              "schemaVersion": 1,
+              "loopId": "loop_conf_0001",
+              "iterationIndex": 2,
+              "priorIterationHash": "sha256:88884406a5efc11f5385370b38e52f41f20aff3924f0c79deaffe012674f9126",
+              "admissionVerdict": "ADMITTED",
+              "admissionReason": "ADMITTED",
+              "swarmRunId": "swarm_run_2",
+              "consumptionSnapshot": {
+                "actions": 2
+              },
+              "runTerminalState": "COMPLETED",
+              "verifierMetric": null,
+              "createdAt": "2026-07-12T02:00:00Z"
+            }
+          },
+          "signature": "pRKQSzPMn2hy/NoLB6AJF/YPgPbX5KFh+ONFV4vfE/b5coC5bhxfms3dn/s1d9VNB1WDbxP5IudxK7Ae2i+WAQ==",
+          "signingKeyId": "strix-dev-2026-07"
+        }
+      ]
+    },
+    "chain2": {
+      "loopId": "loop_conf_0001",
+      "intent": {
+        "canonical": {
+          "payload": {
+            "schemaVersion": 1,
+            "loopId": "loop_conf_0001",
+            "tenantId": "tenant-acme",
+            "rootDecisionId": "dec_root_0001",
+            "ownerPrincipal": "user:founder",
+            "mission": "reconcile billing denials",
+            "successCriteria": "draft rate >= 0.9",
+            "capabilityCeiling": [
+              "rcm.denial.draft"
+            ],
+            "riskCeiling": "medium",
+            "scopeCeiling": {},
+            "environmentScope": [
+              "staging"
+            ],
+            "resourceBudgets": {
+              "iterations": 10
+            },
+            "maxIterations": 10,
+            "expiresAt": "2026-08-01T00:00:00Z",
+            "exitConditions": [],
+            "escalationPolicy": {
+              "notify": "oncall",
+              "requiresFreshDecision": true
+            },
+            "createdAt": "2026-07-12T00:00:00Z"
+          }
+        },
+        "signature": "rrY1hTdyZMBgSMLy31eBNj9d1p4eD0R7OXghMbqOpf39dXP4iMVaCHWbAscg2+Fhsj8lGdQO1JNodBkXzzPGCg==",
+        "signingKeyId": "strix-dev-2026-07"
+      },
+      "iterations": [
+        {
+          "canonical": {
+            "payload": {
+              "schemaVersion": 1,
+              "loopId": "loop_conf_0001",
+              "iterationIndex": 0,
+              "priorIterationHash": null,
+              "admissionVerdict": "ADMITTED",
+              "admissionReason": "ADMITTED",
+              "swarmRunId": "swarm_run_0",
+              "consumptionSnapshot": {
+                "actions": 0
+              },
+              "runTerminalState": "COMPLETED",
+              "verifierMetric": null,
+              "createdAt": "2026-07-12T00:00:00Z"
+            }
+          },
+          "signature": "+qiem9yu3CbEn7X9VFenlLphBWyyEmdYG2Y3fN9MytS2IQbtcEEH5qknQ7HObEzLXp2GrqSC+Dac2E5hGI2SBQ==",
+          "signingKeyId": "strix-dev-2026-07"
+        },
+        {
+          "canonical": {
+            "payload": {
+              "schemaVersion": 1,
+              "loopId": "loop_conf_0001",
+              "iterationIndex": 1,
+              "priorIterationHash": "sha256:8ebb9f6a4b2477aeb07b5a6af8aeef0b00ae1f10a57a9082318809a347281b76",
+              "admissionVerdict": "ADMITTED",
+              "admissionReason": "ADMITTED",
+              "swarmRunId": "swarm_run_1",
+              "consumptionSnapshot": {
+                "actions": 1
+              },
+              "runTerminalState": "COMPLETED",
+              "verifierMetric": null,
+              "createdAt": "2026-07-12T01:00:00Z"
+            }
+          },
+          "signature": "ejLc/o5f0GaooC7xjItRQ1Ru8SFk1alOfetkeddkaTSDOQQvxhLlqX94U3OQLc3TOUpHe2yzO8KW78y24T1/Dw==",
+          "signingKeyId": "strix-dev-2026-07"
+        }
+      ]
+    },
+    "blockedBranch": {
+      "loopId": "loop_conf_0001",
+      "intent": {
+        "canonical": {
+          "payload": {
+            "schemaVersion": 1,
+            "loopId": "loop_conf_0001",
+            "tenantId": "tenant-acme",
+            "rootDecisionId": "dec_root_0001",
+            "ownerPrincipal": "user:founder",
+            "mission": "reconcile billing denials",
+            "successCriteria": "draft rate >= 0.9",
+            "capabilityCeiling": [
+              "rcm.denial.draft"
+            ],
+            "riskCeiling": "medium",
+            "scopeCeiling": {},
+            "environmentScope": [
+              "staging"
+            ],
+            "resourceBudgets": {
+              "iterations": 10
+            },
+            "maxIterations": 10,
+            "expiresAt": "2026-08-01T00:00:00Z",
+            "exitConditions": [],
+            "escalationPolicy": {
+              "notify": "oncall",
+              "requiresFreshDecision": true
+            },
+            "createdAt": "2026-07-12T00:00:00Z"
+          }
+        },
+        "signature": "rrY1hTdyZMBgSMLy31eBNj9d1p4eD0R7OXghMbqOpf39dXP4iMVaCHWbAscg2+Fhsj8lGdQO1JNodBkXzzPGCg==",
+        "signingKeyId": "strix-dev-2026-07"
+      },
+      "iterations": [
+        {
+          "canonical": {
+            "payload": {
+              "schemaVersion": 1,
+              "loopId": "loop_conf_0001",
+              "iterationIndex": 0,
+              "priorIterationHash": null,
+              "admissionVerdict": "ADMITTED",
+              "admissionReason": "ADMITTED",
+              "swarmRunId": "swarm_run_0",
+              "consumptionSnapshot": {
+                "actions": 0
+              },
+              "runTerminalState": "COMPLETED",
+              "verifierMetric": null,
+              "createdAt": "2026-07-12T00:00:00Z"
+            }
+          },
+          "signature": "+qiem9yu3CbEn7X9VFenlLphBWyyEmdYG2Y3fN9MytS2IQbtcEEH5qknQ7HObEzLXp2GrqSC+Dac2E5hGI2SBQ==",
+          "signingKeyId": "strix-dev-2026-07"
+        },
+        {
+          "canonical": {
+            "payload": {
+              "schemaVersion": 1,
+              "loopId": "loop_conf_0001",
+              "iterationIndex": 1,
+              "priorIterationHash": "sha256:8ebb9f6a4b2477aeb07b5a6af8aeef0b00ae1f10a57a9082318809a347281b76",
+              "admissionVerdict": "DENIED",
+              "admissionReason": "LOOP_CEILING_AMPLIFIED",
+              "swarmRunId": null,
+              "consumptionSnapshot": {
+                "actions": 1
+              },
+              "runTerminalState": null,
+              "verifierMetric": null,
+              "createdAt": "2026-07-12T01:00:00Z"
+            }
+          },
+          "signature": "MsAF/ZuGmhNfm+dW/XgOlwVoaFfn98r99Qd5uB9FgyXBk4VWO6eH5/2JYGGEsuTotSIUmfUMkSXUQbqpk9IoAg==",
+          "signingKeyId": "strix-dev-2026-07"
+        }
+      ]
+    },
+    "intentOnly": {
+      "loopId": "loop_conf_0001",
+      "intent": {
+        "canonical": {
+          "payload": {
+            "schemaVersion": 1,
+            "loopId": "loop_conf_0001",
+            "tenantId": "tenant-acme",
+            "rootDecisionId": "dec_root_0001",
+            "ownerPrincipal": "user:founder",
+            "mission": "reconcile billing denials",
+            "successCriteria": "draft rate >= 0.9",
+            "capabilityCeiling": [
+              "rcm.denial.draft"
+            ],
+            "riskCeiling": "medium",
+            "scopeCeiling": {},
+            "environmentScope": [
+              "staging"
+            ],
+            "resourceBudgets": {
+              "iterations": 10
+            },
+            "maxIterations": 10,
+            "expiresAt": "2026-08-01T00:00:00Z",
+            "exitConditions": [],
+            "escalationPolicy": {
+              "notify": "oncall",
+              "requiresFreshDecision": true
+            },
+            "createdAt": "2026-07-12T00:00:00Z"
+          }
+        },
+        "signature": "rrY1hTdyZMBgSMLy31eBNj9d1p4eD0R7OXghMbqOpf39dXP4iMVaCHWbAscg2+Fhsj8lGdQO1JNodBkXzzPGCg==",
+        "signingKeyId": "strix-dev-2026-07"
+      },
+      "iterations": []
+    }
+  }
+}

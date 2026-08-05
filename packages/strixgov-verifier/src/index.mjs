@@ -55,31 +55,45 @@ export function resolveJwksByKid(kidOrRedacted, jwks) {
   // both bound to "strix-prod-2026-05") produces a legitimate kid collision.
   // Verifiers must try each candidate; first-match resolution misses one or
   // the other side and yields SIGNATURE_INVALID for half the records.
-  const exact = (jwks.keys ?? []).filter((k) => k.kid === kidOrRedacted);
-  if (exact.length > 0) return exact;
+  const keys = jwks.keys ?? [];
 
-  // Case-insensitive fallback. A kid is conventionally lowercase
-  // ("strix-{env}-{YYYY-MM}"), but a historical signer-config defect minted
-  // records under an uppercase env segment (strix-PROD-2026-05, issue #1306).
-  // The kid casing never enters the signed canonical payload — it only selects
-  // WHICH public key to try — so resolving strix-PROD-2026-05 against a JWKS
-  // that advertises "strix-prod-2026-05" tries the same key bytes and is
-  // signature-equivalent. This mirrors the runtime resolver
-  // (apps/strix-console/src/lib/signing.ts getPublicKeyJwks), which already
-  // matches kids case-insensitively. NOT applied to the redacted-suffix branch:
-  // a redacted kid only ever derives from a real one, and the YYYY-MM digits
-  // carry no case.
-  const lower = kidOrRedacted.toLowerCase();
-  const ci = (jwks.keys ?? []).filter(
-    (k) => typeof k.kid === "string" && k.kid.toLowerCase() === lower,
-  );
-  if (ci.length > 0) return ci;
+  // UNION exact + case-insensitive candidates — do NOT short-circuit on the
+  // first exact match. A kid is conventionally lowercase ("strix-{env}-{YYYY-MM}"),
+  // but a historical signer-config defect minted records under an uppercase env
+  // segment (strix-PROD-2026-05, issue #1306). The kid casing never enters the
+  // signed canonical payload — it only selects WHICH public key to try — so a
+  // case-variant of the same kid is signature-equivalent. This mirrors the
+  // runtime resolver (apps/strix-console/src/lib/signing.ts getPublicKeyJwks),
+  // which already matches kids case-insensitively.
+  //
+  // WHY UNION, NOT "exact first, else case-insensitive" (v1.17.0, issue #1628):
+  // if a JWKS serves a WRONG key under the exact (e.g. uppercase) kid AND the
+  // CORRECT key under a case-variant, the old exact-then-fallback logic returned
+  // ONLY the wrong exact match and never tried the correct case-variant — the
+  // record failed even though its key was served. Unioning tries every
+  // candidate; the verifier accepts on the first that validates and an extra
+  // non-matching key is harmless. RFC 7517 declares kid a hint, not a unique
+  // index, so multiple candidates under one (case-folded) kid is expected.
+  const exact = keys.filter((k) => k.kid === kidOrRedacted);
+  const lower =
+    typeof kidOrRedacted === "string" ? kidOrRedacted.toLowerCase() : null;
+  const ciExtra = lower
+    ? keys.filter(
+        (k) =>
+          typeof k.kid === "string" &&
+          k.kid !== kidOrRedacted && // not already counted in `exact`
+          k.kid.toLowerCase() === lower,
+      )
+    : [];
+  const union = [...exact, ...ciExtra]; // exact preferred first, case-variants after
+  if (union.length > 0) return union;
 
-  // Redacted form: strix-***-YYYY-MM. Match by suffix.
+  // Redacted form: strix-***-YYYY-MM. Match by suffix. (The YYYY-MM digits carry
+  // no case, so no union is needed on this branch.)
   const m = kidOrRedacted.match(/^strix-\*\*\*-(\d{4}-\d{2})$/);
   if (!m) return [];
   const suffix = `-${m[1]}`;
-  return (jwks.keys ?? []).filter(
+  return keys.filter(
     (k) => typeof k.kid === "string" && k.kid.endsWith(suffix),
   );
 }
@@ -266,6 +280,62 @@ export async function fetchEvidence(evidenceId, proofBase = DEFAULT_PROOF_BASE) 
   return data.proof ?? data;
 }
 
+// ─── Offline Proof Bundle Export ───────────────────────────────────────────────
+//
+// Customer-facing half of docs/architecture/offline-proof-bundle-v1.md
+// §"Export surface" (the other half is the Console "Download proof bundle"
+// button). Fetches the already-live producer route
+// (apps/strix-console/src/app/api/public/proof/bundle/[evidenceId]/route.ts)
+// and returns its body verbatim — this function does NOT verify the bundle.
+// Verification is `node scripts/verify-offline-bundle.mjs` (a separate,
+// deliberately independent step, same discipline as "export" vs "verify"
+// staying two different commands everywhere else in this CLI).
+//
+// The route's own identifier is a plain evidenceId — PPI-1 (a dedicated
+// portable-proof-identity resolver, docs/architecture/portable-proof-identity-v1.md)
+// is still `planned` per the structural-invariants manifest, not built. The
+// architecture doc's `strix proof export <ppi> -o bundle.json` usage example
+// predates that distinction; today the evidenceId IS the portable identifier.
+
+/**
+ * Fetch an offline proof bundle from the public producer route. Returns the
+ * raw bundle body on success; on any non-200 response, returns the route's
+ * own structured error body (never fabricates one) so the caller can surface
+ * exactly why a bundle isn't available (501 pending_trust_anchor_setup, 404
+ * not_found, 422 record_unsigned / operational_key_not_attested / etc).
+ *
+ * @param {number|string} evidenceId
+ * @param {object} [options]
+ * @param {string} [options.proofBase]
+ * @returns {Promise<{ok: boolean, status: number, url: string, bundle?: object, error?: string, message?: string, [key: string]: unknown}>}
+ */
+export async function exportOfflineBundle(evidenceId, options = {}) {
+  const proofBase = options.proofBase ?? DEFAULT_PROOF_BASE;
+  const url = `${proofBase}/api/public/proof/bundle/${encodeURIComponent(String(evidenceId))}`;
+  const res = await fetchWithContext(url, { headers: { Accept: "application/json" } });
+
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    return {
+      ok: false,
+      status: res.status,
+      url,
+      error: "invalid_response",
+      message: `Response was not valid JSON (HTTP ${res.status}).`,
+    };
+  }
+
+  if (!res.ok) {
+    // body is already the route's structured error shape
+    // ({error, message, prerequisites?, ...}) — forward it as-is.
+    return { ok: false, status: res.status, url, ...body };
+  }
+
+  return { ok: true, status: res.status, url, bundle: body };
+}
+
 // ─── Canonical Payload ────────────────────────────────────────────────────────
 
 /**
@@ -430,7 +500,51 @@ export function verifyHash(canonicalPayload, expectedHash) {
 }
 
 /**
+ * Machine-readable reason codes for an SE v1 verification outcome. Stable
+ * public contract: codes are additive only — never renamed, never reused.
+ *
+ * `verificationStatus` answers "can I rely on this record?" in four words.
+ * `verificationReason` answers "why?" precisely enough to act on. The pair
+ * exists because collapsing them loses the distinction that matters most:
+ * SIGNING_KEY_UNKNOWN and SIGNATURE_INVALID are both "not VERIFIED", and
+ * only one of them means someone tampered with something.
+ */
+export const VERIFICATION_REASONS = Object.freeze({
+  SIGNATURE_VALID: "All required verification layers passed.",
+  LEGACY_UNSIGNED:
+    "Pre-Signed-Evidence-v1 record. No signature was ever produced; provenance cannot be established.",
+  SIGNATURE_ABSENT:
+    "The record claims to be signed but carries no signing key id, so no signature can be checked.",
+  SIGNING_KEY_UNKNOWN:
+    "The signing key id does not resolve in the presented JWKS. Cannot verify — this is NOT evidence of tampering.",
+  UNSUPPORTED_ALGORITHM:
+    "A candidate key is not Ed25519. Strix signs SE v1 exclusively with Ed25519; a non-Ed25519 key is never used to verify.",
+  SIGNATURE_INVALID:
+    "A signing key resolved, and the signature did not verify over the canonical payload. The record does not match what was signed.",
+  RECORD_NOT_FOUND: "No record with this identifier exists on the proof surface.",
+  TRANSPORT_ERROR:
+    "The proof or JWKS endpoint could not be reached. Nothing about the record's validity is established either way.",
+});
+
+/**
+ * Reasons `chainValid` is null. The proof-chain link is a property of a record
+ * PAIR; a single-record verification structurally cannot establish it, and
+ * reporting `false` for "we did not look" would be worse than the gap.
+ */
+export const CHAIN_REASONS = Object.freeze({
+  NOT_CHECKED_SINGLE_RECORD:
+    "Chain linkage is not evaluated by single-record verification. proofChainHash is authenticated as a signed field, but confirming it links to the true predecessor requires the predecessor. Walk the chain with GET /api/public/verify/chain.",
+  NOT_APPLICABLE_UNSIGNED:
+    "Record is unsigned, so its chain hash is not authenticated and linkage is not meaningful.",
+  ABSENT: "The record carries no proofChainHash.",
+});
+
+/** SE v1 record type marker surfaced on every result. */
+const RECORD_TYPE_SE_V1 = "signed_evidence_v1";
+
+/**
  * Full end-to-end verification of an evidence record.
+ *
  * @param {number|string} evidenceId
  * @param {object} [options]
  * @param {string} [options.proofBase]
@@ -443,40 +557,91 @@ export async function verify(evidenceId, options = {}) {
 
   const result = {
     evidenceId,
+    recordType: null,
+    schemaVersion: null,
     hashValid: false,
-    chainValid: null, // null = not checked (would need previous record)
+    /**
+     * DIAGNOSTIC ONLY — does the record's `evidenceHash` field happen to equal
+     * sha256(canonical payload)?
+     *
+     * For SE v1 the answer is normally **false, and that is correct**:
+     * `evidenceHash` addresses the underlying governance decision content and
+     * is a field INSIDE the signed payload, authenticated by the signature. It
+     * is not the digest of the signing envelope, and SE v1 never claimed it
+     * was. This is surfaced in `--json` for tooling that wants the datum, and
+     * deliberately NOT rendered as a pass/fail check in the human output —
+     * showing a red ✗ beside a VERIFIED record would train the reader to
+     * distrust valid records, which is a worse outcome than not reporting it.
+     *
+     * Never gate on this. `signatureValid` is the integrity gate.
+     */
+    payloadSelfConsistent: null,
+    chainValid: null,
+    chainReason: null,
     signaturePresent: false,
     signatureValid: false,
+    signatureAlgorithm: null,
     verificationStatus: "UNKNOWN",
+    verificationReason: null,
     record: null,
     error: null,
+  };
+
+  const settle = (status, reason) => {
+    result.verificationStatus = status;
+    result.verificationReason = reason;
+    result.verificationReasonText = VERIFICATION_REASONS[reason] ?? null;
+    return result;
   };
 
   try {
     // Step 1: Fetch the evidence record
     const record = await fetchEvidence(evidenceId, proofBase);
     result.record = record;
+    result.schemaVersion = record.schemaVersion ?? null;
 
     // Step 2: Check if signature is present
     result.signaturePresent = !!record.signature;
+    result.recordType = record.signature ? RECORD_TYPE_SE_V1 : "legacy_unsigned";
 
     if (!record.signature || !record.signingKeyId) {
-      result.verificationStatus = record.signature
-        ? "UNSIGNED"
-        : "LEGACY_UNSIGNED";
-      return result;
+      result.chainReason = CHAIN_REASONS.NOT_APPLICABLE_UNSIGNED;
+      return record.signature
+        ? settle("UNSIGNED", "SIGNATURE_ABSENT")
+        : settle("LEGACY_UNSIGNED", "LEGACY_UNSIGNED");
     }
+
+    result.chainReason = record.proofChainHash
+      ? CHAIN_REASONS.NOT_CHECKED_SINGLE_RECORD
+      : CHAIN_REASONS.ABSENT;
 
     // Step 3: Fetch all public keys matching the kid (kid collisions are
     // legitimate per RFC 7517; first-match resolution misses one side of
     // the Phase 2 closure scenario where Academy's retired key + strix-
     // platform's active key share kid "strix-prod-2026-05").
-    const publicKeys = await fetchPublicKeys(record.signingKeyId, jwksBase);
+    //
+    // An unresolvable kid is NOT a failed signature. It means this verifier
+    // was handed a JWKS that does not contain the key — the record may be
+    // perfectly valid against a JWKS it has never seen. Floor at UNVERIFIABLE,
+    // never INVALID (the SA-4 discipline: cannot verify != proven wrong).
+    let publicKeys;
+    try {
+      publicKeys = await fetchPublicKeys(record.signingKeyId, jwksBase);
+    } catch (err) {
+      if (/Key not found in JWKS/.test(err.message)) {
+        return settle("UNVERIFIABLE", "SIGNING_KEY_UNKNOWN");
+      }
+      if (/Unexpected key type/.test(err.message)) {
+        return settle("UNVERIFIABLE", "UNSUPPORTED_ALGORITHM");
+      }
+      throw err;
+    }
 
     // Step 4: Build canonical payload
     const canonical = buildCanonicalPayload(record);
 
     // Step 5: Verify against each candidate until one passes
+    result.signatureAlgorithm = "Ed25519";
     let signatureValid = false;
     for (const pk of publicKeys) {
       if (verifySignature(canonical, record.signature, pk)) {
@@ -486,26 +651,36 @@ export async function verify(evidenceId, options = {}) {
     }
     result.signatureValid = signatureValid;
 
-    // Step 6: Compute the canonical payload hash for transparency only.
-    // evidenceHash is the hash of the underlying governance decision content —
-    // it is a field INSIDE the canonical payload and is authenticated by the
-    // Ed25519 signature. SHA-256(signing_envelope) !== evidenceHash by design;
-    // the signature check is the sole integrity gate.
-    result.hashValid = result.signatureValid; // authenticated by signature
+    // Step 6: `hashValid` is retained at its long-standing meaning — the
+    // canonical payload's integrity, which in SE v1 is established by the
+    // signature and nothing else. `payloadSelfConsistent` is the genuinely
+    // independent check and is reported beside it.
+    result.hashValid = result.signatureValid;
+    result.payloadSelfConsistent = checkPayloadSelfConsistency(record, canonical);
 
-    // Determine status
-    if (result.signatureValid) {
-      result.verificationStatus = "VERIFIED";
-    } else {
-      result.verificationStatus = "COMPLIANCE_VIOLATION";
-    }
+    return signatureValid
+      ? settle("VERIFIED", "SIGNATURE_VALID")
+      : settle("COMPLIANCE_VIOLATION", "SIGNATURE_INVALID");
   } catch (err) {
     result.error = err.message;
-    result.verificationStatus = "ERROR";
     if (err?.url) result.attemptedUrl = err.url;
+    const notFound = /No record|not found|HTTP 404/i.test(err.message ?? "");
+    return settle("ERROR", notFound ? "RECORD_NOT_FOUND" : "TRANSPORT_ERROR");
   }
+}
 
-  return result;
+/**
+ * Re-derive sha256 over the canonical payload and compare to the record's own
+ * `evidenceHash`. Returns null when the record does not carry one.
+ *
+ * This is reported, never gating. In SE v1 `evidenceHash` addresses the
+ * underlying governance decision content, so it is not expected to equal
+ * sha256(signing envelope) — a mismatch here is informational, and the
+ * signature remains the sole integrity gate.
+ */
+function checkPayloadSelfConsistency(record, canonicalPayload) {
+  if (!record?.evidenceHash) return null;
+  return verifyHash(canonicalPayload, record.evidenceHash);
 }
 
 // =============================================================================
@@ -2304,6 +2479,206 @@ export async function verifySwarm(swarmRunId, opts = {}) {
   };
 }
 
+// ─── Governed Loop v1 — independent lifecycle-chain verification ──────────
+//
+// Contract: docs/architecture/governed-loop-v1.md (contractVersion 1.0.0).
+// Zero-shared-code with the producer (apps/strix-console/src/lib/loop/,
+// solo-builder-core/src/loop-*.ts): this re-derives the LP-9 hash chain and
+// the LP-7 worst-of terminal state from its OWN implementation using only
+// `scjCanonicalize` (this package's SCJ v1 mirror) + node:crypto — no
+// import from either producer.
+//
+// Expected proof shape (GET /api/public/proof/loop/<loopId>):
+//   {
+//     loopId, intent: { canonical: { payload }, signature, signingKeyId },
+//     iterations: [ { canonical: { payload }, signature, signingKeyId }, ... ],
+//     verification_status: "<server's own opinion, for the agreement check>"
+//   }
+//
+// Signature verification is OPTIONAL (--jwks <path>): without a JWKS, this
+// only proves chain INTEGRITY, and the verdict is capped at UNVERIFIABLE
+// (never VERIFIED) for that reason — mirrors the SA-4 discipline used
+// elsewhere in this codebase: "cannot verify" is never conflated with
+// "proven wrong". A broken chain is ALWAYS reported as INVALID regardless of
+// whether keys were supplied — a proven break outranks an unproven claim.
+
+/** Independent re-derivation of LP-9: dense/monotonic indices + hash-linked chain. */
+function loopVerifyChain(iterationPayloads) {
+  for (let i = 0; i < iterationPayloads.length; i++) {
+    const rec = iterationPayloads[i];
+    if (rec.iterationIndex !== i) {
+      return { ok: false, brokenAtIndex: i, reason: "LOOP_CHAIN_BROKEN" };
+    }
+    if (i === 0) {
+      if (rec.priorIterationHash !== null) {
+        return { ok: false, brokenAtIndex: 0, reason: "LOOP_CHAIN_BROKEN" };
+      }
+      continue;
+    }
+    // solo-builder-core's sha256OfJSON prefixes "sha256:" — match it exactly
+    // so this independent re-derivation compares like-for-like.
+    const priorHash =
+      "sha256:" +
+      crypto
+        .createHash("sha256")
+        .update(scjCanonicalize(iterationPayloads[i - 1]), "utf-8")
+        .digest("hex");
+    if (rec.priorIterationHash !== priorHash) {
+      return { ok: false, brokenAtIndex: i, reason: "LOOP_CHAIN_BROKEN" };
+    }
+  }
+  return { ok: true };
+}
+
+/** Governance-block denial reasons (a "blocked branch") vs. plain lifecycle denials. */
+const LOOP_BLOCK_REASONS = new Set([
+  "LOOP_CEILING_AMPLIFIED",
+  "LOOP_META_CAPABILITY_REFUSED",
+  "LOOP_BUDGET_EXHAUSTED",
+  "LOOP_CONSUMPTION_UNDECLARED",
+  "LOOP_ENV_OUT_OF_SCOPE",
+]);
+
+/**
+ * Independent re-derivation of LP-7: worst-of roll-up over the admitted
+ * iterations' run terminal states + the blocked-branch count. Mirrors
+ * computeLoopTerminalState's precedence exactly, written independently.
+ */
+function loopComputeTerminalState(iterationPayloads) {
+  const admitted = iterationPayloads.filter((r) => r.admissionVerdict === "ADMITTED");
+  const denied = iterationPayloads.filter((r) => r.admissionVerdict === "DENIED");
+  const blockedBranches = denied.filter((d) => LOOP_BLOCK_REASONS.has(d.admissionReason)).length;
+  const runStates = admitted.map((r) => r.runTerminalState).filter((s) => typeof s === "string");
+
+  if (runStates.includes("FAILED") || runStates.includes("CONTROL_UNAVAILABLE")) return "FAILED";
+  if (runStates.includes("VERIFICATION_FAILED")) return "VERIFICATION_FAILED";
+  const clean = new Set(["COMPLETED"]);
+  const blocked = new Set(["COMPLETED_WITH_BLOCKED_BRANCHES", "BUDGET_EXHAUSTED"]);
+  const unrecognized = runStates.filter((s) => !clean.has(s) && !blocked.has(s));
+  if (unrecognized.length > 0) return "VERIFICATION_FAILED";
+
+  const anyBlocked = blockedBranches > 0 || runStates.some((s) => blocked.has(s));
+  if (runStates.length > 0) return anyBlocked ? "COMPLETED_WITH_BLOCKED_BRANCHES" : "COMPLETED";
+  if (anyBlocked) return "COMPLETED_WITH_BLOCKED_BRANCHES";
+  return "NONE";
+}
+
+export async function verifyLoop(loopId, opts = {}) {
+  const base = opts.base ?? DEFAULT_JWKS_BASE;
+
+  let proof = opts.proof;
+  if (!proof) {
+    const url = `${base}/api/public/proof/loop/${encodeURIComponent(loopId)}`;
+    let res;
+    try {
+      res = await fetch(url, { cache: "no-cache", headers: { accept: "application/json" } });
+    } catch (err) {
+      return { verificationStatus: "ERROR", loopId, error: err.message };
+    }
+    if (res.status === 404) {
+      return { verificationStatus: "NOT_FOUND", loopId };
+    }
+    if (!res.ok) {
+      return { verificationStatus: "ERROR", loopId, error: `HTTP ${res.status}` };
+    }
+    proof = await res.json();
+  }
+
+  const intentPayload = proof.intent?.canonical?.payload ?? proof.intent;
+  if (!intentPayload || !intentPayload.loopId) {
+    return { verificationStatus: "ERROR", loopId, error: "malformed proof response (no intent)" };
+  }
+  const iterationEnvelopes = proof.iterations ?? [];
+  const iterationPayloads = iterationEnvelopes.map((it) => it.canonical?.payload ?? it);
+
+  if (iterationPayloads.length === 0) {
+    return {
+      verificationStatus: "LEGACY_UNSIGNED",
+      reason: "LOOP_NO_SIGNED_MATERIAL",
+      loopId: intentPayload.loopId,
+      counts: { iterations: 0, admitted: 0, denied: 0, blockedBranches: 0 },
+    };
+  }
+
+  const chain = loopVerifyChain(iterationPayloads);
+  const terminalState = chain.ok ? loopComputeTerminalState(iterationPayloads) : "VERIFICATION_FAILED";
+
+  const admitted = iterationPayloads.filter((r) => r.admissionVerdict === "ADMITTED");
+  const denied = iterationPayloads.filter((r) => r.admissionVerdict === "DENIED");
+  const blockedBranches = denied.filter((d) => LOOP_BLOCK_REASONS.has(d.admissionReason)).length;
+
+  // Optional signature verification. Without a JWKS, the verdict is capped
+  // at UNVERIFIABLE — never VERIFIED — because signatures were never checked.
+  let signaturesChecked = 0;
+  let signaturesValid = 0;
+  let signaturesAttempted = false;
+  if (opts.jwks) {
+    signaturesAttempted = true;
+    const check = (payload, signature, signingKeyId) => {
+      signaturesChecked++;
+      const jwk = resolveJwkFromKid(signingKeyId, opts.jwks);
+      if (!jwk) return false;
+      try {
+        const key = jwkToPublicKey(jwk);
+        const ok = crypto.verify(
+          null,
+          Buffer.from(scjCanonicalize(payload), "utf-8"),
+          key,
+          Buffer.from(signature, "base64"),
+        );
+        if (ok) signaturesValid++;
+        return ok;
+      } catch {
+        return false;
+      }
+    };
+    if (proof.intent?.signature) check(intentPayload, proof.intent.signature, proof.intent.signingKeyId);
+    for (let i = 0; i < iterationEnvelopes.length; i++) {
+      const env = iterationEnvelopes[i];
+      if (env?.signature) check(iterationPayloads[i], env.signature, env.signingKeyId);
+    }
+  }
+  const allSignaturesValid = signaturesAttempted && signaturesChecked > 0 && signaturesValid === signaturesChecked;
+
+  let overall;
+  let overallReason;
+  if (!chain.ok) {
+    overall = "INVALID";
+    overallReason = chain.reason;
+  } else if (signaturesAttempted && !allSignaturesValid) {
+    overall = "INVALID";
+    overallReason = "LOOP_SIGNATURE_INVALID";
+  } else if (!signaturesAttempted) {
+    // Chain integrity holds, but nothing was cryptographically verified —
+    // "cannot verify", never "invalid" (SA-4 discipline).
+    overall = "UNVERIFIABLE";
+    overallReason = "LOOP_SIGNATURES_NOT_CHECKED";
+  } else {
+    overall = "VERIFIED";
+    overallReason = "LOOP_VERIFIED";
+  }
+
+  return {
+    verificationStatus: overall,
+    reason: overallReason,
+    loopId: intentPayload.loopId,
+    chainOk: chain.ok,
+    terminalState,
+    counts: {
+      iterations: iterationPayloads.length,
+      admitted: admitted.length,
+      denied: denied.length,
+      blockedBranches,
+    },
+    signatures: signaturesAttempted
+      ? { checked: signaturesChecked, valid: signaturesValid }
+      : null,
+    // Agreement check: does our independent verdict match the server's?
+    serverStatus: proof.verification_status ?? null,
+    agreesWithServer: proof.verification_status ? proof.verification_status === overall : null,
+  };
+}
+
 // ─── Consumer Trust Mark v1 (TM-1) ─────────────────────────────────────────
 // The trust_mark_grant_v1 verifier + CLI fetch + public block live in their
 // own module (port of solo-builder-core ADR-029 schema authority,
@@ -2332,3 +2707,15 @@ export {
   resolveGrantRevocation,
   TRUST_MARK_REVOCATION_SCHEMA_VERSION,
 } from "./trust-mark-revocation.mjs";
+
+// MC-1 → SCITT Signed Statement (COSE_Sign1) verifier — E2 profile. Verify-only,
+// zero-dep, cross-validated against conformance/corpus/mcp_proof_scitt_v1/. This
+// is the code capability (gate step 4b); a public "SCITT-conformant" claim is
+// still gated on IANA registration + THREAT-MODEL §9 (scitt-public-claim-gate.md).
+export {
+  verifyMcpScittStatement,
+  detectMcpProofForm,
+  MCP_SCITT_PROFILE,
+  MCP_PROOF_CTY,
+  MCP_SCITT_REASONS,
+} from "./mcp-scitt.mjs";

@@ -18,7 +18,7 @@
     "strixgov-mcp-adapter": "./bin/demo.mjs"
   },
   "scripts": {
-    "test": "node --test test/*.test.mjs",
+    "test": "node scripts/preflight.mjs && node --test",
     "demo": "node bin/demo.mjs"
   },
   "dependencies": {
@@ -33,8 +33,8 @@
     }
   },
   "devDependencies": {
-    "@strixgov/tool-gateway": "0.4.1",
-    "@strixgov/capabilities-mcp-common": "0.1.1"
+    "@strixgov/tool-gateway": "0.5.0",
+    "@strixgov/capabilities-mcp-common": "0.1.2"
   },
   "keywords": [
     "strix",

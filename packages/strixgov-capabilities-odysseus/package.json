@@ -1,0 +1,86 @@
+{
+  "name": "@strixgov/capabilities-odysseus",
+  "version": "0.1.0",
+  "description": "Pre-classified capability registry for the Odysseus self-hosted AI workspace (shell, files, email, web, scheduler, memory, secrets, MCP passthrough). Drop-in starter for @strixgov/tool-gateway + @strixgov/mcp-proxy.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./src/types.d.ts",
+      "import": "./src/index.mjs"
+    },
+    "./shell": {
+      "types": "./src/types.d.ts",
+      "import": "./src/shell.mjs"
+    },
+    "./filesystem": {
+      "types": "./src/types.d.ts",
+      "import": "./src/filesystem.mjs"
+    },
+    "./email": {
+      "types": "./src/types.d.ts",
+      "import": "./src/email.mjs"
+    },
+    "./web": {
+      "types": "./src/types.d.ts",
+      "import": "./src/web.mjs"
+    },
+    "./schedule": {
+      "types": "./src/types.d.ts",
+      "import": "./src/schedule.mjs"
+    },
+    "./memory": {
+      "types": "./src/types.d.ts",
+      "import": "./src/memory.mjs"
+    },
+    "./secrets": {
+      "types": "./src/types.d.ts",
+      "import": "./src/secrets.mjs"
+    },
+    "./extensions": {
+      "types": "./src/types.d.ts",
+      "import": "./src/extensions.mjs"
+    }
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "peerDependencies": {
+    "@strixgov/tool-gateway": "^0.5.0"
+  },
+  "peerDependenciesMeta": {
+    "@strixgov/tool-gateway": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "strix",
+    "governance",
+    "ai-agents",
+    "odysseus",
+    "ai-workspace",
+    "mcp",
+    "shell",
+    "email",
+    "scheduler",
+    "capability-registry"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/strixgov-capabilities-odysseus"
+  }
+}

@@ -20,7 +20,15 @@ export interface ProxyOptions {
   approval?: {
     enabled?: boolean;
     prompt?: (cap: object, invocation: object, opts: object) => Promise<{ approved: boolean; approver?: string }>;
+    /** JSON-config approver selector: "terminal" | "file" | "webhook" | "auto". */
+    type?: "terminal" | "file" | "webhook" | "auto";
+    autoApprove?: boolean;
+    /** type "file" | "webhook": request/response directory (~ expanded). */
+    requestDir?: string;
+    /** type "webhook": Slack-compatible notification URL (http/https). Decision still flows via the response file. */
+    webhookUrl?: string;
     timeoutMs?: number;
+    pollIntervalMs?: number;
   };
   storagePath?: string;
   signingKey?: object;

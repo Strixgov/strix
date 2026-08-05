@@ -17,3 +17,8 @@
 
 export { startProxy } from "./proxy.mjs";
 export { loadConfig, resolveCapabilities } from "./config.mjs";
+export {
+  createShadowDiscovery,
+  SHADOW_LOG_BASENAME,
+  SHADOW_MEASUREMENT_DISCLAIMER,
+} from "./shadow-discovery.mjs";

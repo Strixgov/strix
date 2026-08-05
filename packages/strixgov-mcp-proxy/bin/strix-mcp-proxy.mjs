@@ -14,13 +14,7 @@
  *     --policy-default DENY \
  *     --risk-low ALLOW --risk-medium APPROVAL_REQUIRED
  *
- * The CLI is intentionally minimal — anything elaborate goes in the
- * config file. Operators wiring this into Claude Desktop, mcp-cli, or
- * an IDE integration just change their existing MCP command from
- * `<upstream>` to `strix-mcp-proxy --config <path>`.
- *
- * Audit events (proxy lifecycle + denied calls) print to stderr so the
- * MCP stdio channel on stdout stays clean for the protocol.
+ * Audit events print to stderr so the MCP stdio channel on stdout stays clean.
  */
 
 import { startProxy, loadConfig, resolveCapabilities } from "../src/index.mjs";
@@ -41,13 +35,20 @@ try {
   const handle = await startProxy({
     ...opts,
     onAudit: (event) => {
-      // stderr: doesn't collide with the MCP stdio protocol on stdout.
       console.error(`[strix-proxy] ${event.kind} ${JSON.stringify(event.detail)}`);
     },
     onReceipt: (r) => {
-      // One-line summary per receipt; full receipts persist via storagePath when set.
-      console.error(`[strix-proxy] receipt ${r.decision} ${r.capabilityId}`);
+      // This is the signed pre-invocation authorization receipt.
+      console.error(`[strix-proxy] authorization ${r.decision} ${r.capabilityId} ${r.receiptId}`);
     },
+  });
+
+  // Signed post-execution outcomes are separate artifacts. They are emitted
+  // only after an ALLOW path actually attempts the upstream call.
+  handle.gateway.on("outcome", (outcome) => {
+    console.error(
+      `[strix-proxy] outcome ${outcome.executionStatus} ${outcome.capabilityId} ${outcome.outcomeId}`,
+    );
   });
 
   const shutdown = async (signal) => {
@@ -61,8 +62,6 @@ try {
   console.error(`[strix-proxy] startup failed: ${err.message}`);
   process.exit(1);
 }
-
-// ─── arg parsing ────────────────────────────────────────────────────────────
 
 async function parseArgs(argv) {
   const flag = (name) => {
@@ -83,6 +82,7 @@ async function parseArgs(argv) {
     return {
       serverId: cfg.serverId,
       upstream: cfg.upstream,
+      upstreamCredentials: cfg.upstreamCredentials,
       capabilities: await resolveCapabilities(cfg.capabilities),
       policy: cfg.policy,
       approval: cfg.approval,
@@ -101,8 +101,8 @@ async function parseArgs(argv) {
   const policyDefault = flag("--policy-default") ?? "DENY";
   const riskOverrides = {};
   for (const level of ["LOW", "MEDIUM", "HIGH", "CRITICAL"]) {
-    const v = flag(`--risk-${level.toLowerCase()}`);
-    if (v) riskOverrides[level] = v;
+    const value = flag(`--risk-${level.toLowerCase()}`);
+    if (value) riskOverrides[level] = value;
   }
   const approvalEnabled = argv.includes("--approval-enabled");
   const storagePath = flag("--storage-path");
@@ -143,15 +143,22 @@ FLAG MODE
   --risk-high <D>           Override decision for HIGH-risk calls
   --risk-critical <D>       Override decision for CRITICAL-risk calls
   --approval-enabled        Enable the approval gate (requires custom prompt)
-  --storage-path <dir>      Persist receipts to JSONL at this directory
-                            (default: in-memory)
+  --storage-path <dir>      Persist authorization receipts and execution outcomes
+                            (default: ~/.strix-mcp-proxy/<serverId>)
+
+TRUSTED WORKLOAD IDENTITY
+  STRIX_TRUSTED_ACTOR_ID          Fixed authenticated workload identity
+  STRIX_TRUSTED_ACTOR_ROLE        Optional role bound to authorization receipts
+  STRIX_REQUIRE_TRUSTED_IDENTITY  Set true to reject client-only identity claims
+  STRIX_TENANT_ID                 Tenant bound into signed artifacts
+  STRIX_ENVIRONMENT               Environment bound into signed artifacts
 
 GENERAL
   --help, -h                Show this help
   --version, -v             Show proxy version
 
-The proxy speaks MCP over stdio toward its consumer. Configure your
-MCP-aware client (Claude Desktop, mcp-cli, etc.) to spawn this binary
-in place of the upstream MCP server you previously used directly.
+The proxy speaks MCP over stdio toward its consumer. NVIDIA OO Agents,
+Claude Desktop, mcp-cli, and other .mcp.json clients can spawn this binary
+in place of the upstream MCP server.
 `);
 }

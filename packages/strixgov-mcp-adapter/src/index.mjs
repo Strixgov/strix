@@ -3,48 +3,14 @@
  *
  * One-call governance for any MCP server.
  *
- * ## Quickstart
+ * The adapter emits two deliberately separate proof artifacts:
  *
- *   import { governMCPServer } from "@strixgov/mcp-adapter";
- *   import { githubCapabilities } from "@strixgov/capabilities-mcp-common/github";
+ *   1. authorization receipt — signed and persisted before invocation;
+ *   2. execution outcome — signed and persisted after the allowed invocation.
  *
- *   const governed = governMCPServer(myTools, {
- *     serverId: "github",
- *     capabilities: githubCapabilities,
- *     policy: {
- *       rules: {
- *         "mcp.github.merge_pull_request":  "APPROVAL_REQUIRED",
- *         "mcp.github.delete_repository":   "DENY",
- *         "mcp.github.get_file_contents":   "ALLOW",
- *       },
- *       default: "DENY",
- *     },
- *   });
- *
- *   // In your MCP request handler:
- *   const result = await governed.callTool(name, args, { actorId: "agent-1" });
- *
- * `myTools` is either:
- *   - A plain Record<string, async (args) => result> — your existing handlers, untouched
- *   - An object with { handler(name, args), listTools() } for full control
- *
- * ## What happens on every callTool
- *
- *   1. Capability is looked up (companion pack → heuristic fallback)
- *   2. PolicyEngine evaluates: ALLOW / DENY / APPROVAL_REQUIRED
- *   3. If APPROVAL_REQUIRED: approval gate fires (configurable)
- *   4. If ALLOW/approved: tool handler runs
- *   5. Signed execution receipt written to storage (local-first)
- *   6. If connectedMode: receipt synced to strixgov.com in the background
- *
- * Steps 1–5 complete before the tool handler runs. A denied tool never
- * executes and still leaves a signed receipt proving the attempt.
- *
- * ## Fail-closed guarantee
- *
- * If a signing key cannot be obtained, `governMCPServer` throws at
- * construction — not at first call. There is no "governance degraded
- * but tool still runs" state.
+ * A DENY or unapproved action produces only the authorization receipt because
+ * the executor was never called. An allowed action produces a linked outcome
+ * with SUCCEEDED or FAILED status.
  */
 
 import {
@@ -52,6 +18,9 @@ import {
   generateSigningKey,
   MemoryStorage,
   JsonlStorage,
+  MemoryOutcomeStorage,
+  JsonlOutcomeStorage,
+  issueExecutionOutcome,
 } from "@strixgov/tool-gateway";
 
 import {
@@ -63,20 +32,6 @@ export { classifyMcpTool };
 
 const DEFAULT_KERNEL_URL = "https://www.strixgov.com";
 
-/**
- * Build connected-mode options from environment variables.
- *
- * Required env vars (both must be set for connected mode to activate):
- *   STRIX_API_KEY   — your strixgov.com API key (≥16 chars)
- *   STRIX_TENANT_ID — your tenant slug (e.g. "acme-corp")
- *
- * Optional:
- *   STRIX_KERNEL_URL — platform URL (default: https://www.strixgov.com)
- *
- * Returns null when required vars are absent (stays in Local Mode).
- *
- * @returns {{ kernelUrl: string, apiKey: string, tenantId: string } | null}
- */
 export function loadConnectedModeFromEnv() {
   const apiKey = process.env.STRIX_API_KEY;
   const tenantId = process.env.STRIX_TENANT_ID;
@@ -89,103 +44,94 @@ export function loadConnectedModeFromEnv() {
 }
 
 /**
- * Govern every tool call on an MCP server with a single call.
+ * Govern every tool call on an MCP server.
  *
- * @param {Record<string, (args: unknown) => Promise<unknown>> | McpServerLike} tools
- *   Either a plain map of tool name → handler, or an object with
- *   `{ handler(name, args), listTools() }` for servers that already have
- *   that interface.
+ * Trusted identity precedence:
+ *   1. opts.identity.resolve(ctx)
+ *   2. opts.identity.actorId / actorRole
+ *   3. STRIX_TRUSTED_ACTOR_ID / STRIX_TRUSTED_ACTOR_ROLE
+ *   4. client-supplied ctx only when trusted identity is not required
  *
- * @param {{
- *   serverId?: string,
- *   capabilities?: Array<{ id: string, name: string, risk: string, mode: string }>,
- *   policy?: { rules?: Record<string, "ALLOW"|"DENY"|"APPROVAL_REQUIRED">, default?: string },
- *   signingKey?: object,
- *   storagePath?: string,
- *   connectedMode?: {
- *     kernelUrl: string,
- *     apiKey: string,
- *     tenantId: string,
- *   },
- *   approval?: object,
- *   rateLimits?: Record<string, { windowMs: number, max: number, perActor?: boolean }>,
- * }} opts
- *
- * @returns {{
- *   callTool(name: string, args: unknown, ctx?: { actorId?: string, actorRole?: string }): Promise<unknown>,
- *   listTools(): Promise<Array<{ name: string, description?: string }>>,
- *   gateway: import("../../tool-gateway/src/gateway.mjs").Gateway,
- *   signingKey: object,
- * }}
+ * Client-provided actor metadata is never able to override a fixed or
+ * transport-authenticated identity. NVIDIA NOOA/OpenShell profiles set
+ * STRIX_REQUIRE_TRUSTED_IDENTITY=true and provide a workload identity.
  */
 export function governMCPServer(tools, opts = {}) {
   const serverId = opts.serverId ?? "default";
 
-  // Auto-detect connected mode from env vars when caller hasn't set it
-  // explicitly. This makes the 5-line integration stay 5 lines even with
-  // connected mode enabled: just export STRIX_API_KEY + STRIX_TENANT_ID.
   const connectedMode =
     opts.connectedMode !== undefined
       ? opts.connectedMode
       : loadConnectedModeFromEnv();
 
-  // Build a lookup map from the companion pack (if provided) keyed by
-  // both the full canonical id AND the bare tool name for convenience.
-  /** @type {Map<string, object>} */
+  const effectiveIdentity = opts.identity ?? {
+    actorId: process.env.STRIX_TRUSTED_ACTOR_ID,
+    actorRole: process.env.STRIX_TRUSTED_ACTOR_ROLE,
+    requireTrusted:
+      String(process.env.STRIX_REQUIRE_TRUSTED_IDENTITY ?? "").toLowerCase() ===
+      "true",
+  };
+
   const capByFullId = new Map();
-  /** @type {Map<string, object>} */
   const capByName = new Map();
   if (Array.isArray(opts.capabilities)) {
     for (const cap of opts.capabilities) {
       capByFullId.set(cap.id, cap);
-      // Strip the "mcp.<serverId>." prefix to get the bare tool name.
       const bare = cap.id.replace(/^mcp\.[^.]+\./, "");
       capByName.set(bare, cap);
-      // Many MCP servers (Notion, Slack, Linear) prefix tool names with
-      // the server name — e.g. "notion-fetch". The capability `name` field
-      // already carries that real on-the-wire name, so index by it too.
-      // Without this, server-prefixed tools fall through to the heuristic
-      // (MEDIUM EXECUTE) and the companion-pack classification is wasted.
       if (typeof cap.name === "string" && cap.name !== bare) {
         capByName.set(cap.name, cap);
       }
     }
   }
 
-  // Signing key — auto-generate for Local Mode, stable key for Connected Mode.
-  const signingKey = opts.signingKey ?? generateSigningKey(`strix-${serverId}`);
+  // A durable receipt store paired with an implicit ephemeral private key
+  // creates historical records that cannot be verified after restart. Reject
+  // that combination. A key ring is accepted because it preserves retired keys
+  // and exposes the currently active signer.
+  if (opts.storagePath && !opts.signingKey && !opts.keyRing) {
+    throw new Error(
+      "governMCPServer: storagePath requires an explicit persistent signingKey or keyRing; " +
+        "use loadOrCreateSigningKey/loadOrCreateKeyRing or @strixgov/mcp-proxy",
+    );
+  }
 
-  // Storage — in-memory by default (Local Mode), JSONL on disk if storagePath given.
+  const initialSigningKey =
+    opts.signingKey ?? opts.keyRing?.active ?? generateSigningKey(`strix-${serverId}`);
+
   const storage = opts.storagePath
     ? new JsonlStorage({ dir: opts.storagePath })
     : new MemoryStorage();
+  const outcomeStorage = opts.outcomeStorage ?? (
+    opts.storagePath
+      ? new JsonlOutcomeStorage({ dir: opts.storagePath })
+      : new MemoryOutcomeStorage()
+  );
 
-  // Policy — caller-supplied or fail-closed default.
   const policy = opts.policy ?? { default: "DENY" };
-
-  // Pre-populate capabilities map for the gateway so policy rules can
-  // reference them by id before the first callTool arrives.
-  /** @type {Record<string, object>} */
   const capabilities = {};
-  for (const [id, cap] of capByFullId) {
-    capabilities[id] = cap;
-  }
+  for (const [id, cap] of capByFullId) capabilities[id] = cap;
 
   const gateway = createGateway({
-    signingKey,
+    signingKey: opts.keyRing ? undefined : initialSigningKey,
+    keyRing: opts.keyRing,
     storage,
     policy,
     capabilities,
     approval: opts.approval ?? { enabled: false },
     connectedMode: connectedMode ?? undefined,
     rateLimits: opts.rateLimits,
-    tenantId: connectedMode?.tenantId,
+    tenantId:
+      connectedMode?.tenantId ??
+      opts.tenantId ??
+      process.env.STRIX_TENANT_ID,
+    environment:
+      opts.environment ??
+      process.env.STRIX_ENVIRONMENT,
   });
 
-  // Build the server interface that governedMcpServer expects.
   const serverIface = _buildServerIface(tools, serverId);
 
-  // Classifier: companion pack wins, heuristics are the fallback.
   function classify(tool) {
     const fullId = `mcp.${serverId}.${tool.name}`;
     return (
@@ -195,67 +141,212 @@ export function governMCPServer(tools, opts = {}) {
     );
   }
 
+  async function resolveCapability(name) {
+    try {
+      const catalog = await serverIface.listTools();
+      const tool = catalog.find((entry) => entry.name === name);
+      const cap = tool
+        ? classify({ ...tool, serverId })
+        : {
+            id: `mcp.${serverId}.${name}`,
+            name,
+            risk: "CRITICAL",
+            mode: "EXECUTE",
+            description: "Unknown MCP tool",
+          };
+      gateway.registerCapability(cap);
+      return cap;
+    } catch {
+      const cap = {
+        id: `mcp.${serverId}.${name}`,
+        name,
+        risk: "CRITICAL",
+        mode: "EXECUTE",
+        description: "MCP capability unresolved during identity failure",
+      };
+      gateway.registerCapability(cap);
+      return cap;
+    }
+  }
+
   const governed = governedMcpServer(gateway, serverIface, { classify });
 
+  async function executeTool(name, args, ctx = {}) {
+    let identity;
+    try {
+      identity = await _resolveIdentity(effectiveIdentity, ctx);
+    } catch (err) {
+      // Identity is part of governance, not an adapter precondition that may
+      // disappear without evidence. Mint a signed DENY and never invoke the
+      // handler. The client-supplied actor claim is intentionally not promoted
+      // into trusted actor fields on this receipt.
+      const capability = await resolveCapability(name);
+      const authorizationReceipt = await gateway.recordDenial({
+        invocation: {
+          capabilityId: capability.id,
+          action: `mcp.callTool:${name}`,
+          args,
+        },
+        capability,
+        reason: "IDENTITY_RESOLUTION_FAILED",
+      });
+      return {
+        ok: false,
+        decision: "DENY",
+        authorizationReceipt,
+        executionOutcome: null,
+        error: {
+          code: "IDENTITY_RESOLUTION_FAILED",
+          message: err instanceof Error ? err.message : String(err),
+        },
+      };
+    }
+
+    const raw = await governed.executeTool(name, args, identity);
+
+    if (raw.decision !== "ALLOW") {
+      return {
+        ok: false,
+        decision: raw.decision,
+        authorizationReceipt: raw.receipt,
+        executionOutcome: null,
+        error: raw.error,
+      };
+    }
+
+    const executionStatus = raw.ok ? "SUCCEEDED" : "FAILED";
+    let executionOutcome;
+    try {
+      // Always read the gateway's active key at outcome time. If a key ring was
+      // rotated after construction, the outcome must not continue signing with
+      // the retired constructor-time key.
+      executionOutcome = issueExecutionOutcome({
+        authorizationReceipt: raw.receipt,
+        executionStatus,
+        result: raw.result,
+        errorCode: raw.error?.code,
+        signingKey: gateway.signingKey,
+      });
+      await outcomeStorage.appendOutcome(executionOutcome);
+    } catch (err) {
+      const proofError = new Error(
+        `MCP tool '${name}' completed but its signed execution outcome could not be persisted: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      proofError.code = "OUTCOME_PERSISTENCE_FAILED";
+      proofError.authorizationReceipt = raw.receipt;
+      proofError.executionOutcome = executionOutcome ?? null;
+      proofError.sideEffectMayHaveCompleted = true;
+      throw proofError;
+    }
+
+    _safeGatewayEmit(gateway, "outcome", executionOutcome);
+    if (typeof opts.onOutcome === "function") {
+      try {
+        opts.onOutcome(executionOutcome);
+      } catch {
+        // Observer failures cannot rewrite an already persisted proof artifact.
+      }
+    }
+
+    return {
+      ok: raw.ok,
+      decision: raw.decision,
+      authorizationReceipt: raw.receipt,
+      executionOutcome,
+      result: raw.result,
+      error: raw.error,
+    };
+  }
+
+  async function callTool(name, args, ctx = {}) {
+    const result = await executeTool(name, args, ctx);
+    if (!result.ok) {
+      const err = new Error(
+        result.decision === "ALLOW"
+          ? `MCP tool '${name}' failed: ${result.error?.message ?? "executor error"}`
+          : `MCP tool '${name}' denied: ${result.error?.message ?? "policy denied"}`,
+      );
+      err.code = result.error?.code ?? (result.decision === "ALLOW" ? "EXECUTOR_ERROR" : "DENIED");
+      err.receipt = result.authorizationReceipt;
+      err.authorizationReceipt = result.authorizationReceipt;
+      err.executionOutcome = result.executionOutcome;
+      throw err;
+    }
+    return result.result;
+  }
+
   return {
-    callTool: governed.callTool,
+    callTool,
+    executeTool,
     listTools: governed.listTools,
+    listOutcomes: () => outcomeStorage.listOutcomes(),
     gateway,
-    signingKey,
+    get signingKey() {
+      return gateway.signingKey;
+    },
+    outcomeStorage,
   };
 }
 
-/**
- * Build a governed server from a plain map of tool handlers and a tool
- * list, without exposing the Gateway at all. Useful for the simplest
- * possible integration.
- *
- *   const server = createGovernedServer({
- *     capabilities: githubCapabilities,
- *     policy: { rules: { "mcp.github.merge_pull_request": "DENY" }, default: "DENY" },
- *     tools: {
- *       merge_pull_request: async (args) => octokit.pulls.merge(args),
- *       get_file_contents:  async (args) => octokit.repos.getContent(args),
- *     },
- *   });
- *
- *   // Plug into your MCP request handler:
- *   const result = await server.callTool(name, args);
- *
- * @param {{
- *   tools: Record<string, (args: unknown) => Promise<unknown>>,
- *   capabilities?: Array<{ id: string, name: string, risk: string, mode: string }>,
- *   policy?: object,
- *   signingKey?: object,
- *   storagePath?: string,
- *   connectedMode?: object,
- *   approval?: object,
- *   serverId?: string,
- * }} opts
- */
 export function createGovernedServer(opts) {
   const { tools, ...rest } = opts;
   return governMCPServer(tools, rest);
 }
 
-// ─── internal ─────────────────────────────────────────────────────────────────
+async function _resolveIdentity(identity, ctx = {}) {
+  const claimed = {
+    actorId: ctx.actorId,
+    actorRole: ctx.actorRole,
+  };
 
-/**
- * Normalise the caller's `tools` argument into the
- * `{ handler, listTools, serverId }` shape governedMcpServer expects.
- *
- * @param {Record<string, Function> | object} tools
- * @param {string} serverId
- */
+  if (typeof identity?.resolve === "function") {
+    const resolved = await identity.resolve({
+      claimedActorId: ctx.actorId,
+      claimedActorRole: ctx.actorRole,
+      transport: ctx.transport,
+      headers: ctx.headers,
+      metadata: ctx.metadata,
+    });
+    if (!resolved || typeof resolved.actorId !== "string" || !resolved.actorId) {
+      throw new Error("governMCPServer: identity resolver returned no actorId");
+    }
+    return { actorId: resolved.actorId, actorRole: resolved.actorRole };
+  }
+
+  if (typeof identity?.actorId === "string" && identity.actorId) {
+    return { actorId: identity.actorId, actorRole: identity.actorRole };
+  }
+
+  if (identity?.requireTrusted === true) {
+    throw new Error(
+      "governMCPServer: trusted actor identity is required; client-supplied MCP metadata is not an authentication boundary",
+    );
+  }
+
+  return claimed;
+}
+
+function _safeGatewayEmit(gateway, event, value) {
+  if (typeof gateway?._safeEmit === "function") {
+    gateway._safeEmit(event, value);
+    return;
+  }
+  try {
+    gateway?.emit?.(event, value);
+  } catch {
+    // Observer failure is not load-bearing after persistence.
+  }
+}
+
 function _buildServerIface(tools, serverId) {
-  // Already the right shape
   if (tools && typeof tools.handler === "function" && typeof tools.listTools === "function") {
     return { ...tools, serverId: tools.serverId ?? serverId };
   }
 
-  // Plain Record<name, handler>
   if (tools && typeof tools === "object") {
-    const entries = Object.entries(tools).filter(([, v]) => typeof v === "function");
+    const entries = Object.entries(tools).filter(([, value]) => typeof value === "function");
     if (entries.length === 0) {
       throw new TypeError(
         "governMCPServer: tools must be a non-empty record of tool handlers or a { handler, listTools } object",

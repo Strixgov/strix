@@ -1,0 +1,166 @@
+{
+  "bundleVersion": 1,
+  "commitment": {
+    "payload": {
+      "schemaVersion": 1,
+      "commitmentId": "rc_agentsess_golden_0001",
+      "runId": "agentsess_golden_0001",
+      "runKind": "agent_session",
+      "tenantId": "academy",
+      "environment": "production",
+      "leafCount": 7,
+      "rootHash": "632ad908389f0fd246f584a102d0c0842594fc294053340e7d941bad6c752bd0",
+      "leafHashAlgorithm": "sha256-rfc6962",
+      "committedAt": "2026-07-30T03:11:40Z"
+    },
+    "signature": "cTlPztbIL96Qp9R44o1S7Jpn2zGnaGloEG+ZQhNVDekkIvzloWPWAoEwdmS/K0zLlkBL9539WMTMVimjY0peBA==",
+    "signatureAlgorithm": "Ed25519",
+    "signingKeyId": "strix-test-golden-v1"
+  },
+  "events": [
+    {
+      "payload": {
+        "schemaVersion": 1,
+        "eventId": "evt_001",
+        "sessionId": "agentsess_golden_0001",
+        "tenantId": "academy",
+        "environment": "production",
+        "capabilityId": "academy.app.review",
+        "agentId": "chatgpt-5.5",
+        "stepIndex": 0,
+        "action": "SESSION_START",
+        "screen": "App",
+        "screenshotHash": null,
+        "previousEventHash": null,
+        "occurredAt": "2026-07-30T03:11:00Z"
+      },
+      "eventHash": "5962203146228865d9b70854b74b06369e20ed1a25e510ce1993a25425036fef"
+    },
+    {
+      "payload": {
+        "schemaVersion": 1,
+        "eventId": "evt_002",
+        "sessionId": "agentsess_golden_0001",
+        "tenantId": "academy",
+        "environment": "production",
+        "capabilityId": "academy.app.review",
+        "agentId": "chatgpt-5.5",
+        "stepIndex": 1,
+        "action": "LOGIN",
+        "screen": "Login",
+        "screenshotHash": "1111111111111111111111111111111111111111111111111111111111111111",
+        "previousEventHash": "5962203146228865d9b70854b74b06369e20ed1a25e510ce1993a25425036fef",
+        "occurredAt": "2026-07-30T03:11:04Z"
+      },
+      "eventHash": "1656b3309b821e6d523da5dd7b829332bca88d26c3de680b6ee5f0d1d043287f"
+    },
+    {
+      "payload": {
+        "schemaVersion": 1,
+        "eventId": "evt_003",
+        "sessionId": "agentsess_golden_0001",
+        "tenantId": "academy",
+        "environment": "production",
+        "capabilityId": "academy.app.review",
+        "agentId": "chatgpt-5.5",
+        "stepIndex": 2,
+        "action": "OPEN_SCREEN",
+        "screen": "Dashboard",
+        "screenshotHash": "2222222222222222222222222222222222222222222222222222222222222222",
+        "previousEventHash": "1656b3309b821e6d523da5dd7b829332bca88d26c3de680b6ee5f0d1d043287f",
+        "occurredAt": "2026-07-30T03:11:09Z"
+      },
+      "eventHash": "9396959141f401f0af5f9550f48db91b07f77fcf5e2e5726ff41762a82dfbc5c"
+    },
+    {
+      "payload": {
+        "schemaVersion": 1,
+        "eventId": "evt_004",
+        "sessionId": "agentsess_golden_0001",
+        "tenantId": "academy",
+        "environment": "production",
+        "capabilityId": "academy.app.review",
+        "agentId": "chatgpt-5.5",
+        "stepIndex": 3,
+        "action": "OPEN_SCREEN",
+        "screen": "Schedule",
+        "screenshotHash": "3333333333333333333333333333333333333333333333333333333333333333",
+        "previousEventHash": "9396959141f401f0af5f9550f48db91b07f77fcf5e2e5726ff41762a82dfbc5c",
+        "occurredAt": "2026-07-30T03:11:15Z"
+      },
+      "eventHash": "511f1680be50655134d02bfa72c541c6bf3a49dd022cce6bfcb058bd16b2a57e"
+    },
+    {
+      "payload": {
+        "schemaVersion": 1,
+        "eventId": "evt_005",
+        "sessionId": "agentsess_golden_0001",
+        "tenantId": "academy",
+        "environment": "production",
+        "capabilityId": "academy.app.review",
+        "agentId": "chatgpt-5.5",
+        "stepIndex": 4,
+        "action": "OPEN_SCREEN",
+        "screen": "Registration",
+        "screenshotHash": "4444444444444444444444444444444444444444444444444444444444444444",
+        "previousEventHash": "511f1680be50655134d02bfa72c541c6bf3a49dd022cce6bfcb058bd16b2a57e",
+        "occurredAt": "2026-07-30T03:11:22Z"
+      },
+      "eventHash": "091a5be5c06df165724696786d46fcb501f2625dc21d99c3ee53e36e833fa23c"
+    },
+    {
+      "payload": {
+        "schemaVersion": 1,
+        "eventId": "evt_006",
+        "sessionId": "agentsess_golden_0001",
+        "tenantId": "academy",
+        "environment": "production",
+        "capabilityId": "academy.app.review",
+        "agentId": "chatgpt-5.5",
+        "stepIndex": 5,
+        "action": "SUBMIT",
+        "screen": "Registration",
+        "screenshotHash": "5555555555555555555555555555555555555555555555555555555555555555",
+        "previousEventHash": "091a5be5c06df165724696786d46fcb501f2625dc21d99c3ee53e36e833fa23c",
+        "occurredAt": "2026-07-30T03:11:30Z"
+      },
+      "eventHash": "64fe4ad907d0d068a4c7db7fd005204690ba344886bfbfda1330cfcfaf5f15b9"
+    },
+    {
+      "payload": {
+        "schemaVersion": 1,
+        "eventId": "evt_007",
+        "sessionId": "agentsess_golden_0001",
+        "tenantId": "academy",
+        "environment": "production",
+        "capabilityId": "academy.app.review",
+        "agentId": "chatgpt-5.5",
+        "stepIndex": 6,
+        "action": "SESSION_END",
+        "screen": "App",
+        "screenshotHash": null,
+        "previousEventHash": "64fe4ad907d0d068a4c7db7fd005204690ba344886bfbfda1330cfcfaf5f15b9",
+        "occurredAt": "2026-07-30T03:11:35Z"
+      },
+      "eventHash": "59dad144c0118db48e51f658bda3ccba1882a195e1dbf21bb10824e5defda72e"
+    }
+  ],
+  "findings": [
+    {
+      "findingVersion": 1,
+      "findingId": "F-14",
+      "sessionId": "agentsess_golden_0001",
+      "sessionRootHash": "632ad908389f0fd246f584a102d0c0842594fc294053340e7d941bad6c752bd0",
+      "observedEventHash": "091a5be5c06df165724696786d46fcb501f2625dc21d99c3ee53e36e833fa23c",
+      "screen": "Registration",
+      "screenshotHash": "4444444444444444444444444444444444444444444444444444444444444444",
+      "dimension": "CONVERSION",
+      "severity": "HIGH",
+      "summary": "Registration takes five steps.",
+      "recommendation": "Reduce registration from five steps to three.",
+      "derivedBy": "model",
+      "discovery": false,
+      "proves": "SESSION_INTEGRITY_ONLY"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "name": "@strixgov/claude-code",
+  "version": "0.1.0",
+  "description": "Claude Code Governance Pack by Strix. One command (npx @strixgov/claude-code init) adds a PreToolUse hook that governs the tool-execution surfaces Claude Code exposes (Bash/Edit/Write/…) through the Strix kernel and emits signed, independently-verifiable decision receipts — no fork, no workflow change.",
+  "type": "module",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "main": "src/index.mjs",
+  "exports": {
+    ".": {
+      "import": "./src/index.mjs"
+    }
+  },
+  "bin": {
+    "strix-claude": "bin/strix-claude.mjs"
+  },
+  "files": [
+    "src",
+    "bin",
+    "benchmark",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node scripts/preflight.mjs && node --test",
+    "benchmark": "node bin/strix-claude.mjs benchmark"
+  },
+  "keywords": [
+    "strix",
+    "claude-code",
+    "governance",
+    "ai-agents",
+    "execution-control",
+    "signed-evidence",
+    "approval-gate",
+    "hooks"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/strixgov-claude-code"
+  },
+  "dependencies": {
+    "@strixgov/tool-gateway": "0.5.0",
+    "@strixgov/capabilities-claude-code": "0.1.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

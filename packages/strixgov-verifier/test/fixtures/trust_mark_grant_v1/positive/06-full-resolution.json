@@ -1,0 +1,55 @@
+{
+  "canonical_bytes_b64": "eyJjYXBhYmlsaXR5X2lkIjoiVE0tMSIsImNvdmVyYWdlX3dpbmRvd19zZWNvbmRzIjozNjAwLCJlbnZpcm9ubWVudCI6InByb2QiLCJncmFudF9pZCI6InRtLWdyYW50LTAwMDEiLCJoZWFydGJlYXRfa2V5Ijp7Imp3ayI6eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6IjExcVlBWUt4Q3JmVlNfN1R5V1FIT2c3aGN2UGFwaU1scndJYWFQY0hVUm8ifSwia2lkIjoibGljZW5zZWUtaGItMjAyNi0wNiJ9LCJpc3MiOiJodHRwczovL3d3dy5zdHJpeGdvdi5jb20iLCJpc3N1ZWRfYXQiOiIyMDI2LTA2LTAxVDAwOjAwOjAwWiIsImtlcm5lbF9wb2xpY3lfaGFzaCI6InNoYTI1NjpjZjlhODkxNmZiMzY1M2UxZjgwNDE3MTI3ZDgwNzE1ZDk5Mzc2Y2Q4OTMxNzIxOTI2MGNhZjhhY2ZmZTdlY2VkIiwibGljZW5zZWUiOnsibGVnYWxfbmFtZSI6IkFjbWUgU3VwcG9ydCBDby4iLCJsaWNlbnNlZV9pZCI6ImxpYy1hY21lLTAwMSJ9LCJtYXJrX2NsYXNzIjoiZ292ZXJuZWRfYWdlbnQiLCJzdXJmYWNlX29yaWdpbiI6Imh0dHBzOi8vc3VwcG9ydC5hY21lLmV4YW1wbGUiLCJ0ZW5hbnRfaWQiOiJ0ZW5hbnQtYWNtZSIsInZhbGlkX2Zyb20iOiIyMDI2LTA2LTAxVDAwOjAwOjAwWiIsInZhbGlkX3VudGlsIjoiMjAyNy0wNi0wMVQwMDowMDowMFoifQ==",
+  "canonical_bytes_hex": "7b226361706162696c6974795f6964223a22544d2d31222c22636f7665726167655f77696e646f775f7365636f6e6473223a333630302c22656e7669726f6e6d656e74223a2270726f64222c226772616e745f6964223a22746d2d6772616e742d30303031222c226865617274626561745f6b6579223a7b226a776b223a7b22637276223a2245643235353139222c226b7479223a224f4b50222c2278223a223131715941594b7843726656535f3754795751484f6737686376506170694d6c727749616150634855526f227d2c226b6964223a226c6963656e7365652d68622d323032362d3036227d2c22697373223a2268747470733a2f2f7777772e7374726978676f762e636f6d222c226973737565645f6174223a22323032362d30362d30315430303a30303a30305a222c226b65726e656c5f706f6c6963795f68617368223a227368613235363a63663961383931366662333635336531663830343137313237643830373135643939333736636438393331373231393236306361663861636666653765636564222c226c6963656e736565223a7b226c6567616c5f6e616d65223a2241636d6520537570706f727420436f2e222c226c6963656e7365655f6964223a226c69632d61636d652d303031227d2c226d61726b5f636c617373223a22676f7665726e65645f6167656e74222c22737572666163655f6f726967696e223a2268747470733a2f2f737570706f72742e61636d652e6578616d706c65222c2274656e616e745f6964223a2274656e616e742d61636d65222c2276616c69645f66726f6d223a22323032362d30362d30315430303a30303a30305a222c2276616c69645f756e74696c223a22323032372d30362d30315430303a30303a30305a227d",
+  "category": "positive",
+  "description": "The full consumer embed path: bound_grant_id + bound_surface_origin both supplied and matching, coverage COVERED, revocation NOT_REVOKED. All 10 rules + both binding cross-checks exercised in one vector.",
+  "expected": {
+    "construction_error_substring": null,
+    "failing_rule": null,
+    "reason": null,
+    "rejects_at_construction": false,
+    "valid": true
+  },
+  "payload_hash_sha256": "02f8bbbcd97fb5df36316c179fbcf6a187e7a495e2b55575b2810eb1ab3d5d30",
+  "record": {
+    "created_at": "2026-06-01T00:00:01Z",
+    "kid": "strix-prod-2026-06",
+    "payload": {
+      "capability_id": "TM-1",
+      "coverage_window_seconds": 3600,
+      "environment": "prod",
+      "grant_id": "tm-grant-0001",
+      "heartbeat_key": {
+        "jwk": {
+          "crv": "Ed25519",
+          "kty": "OKP",
+          "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+        },
+        "kid": "licensee-hb-2026-06"
+      },
+      "iss": "https://www.strixgov.com",
+      "issued_at": "2026-06-01T00:00:00Z",
+      "kernel_policy_hash": "sha256:cf9a8916fb3653e1f80417127d80715d99376cd89317219260caf8acffe7eced",
+      "licensee": {
+        "legal_name": "Acme Support Co.",
+        "licensee_id": "lic-acme-001"
+      },
+      "mark_class": "governed_agent",
+      "surface_origin": "https://support.acme.example",
+      "tenant_id": "tenant-acme",
+      "valid_from": "2026-06-01T00:00:00Z",
+      "valid_until": "2027-06-01T00:00:00Z"
+    },
+    "signature": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+  },
+  "schema_version": "trust_mark_grant_v1",
+  "vector_id": "tm1-pos-06-full-resolution",
+  "verification_inputs": {
+    "bound_grant_id": "tm-grant-0001",
+    "bound_surface_origin": "https://support.acme.example",
+    "coverage_status": "covered",
+    "revocation_status": "not_revoked",
+    "signing_key": null,
+    "verified_at": "2026-06-12T00:00:00Z"
+  }
+}

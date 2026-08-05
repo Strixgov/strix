@@ -1,7 +1,7 @@
 {
   "name": "@strixgov/verifier",
-  "version": "1.16.0",
-  "description": "Public cryptographic verification primitive for Signed Evidence v1. Independent Ed25519 + JWKS verification of Strix governance evidence, approval artifacts, linked attestations, and tool-gateway receipts. Zero runtime dependencies. No Strix account, SDK, or API key required.",
+  "version": "1.22.0",
+  "description": "Independent verification of Strix governance evidence, approval artifacts, linked attestations, tool-gateway authorization receipts, signed execution outcomes, chain snapshots, and connected-mode wire envelopes. Offline-capable. No Strix account required.",
   "license": "MIT",
   "bin": {
     "strix-verify": "bin/verify.mjs"
@@ -11,6 +11,22 @@
     ".": {
       "import": "./src/index.mjs",
       "default": "./src/index.mjs"
+    },
+    "./evidence-contract": {
+      "import": "./src/evidence-contract.mjs",
+      "default": "./src/evidence-contract.mjs"
+    },
+    "./verify-v2": {
+      "import": "./src/verify-v2.mjs",
+      "default": "./src/verify-v2.mjs"
+    },
+    "./execution-outcome": {
+      "import": "./src/execution-outcome.mjs",
+      "default": "./src/execution-outcome.mjs"
+    },
+    "./agent-session": {
+      "import": "./src/agent-session.mjs",
+      "default": "./src/agent-session.mjs"
     }
   },
   "type": "module",
@@ -25,14 +41,9 @@
     "governance",
     "verification",
     "ed25519",
-    "jwks",
     "proof",
     "evidence",
-    "ai-governance",
-    "runtime-governance",
-    "aarm",
-    "signed-evidence",
-    "auditable"
+    "execution-outcomes"
   ],
   "publishConfig": {
     "access": "public"
@@ -41,23 +52,13 @@
     "bin/",
     "src/",
     "assets/",
-    "examples/",
-    "goldens/",
     "README.md",
     "CHANGELOG.md",
-    "LICENSE",
-    "JWKS.md",
-    "CANONICAL_PAYLOAD.md",
-    "GOLDEN_VECTORS.md",
-    "SECURITY.md"
+    "LICENSE"
   ],
   "repository": {
     "type": "git",
     "url": "https://github.com/Strixgov/strix",
     "directory": "packages/strixgov-verifier"
-  },
-  "bugs": {
-    "url": "https://github.com/Strixgov/strix/issues"
-  },
-  "homepage": "https://github.com/Strixgov/strix#readme"
+  }
 }

@@ -33,6 +33,8 @@ import path from "node:path";
 import os from "node:os";
 import { governMCPServer } from "@strixgov/mcp-adapter";
 import { loadOrCreateSigningKey, fileApprover } from "@strixgov/tool-gateway";
+import { webhookApprover } from "./webhook-approver.mjs";
+import { createShadowDiscovery } from "./shadow-discovery.mjs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -58,9 +60,16 @@ import {
  *   connectedMode?: object,
  *   onReceipt?: (receipt: object) => void,
  *   onAudit?: (event: { kind: string, detail: object }) => void,
+ *   shadowDiscovery?: boolean,
  *   transport?: { kind: "stdio" } | { kind: "test", server: object, client: object },
  * }} opts
- * @returns {Promise<{ stop: () => Promise<void>, gateway: object, signingKey: object }>}
+ * @returns {Promise<{
+ *   stop: () => Promise<void>,
+ *   gateway: object,
+ *   signingKey: object,
+ *   shadowDiscovery: object | null,
+ *   shadowDiscoveryLogPath: string | null,
+ * }>}
  */
 export async function startProxy(opts) {
   if (!opts) {
@@ -228,6 +237,9 @@ export async function startProxy(opts) {
   //   {enabled: true, type: "file",
   //    requestDir: "~/.strix-gateway/approvals",        ← request/response file polling (headless)
   //    timeoutMs: 300000}
+  //   {enabled: true, type: "webhook",
+  //    webhookUrl: "https://hooks.slack.com/...",       ← file polling + Slack-compatible
+  //    requestDir: "...", timeoutMs: 300000}              notification per pending request
   //   {enabled: true, autoApprove: true}                ← long form of {type: "auto"}
   //   {enabled: true, prompt: <fn>}                     ← programmatic caller wins (always)
   const resolvedApproval = resolveApproval(opts.approval, {
@@ -250,6 +262,37 @@ export async function startProxy(opts) {
     governed.gateway.on("receipt", opts.onReceipt);
   }
 
+  // ─── 3d. Shadow discovery (GSD-1 Phase 4) — observation only ───────────────
+  // Records what the upstream actually advertises and what actually gets
+  // called, and reports the delta against the classified capability set —
+  // the actions runtime traffic sees that static discovery missed.
+  // Strictly read-only over events the proxy already handles: it never
+  // changes a verdict and never touches the policy/approval/receipt
+  // pipeline. Opt out with `shadowDiscovery: false`. The JSONL shadow log
+  // shares the receipt store's lifecycle (only written when a storagePath
+  // is in effect) and is an unsigned measurement — never proof.
+  const shadowDiscovery =
+    opts.shadowDiscovery === false
+      ? null
+      : createShadowDiscovery({
+          serverId,
+          capabilities: opts.capabilities,
+          storagePath: resolvedStoragePath,
+          onAudit: (event) => audit(opts, event),
+        });
+
+  // Seed the advertised-tool universe once at startup so a proxy that
+  // never receives a tools/list from its consumer still reports the
+  // upstream's surface. Best-effort: a slow/broken upstream listTools
+  // must not fail proxy startup — the same call will be retried on the
+  // consumer's first tools/list anyway.
+  if (shadowDiscovery) {
+    try {
+      const seed = await upstreamClient.listTools();
+      shadowDiscovery.recordToolList(seed.tools ?? []);
+    } catch { /* best-effort seed; consumer-driven listTools re-records */ }
+  }
+
   // ─── 4. Expose the proxy as an MCP server toward the consumer ──────────────
   const proxyServer = new Server(
     { name: `strix-proxy:${serverId}`, version: "0.1.0" },
@@ -263,6 +306,7 @@ export async function startProxy(opts) {
     // Re-fetch the full descriptors from the upstream so callers see
     // the original argument shapes — governance doesn't reshape tools.
     const upstream = await upstreamClient.listTools();
+    shadowDiscovery?.recordToolList(upstream.tools ?? []);
     const upstreamByName = new Map(upstream.tools.map((t) => [t.name, t]));
     return {
       tools: tools.map((t) => upstreamByName.get(t.name) ?? { name: t.name }),
@@ -271,6 +315,9 @@ export async function startProxy(opts) {
 
   proxyServer.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
+    // Shadow discovery counts the call BEFORE governance evaluates —
+    // a denied call is still an observed action surface.
+    shadowDiscovery?.recordCall(name);
     // Forward actor context if the client put it in _meta — this is how
     // mcp-aware clients attribute calls to a specific agent identity.
     const ctx = {
@@ -312,6 +359,8 @@ export async function startProxy(opts) {
   return {
     gateway: governed.gateway,
     signingKey: governed.signingKey,
+    shadowDiscovery,
+    shadowDiscoveryLogPath: shadowDiscovery?.logPath ?? null,
     async stop() {
       try { await proxyServer.close(); } catch { /* best-effort */ }
       try { await upstreamClient.close(); } catch { /* best-effort */ }
@@ -412,8 +461,32 @@ function resolveApproval(approval, opts) {
     return approval;
   }
 
+  if (type === "webhook") {
+    // Slack-compatible notification layered on the file primitive: the
+    // request/response files stay the decision channel (timeout → DENY
+    // unchanged); the webhook only tells a human where to look. A failed
+    // notification never approves and never auto-denies — see
+    // webhook-approver.mjs for the full failure semantics.
+    const requestDirRaw =
+      approval.requestDir ??
+      (opts.storagePath ? path.join(opts.storagePath, "approvals") : "./.strix-approvals");
+    const requestDir = expandHomeTilde(requestDirRaw);
+    return {
+      ...approval,
+      prompt: webhookApprover({
+        webhookUrl: approval.webhookUrl,
+        serverId: opts.serverId,
+        requestDir,
+        timeoutMs: approval.timeoutMs,
+        pollIntervalMs: approval.pollIntervalMs,
+        onAudit: (event) => audit(opts, event),
+        fetchImpl: approval.fetchImpl, // programmatic/test seam; not JSON-configurable
+      }),
+    };
+  }
+
   throw new Error(
-    `startProxy: unknown approval.type '${type}' — expected "terminal", "file", or "auto"`,
+    `startProxy: unknown approval.type '${type}' — expected "terminal", "file", "webhook", or "auto"`,
   );
 }
 

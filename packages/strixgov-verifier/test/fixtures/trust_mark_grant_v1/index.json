@@ -1,0 +1,243 @@
+{
+  "capability_id": "TM-1",
+  "schema_version": "trust_mark_grant_v1",
+  "vector_count": {
+    "negative_construction": 7,
+    "negative_verify": 7,
+    "positive": 7,
+    "total": 21
+  },
+  "vectors": [
+    {
+      "category": "positive",
+      "description": "Canonical happy path: a governed_agent mark on a prod surface, verified mid-window with no resolvers (rules 9/10 skipped \u2014 legacy/test mode). The base reference vector every conformant implementation MUST verify.",
+      "expected_failing_rule": null,
+      "expected_reason": null,
+      "expected_rejects_at_construction": false,
+      "expected_valid": true,
+      "payload_hash_sha256": "02f8bbbcd97fb5df36316c179fbcf6a187e7a495e2b55575b2810eb1ab3d5d30",
+      "relative_path": "positive/01-governed-agent.json",
+      "vector_id": "tm1-pos-01-governed-agent"
+    },
+    {
+      "category": "positive",
+      "description": "A governed_commerce mark (the AC-1-backed mark class).",
+      "expected_failing_rule": null,
+      "expected_reason": null,
+      "expected_rejects_at_construction": false,
+      "expected_valid": true,
+      "payload_hash_sha256": "57f80061a755c8447e6fa36aca1149dcd05172de856eb1a78edf1bc273f95833",
+      "relative_path": "positive/02-governed-commerce.json",
+      "vector_id": "tm1-pos-02-governed-commerce"
+    },
+    {
+      "category": "positive",
+      "description": "A governed_content mark on a staging surface with an explicit port in the origin.",
+      "expected_failing_rule": null,
+      "expected_reason": null,
+      "expected_rejects_at_construction": false,
+      "expected_valid": true,
+      "payload_hash_sha256": "21e415715e7d0fcfd11dc8afb74ed5c8ff1be4245649c1e8cf8771fc84e20e3c",
+      "relative_path": "positive/03-governed-content.json",
+      "vector_id": "tm1-pos-03-governed-content"
+    },
+    {
+      "category": "positive",
+      "description": "Coverage resolver supplied and returns COVERED \u2014 rule 9 passes (distinct from no-resolver).",
+      "expected_failing_rule": null,
+      "expected_reason": null,
+      "expected_rejects_at_construction": false,
+      "expected_valid": true,
+      "payload_hash_sha256": "02f8bbbcd97fb5df36316c179fbcf6a187e7a495e2b55575b2810eb1ab3d5d30",
+      "relative_path": "positive/04-coverage-covered.json",
+      "vector_id": "tm1-pos-04-coverage-covered"
+    },
+    {
+      "category": "positive",
+      "description": "Revocation resolver supplied and returns NOT_REVOKED \u2014 rule 10 passes (distinct from no-resolver).",
+      "expected_failing_rule": null,
+      "expected_reason": null,
+      "expected_rejects_at_construction": false,
+      "expected_valid": true,
+      "payload_hash_sha256": "02f8bbbcd97fb5df36316c179fbcf6a187e7a495e2b55575b2810eb1ab3d5d30",
+      "relative_path": "positive/05-revocation-not-revoked.json",
+      "vector_id": "tm1-pos-05-revocation-not-revoked"
+    },
+    {
+      "category": "positive",
+      "description": "The full consumer embed path: bound_grant_id + bound_surface_origin both supplied and matching, coverage COVERED, revocation NOT_REVOKED. All 10 rules + both binding cross-checks exercised in one vector.",
+      "expected_failing_rule": null,
+      "expected_reason": null,
+      "expected_rejects_at_construction": false,
+      "expected_valid": true,
+      "payload_hash_sha256": "02f8bbbcd97fb5df36316c179fbcf6a187e7a495e2b55575b2810eb1ab3d5d30",
+      "relative_path": "positive/06-full-resolution.json",
+      "vector_id": "tm1-pos-06-full-resolution"
+    },
+    {
+      "category": "positive",
+      "description": "REAL Ed25519 signature over the grant's canonical bytes. verification_inputs.signing_key pins the authority's public key; the harness verifies the signature cryptographically (real verifier + real JWKS) rather than via an always-true fake. Cross-language ports MUST reproduce this check against the pinned key.",
+      "expected_failing_rule": null,
+      "expected_reason": null,
+      "expected_rejects_at_construction": false,
+      "expected_valid": true,
+      "payload_hash_sha256": "c4ef571d84dab40b66ee754205d866415d79292cf2b07158a9ac5650a08023e8",
+      "relative_path": "positive/07-real-ed25519-signature.json",
+      "vector_id": "tm1-pos-07-real-ed25519-signature"
+    },
+    {
+      "category": "negative",
+      "description": "The resolved grant id differs from payload.grant_id \u2014 a substituted grant document served under another grant's resolution URL. Rejected at the rule-6 binding cross-check point.",
+      "expected_failing_rule": "surface_origin",
+      "expected_reason": "tm1_grant_binding_mismatch",
+      "expected_rejects_at_construction": false,
+      "expected_valid": false,
+      "payload_hash_sha256": "02f8bbbcd97fb5df36316c179fbcf6a187e7a495e2b55575b2810eb1ab3d5d30",
+      "relative_path": "negative/rule6-grant-binding-mismatch.json",
+      "vector_id": "tm1-neg-rule6-grant-binding-mismatch"
+    },
+    {
+      "category": "negative",
+      "description": "A valid grant for support.acme.example presented from an embed on evil.example. THE consumer-facing defense: a real mark cannot be borrowed by another origin.",
+      "expected_failing_rule": "surface_origin",
+      "expected_reason": "tm1_surface_mismatch",
+      "expected_rejects_at_construction": false,
+      "expected_valid": false,
+      "payload_hash_sha256": "02f8bbbcd97fb5df36316c179fbcf6a187e7a495e2b55575b2810eb1ab3d5d30",
+      "relative_path": "negative/rule6-surface-mismatch.json",
+      "vector_id": "tm1-neg-rule6-surface-mismatch"
+    },
+    {
+      "category": "negative",
+      "description": "Verification time is after valid_until. An expired grant must fail rule 8, not render a stale mark.",
+      "expected_failing_rule": "validity_window",
+      "expected_reason": "tm1_validity_window_violated",
+      "expected_rejects_at_construction": false,
+      "expected_valid": false,
+      "payload_hash_sha256": "02f8bbbcd97fb5df36316c179fbcf6a187e7a495e2b55575b2810eb1ab3d5d30",
+      "relative_path": "negative/rule8-validity-window-expired.json",
+      "vector_id": "tm1-neg-rule8-validity-window-expired"
+    },
+    {
+      "category": "negative",
+      "description": "Coverage resolver answers definitively NOT_COVERED \u2014 no live heartbeat on the covered surface. The mark is granted but not live; consumers must see a definitive failure.",
+      "expected_failing_rule": "coverage",
+      "expected_reason": "tm1_not_covered",
+      "expected_rejects_at_construction": false,
+      "expected_valid": false,
+      "payload_hash_sha256": "02f8bbbcd97fb5df36316c179fbcf6a187e7a495e2b55575b2810eb1ab3d5d30",
+      "relative_path": "negative/rule9-coverage-not-covered.json",
+      "vector_id": "tm1-neg-rule9-coverage-not-covered"
+    },
+    {
+      "category": "negative",
+      "description": "Coverage resolver returns UNAVAILABLE. SUBSTRATE-ERROR tri-state: the public block surfaces this as verified=null (NOT verified=false). 'No silent allow' AND 'no fake verdict' \u2014 a broken licensee surface neither passes nor definitively fails the mark.",
+      "expected_failing_rule": "coverage",
+      "expected_reason": "tm1_coverage_check_unavailable",
+      "expected_rejects_at_construction": false,
+      "expected_valid": false,
+      "payload_hash_sha256": "02f8bbbcd97fb5df36316c179fbcf6a187e7a495e2b55575b2810eb1ab3d5d30",
+      "relative_path": "negative/rule9-coverage-unavailable-substrate.json",
+      "vector_id": "tm1-neg-rule9-coverage-unavailable-substrate"
+    },
+    {
+      "category": "negative",
+      "description": "Revocation resolver returns REVOKED \u2014 the grant is on trust_mark_revocation_list_v1. Emits tm1_revoked, deliberately NOT the AA-1 signature-invalid mapping: the authority key is still trusted, the license is withdrawn.",
+      "expected_failing_rule": "revocation",
+      "expected_reason": "tm1_revoked",
+      "expected_rejects_at_construction": false,
+      "expected_valid": false,
+      "payload_hash_sha256": "02f8bbbcd97fb5df36316c179fbcf6a187e7a495e2b55575b2810eb1ab3d5d30",
+      "relative_path": "negative/rule10-revocation-revoked.json",
+      "vector_id": "tm1-neg-rule10-revocation-revoked"
+    },
+    {
+      "category": "negative",
+      "description": "Revocation resolver returns UNAVAILABLE. SUBSTRATE-ERROR tri-state: verified=null in the public block. UNAVAILABLE is never treated as NOT_REVOKED.",
+      "expected_failing_rule": "revocation",
+      "expected_reason": "tm1_revocation_check_unavailable",
+      "expected_rejects_at_construction": false,
+      "expected_valid": false,
+      "payload_hash_sha256": "02f8bbbcd97fb5df36316c179fbcf6a187e7a495e2b55575b2810eb1ab3d5d30",
+      "relative_path": "negative/rule10-revocation-unavailable-substrate.json",
+      "vector_id": "tm1-neg-rule10-revocation-unavailable-substrate"
+    },
+    {
+      "category": "negative",
+      "description": "capability_id mutated to 'MC-1'. TrustMarkGrantPayload rejects at __post_init__. Cross-capability confusion.",
+      "expected_failing_rule": null,
+      "expected_reason": null,
+      "expected_rejects_at_construction": true,
+      "expected_valid": false,
+      "payload_hash_sha256": "bcaf229397e8c945d340413594755941c8d4f528f8b21c078e4bb1589bf0e3f7",
+      "relative_path": "negative/construction-wrong-capability-id.json",
+      "vector_id": "tm1-neg-construction-wrong-capability-id"
+    },
+    {
+      "category": "negative",
+      "description": "mark_class='sparkly' is not a known MarkClass. Typed reconstruction rejects at enum build; a Mapping-input verifier fails at rule 5.",
+      "expected_failing_rule": null,
+      "expected_reason": null,
+      "expected_rejects_at_construction": true,
+      "expected_valid": false,
+      "payload_hash_sha256": "764d56e3ff2aa8bc587c3f78a399a2fee29a05febf2d68854a9d958d83eb35a6",
+      "relative_path": "negative/construction-invalid-mark-class.json",
+      "vector_id": "tm1-neg-construction-invalid-mark-class"
+    },
+    {
+      "category": "negative",
+      "description": "The heartbeat jwk carries a 'd' (private) member. THE mint-ceremony invariant made structural: a grant must never embed (and the registry must never accept) private key material. Rejected at HeartbeatKey construction / rule 7 / JSON Schema.",
+      "expected_failing_rule": null,
+      "expected_reason": null,
+      "expected_rejects_at_construction": true,
+      "expected_valid": false,
+      "payload_hash_sha256": "26f7070b989a2196957c2e32af206a7e30c2382f303dbb6ca449e6ab0a767a14",
+      "relative_path": "negative/construction-private-key-component.json",
+      "vector_id": "tm1-neg-construction-private-key-component"
+    },
+    {
+      "category": "negative",
+      "description": "grant_id is empty. The grant requires a non-empty public resolution key.",
+      "expected_failing_rule": null,
+      "expected_reason": null,
+      "expected_rejects_at_construction": true,
+      "expected_valid": false,
+      "payload_hash_sha256": "f427a986f60ff4161bcd1da7109dbac1c6ede4599a41f9ebb6a2bb76c7668a2e",
+      "relative_path": "negative/construction-empty-grant-id.json",
+      "vector_id": "tm1-neg-construction-empty-grant-id"
+    },
+    {
+      "category": "negative",
+      "description": "surface_origin is http://, not https://. The covered surface must be an https origin.",
+      "expected_failing_rule": null,
+      "expected_reason": null,
+      "expected_rejects_at_construction": true,
+      "expected_valid": false,
+      "payload_hash_sha256": "76df36b31f21ba908d5d4f7f057f953f775246449f43dd43a3ae3f98587d479d",
+      "relative_path": "negative/construction-http-surface-origin.json",
+      "vector_id": "tm1-neg-construction-http-surface-origin"
+    },
+    {
+      "category": "negative",
+      "description": "kernel_policy_hash is 'not-a-hash', not a 'sha256:<64 hex>' content reference. The signed rule-9 coverage comparand must be a well-formed sha256 ref so coverage is independently re-derivable; a malformed value is a structural failure, never silently coerced at coverage time. Rejected at TrustMarkGrantPayload construction / JSON Schema pattern.",
+      "expected_failing_rule": null,
+      "expected_reason": null,
+      "expected_rejects_at_construction": true,
+      "expected_valid": false,
+      "payload_hash_sha256": "b85e0facb339aed86ce9e35d3d759c41c9f6a7e3abf2dac18d52d3abc14080d7",
+      "relative_path": "negative/construction-invalid-kernel-policy-hash.json",
+      "vector_id": "tm1-neg-construction-invalid-kernel-policy-hash"
+    },
+    {
+      "category": "negative",
+      "description": "coverage_window_seconds is the JSON boolean true, not a positive integer. The signed staleness bound must be int > 0; bool (an int subclass) is rejected explicitly so True/False cannot masquerade as a window. Rejected at TrustMarkGrantPayload construction / JSON Schema integer type.",
+      "expected_failing_rule": null,
+      "expected_reason": null,
+      "expected_rejects_at_construction": true,
+      "expected_valid": false,
+      "payload_hash_sha256": "dc6613f6cb7924873e2250248c570538cee4ded5df274f46fa3a2bd438d837a8",
+      "relative_path": "negative/construction-non-positive-coverage-window.json",
+      "vector_id": "tm1-neg-construction-non-positive-coverage-window"
+    }
+  ]
+}

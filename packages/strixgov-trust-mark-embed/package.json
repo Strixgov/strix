@@ -1,0 +1,51 @@
+{
+  "name": "@strixgov/trust-mark-embed",
+  "version": "0.1.0",
+  "description": "One-line embeddable <strix-trust-mark> web component. Renders the live four-state Consumer Trust Mark (TM-1) badge from a licensee's public status surface. Render-only — independent re-derivation is `npx @strixgov/verifier trustmark`.",
+  "type": "module",
+  "main": "src/index.mjs",
+  "types": "src/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.mts",
+      "default": "./src/index.mjs"
+    },
+    "./dist/trust-mark.js": "./dist/trust-mark.js"
+  },
+  "files": [
+    "src/",
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "strix",
+    "strixgov",
+    "trust-mark",
+    "consumer-trust-mark",
+    "ai-governance",
+    "trust",
+    "web-component",
+    "custom-element",
+    "embed",
+    "badge"
+  ],
+  "author": "Strixgov",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/strixgov-trust-mark-embed"
+  },
+  "homepage": "https://verify.strixgov.com/trust-mark",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

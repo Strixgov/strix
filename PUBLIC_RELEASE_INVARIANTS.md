@@ -47,6 +47,14 @@ exact path its published `package.json` declares in `repository.directory`:
 | `@strixgov/verify-embed` | `packages/strixgov-verify-embed/` |
 | `@strixgov/healthcare-demo` | `packages/strixgov-healthcare-demo/` |
 | `@strixgov/rcm-reference` | `packages/strixgov-rcm-reference/` |
+| `@strixgov/governed-action` | `packages/strixgov-governed-action/` |
+| `@strixgov/swarm-adapter` | `packages/strixgov-swarm-adapter/` |
+| `@strixgov/guard` | `packages/strixgov-guard/` |
+| `@strixgov/claude-code` | `packages/strixgov-claude-code/` |
+| `@strixgov/capabilities-odysseus` | `packages/strixgov-capabilities-odysseus/` |
+| `@strixgov/mcp-credentials` | `packages/strixgov-mcp-credentials/` |
+| `@strixgov/trust-mark-embed` | `packages/strixgov-trust-mark-embed/` |
+| `@strixgov/visual-receipts` | `packages/visual-receipts/` |
 
 Adding or removing a package is a deliberate change that updates this table
 **and** the locked `EXPECTED_PACKAGES` list in the upstream invariant lint
@@ -88,6 +96,18 @@ staging tree before it is pushed here:
   (`workspaces: ["packages/*"]`) and the repo-level docs are present.
 - **PR-5 — Baseline files.** Every package ships `package.json`,
   `README.md`, and `LICENSE`.
+- **PR-6 — Source availability.** Every publishable package upstream that
+  declares a `repository.directory` on this repo is actually present here.
+  Unlike PR-3, this is derived from the upstream package set rather than
+  compared against a hand-maintained list — so a package cannot be published
+  with a `repository.directory` pointing at a path that was never mirrored.
+  That failure mode is not hypothetical: `@strixgov/governed-action`,
+  `@strixgov/swarm-adapter`, and `@strixgov/guard` each shipped to npm with a
+  "Repository" link that 404'd, while PR-1…PR-5 stayed green — because those
+  checks only ever inspected packages already in the mirror. PR-6 is the
+  outward-facing direction of the same question. The remedy is either to
+  mirror the package or to stop declaring a public source path it does not
+  have; the lint refuses the inconsistent middle state.
 
 ---
 

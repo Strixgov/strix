@@ -14,6 +14,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
+import { expandTilde } from "./paths.mjs";
 
 const DEFAULT_STORAGE_DIR = path.join(os.homedir(), ".strix-gateway");
 const RECEIPTS_FILE = "receipts.jsonl";
@@ -27,7 +28,7 @@ export class JsonlStorage {
    * @param {{ dir?: string, file?: string, snapshotsFile?: string }} [opts]
    */
   constructor(opts = {}) {
-    this.dir = opts.dir ?? DEFAULT_STORAGE_DIR;
+    this.dir = expandTilde(opts.dir ?? DEFAULT_STORAGE_DIR);
     this.file = path.join(this.dir, opts.file ?? RECEIPTS_FILE);
     this.snapshotsFile = path.join(
       this.dir,

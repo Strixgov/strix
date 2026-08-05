@@ -1,0 +1,55 @@
+{
+  "canonical_bytes_b64": "eyJjYXBhYmlsaXR5X2lkIjoiVE0tMSIsImNvdmVyYWdlX3dpbmRvd19zZWNvbmRzIjozNjAwLCJlbnZpcm9ubWVudCI6InByb2QiLCJncmFudF9pZCI6IiIsImhlYXJ0YmVhdF9rZXkiOnsiandrIjp7ImNydiI6IkVkMjU1MTkiLCJrdHkiOiJPS1AiLCJ4IjoiMTFxWUFZS3hDcmZWU183VHlXUUhPZzdoY3ZQYXBpTWxyd0lhYVBjSFVSbyJ9LCJraWQiOiJsaWNlbnNlZS1oYi0yMDI2LTA2In0sImlzcyI6Imh0dHBzOi8vd3d3LnN0cml4Z292LmNvbSIsImlzc3VlZF9hdCI6IjIwMjYtMDYtMDFUMDA6MDA6MDBaIiwia2VybmVsX3BvbGljeV9oYXNoIjoic2hhMjU2OmNmOWE4OTE2ZmIzNjUzZTFmODA0MTcxMjdkODA3MTVkOTkzNzZjZDg5MzE3MjE5MjYwY2FmOGFjZmZlN2VjZWQiLCJsaWNlbnNlZSI6eyJsZWdhbF9uYW1lIjoiQWNtZSBTdXBwb3J0IENvLiIsImxpY2Vuc2VlX2lkIjoibGljLWFjbWUtMDAxIn0sIm1hcmtfY2xhc3MiOiJnb3Zlcm5lZF9hZ2VudCIsInN1cmZhY2Vfb3JpZ2luIjoiaHR0cHM6Ly9zdXBwb3J0LmFjbWUuZXhhbXBsZSIsInRlbmFudF9pZCI6InRlbmFudC1hY21lIiwidmFsaWRfZnJvbSI6IjIwMjYtMDYtMDFUMDA6MDA6MDBaIiwidmFsaWRfdW50aWwiOiIyMDI3LTA2LTAxVDAwOjAwOjAwWiJ9",
+  "canonical_bytes_hex": "7b226361706162696c6974795f6964223a22544d2d31222c22636f7665726167655f77696e646f775f7365636f6e6473223a333630302c22656e7669726f6e6d656e74223a2270726f64222c226772616e745f6964223a22222c226865617274626561745f6b6579223a7b226a776b223a7b22637276223a2245643235353139222c226b7479223a224f4b50222c2278223a223131715941594b7843726656535f3754795751484f6737686376506170694d6c727749616150634855526f227d2c226b6964223a226c6963656e7365652d68622d323032362d3036227d2c22697373223a2268747470733a2f2f7777772e7374726978676f762e636f6d222c226973737565645f6174223a22323032362d30362d30315430303a30303a30305a222c226b65726e656c5f706f6c6963795f68617368223a227368613235363a63663961383931366662333635336531663830343137313237643830373135643939333736636438393331373231393236306361663861636666653765636564222c226c6963656e736565223a7b226c6567616c5f6e616d65223a2241636d6520537570706f727420436f2e222c226c6963656e7365655f6964223a226c69632d61636d652d303031227d2c226d61726b5f636c617373223a22676f7665726e65645f6167656e74222c22737572666163655f6f726967696e223a2268747470733a2f2f737570706f72742e61636d652e6578616d706c65222c2274656e616e745f6964223a2274656e616e742d61636d65222c2276616c69645f66726f6d223a22323032362d30362d30315430303a30303a30305a222c2276616c69645f756e74696c223a22323032372d30362d30315430303a30303a30305a227d",
+  "category": "negative",
+  "description": "grant_id is empty. The grant requires a non-empty public resolution key.",
+  "expected": {
+    "construction_error_substring": "grant_id is required",
+    "failing_rule": null,
+    "reason": null,
+    "rejects_at_construction": true,
+    "valid": false
+  },
+  "payload_hash_sha256": "f427a986f60ff4161bcd1da7109dbac1c6ede4599a41f9ebb6a2bb76c7668a2e",
+  "record_dict": {
+    "created_at": "2026-06-01T00:00:01Z",
+    "kid": "strix-prod-2026-06",
+    "payload": {
+      "capability_id": "TM-1",
+      "coverage_window_seconds": 3600,
+      "environment": "prod",
+      "grant_id": "",
+      "heartbeat_key": {
+        "jwk": {
+          "crv": "Ed25519",
+          "kty": "OKP",
+          "x": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+        },
+        "kid": "licensee-hb-2026-06"
+      },
+      "iss": "https://www.strixgov.com",
+      "issued_at": "2026-06-01T00:00:00Z",
+      "kernel_policy_hash": "sha256:cf9a8916fb3653e1f80417127d80715d99376cd89317219260caf8acffe7eced",
+      "licensee": {
+        "legal_name": "Acme Support Co.",
+        "licensee_id": "lic-acme-001"
+      },
+      "mark_class": "governed_agent",
+      "surface_origin": "https://support.acme.example",
+      "tenant_id": "tenant-acme",
+      "valid_from": "2026-06-01T00:00:00Z",
+      "valid_until": "2027-06-01T00:00:00Z"
+    },
+    "signature": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+  },
+  "schema_version": "trust_mark_grant_v1",
+  "vector_id": "tm1-neg-construction-empty-grant-id",
+  "verification_inputs": {
+    "bound_grant_id": null,
+    "bound_surface_origin": null,
+    "coverage_status": null,
+    "revocation_status": null,
+    "signing_key": null,
+    "verified_at": "2026-06-12T00:00:00Z"
+  }
+}

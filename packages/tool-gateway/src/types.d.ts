@@ -2,25 +2,15 @@
  * @strixgov/tool-gateway — Type definitions
  *
  * Governed tool execution for AI agents. The gateway sits inline between
- * an agent and an execution surface (filesystem, shell, MCP, HTTP) and
- * enforces the five Strix invariants:
- *
- *   1. Nothing executes until evaluation completes.
- *   2. Execution does not inherit authority.
- *   3. Admissibility is decided at execution time.
- *   4. Enforcement is at runtime, not in logs.
- *   5. Execution is bounded and revocable.
+ * an agent and an execution surface and evaluates every action before the
+ * executor can be invoked.
  */
 
 export type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type Mode = "READ" | "WRITE" | "EXECUTE";
 export type Decision = "ALLOW" | "DENY" | "APPROVAL_REQUIRED";
+export type ExecutionStatus = "SUCCEEDED" | "FAILED" | "UNKNOWN";
 
-/**
- * A single classified tool. The triple (id, mode, risk) is the contract
- * the policy engine evaluates against. Everything downstream — receipts,
- * approval prompts, audit — depends on accurate classification.
- */
 export interface ToolCapability {
   id: string;
   name?: string;
@@ -29,12 +19,6 @@ export interface ToolCapability {
   description?: string;
 }
 
-/**
- * A concrete invocation of a capability. `args` is the raw input that
- * will be forwarded to the executor on ALLOW. The gateway hashes the
- * canonical (id, action, args) tuple into the receipt — so anything an
- * approver sees and signs off on is exactly what executes.
- */
 export interface ToolInvocation {
   capabilityId: string;
   action: string;
@@ -44,20 +28,10 @@ export interface ToolInvocation {
   invocationId?: string;
 }
 
-/**
- * Static policy ruleset. Keys are capability IDs (or glob-like prefixes —
- * `filesystem.*`); values are the deterministic decision. `default` is
- * applied when no rule matches; the gateway treats a missing default as
- * DENY (fail-closed).
- */
 export interface PolicyRuleset {
   rules: Record<string, Decision>;
   default?: Decision;
   riskOverrides?: Partial<Record<RiskLevel, Decision>>;
-  /**
-   * Per-capability rate limits. Advisory — not bound into the policy
-   * version hash, since these are operationally tunable.
-   */
   rateLimits?: Record<string, RateLimitRule>;
 }
 
@@ -100,14 +74,7 @@ export interface ApprovalResult {
   approvedBy?: string;
 }
 
-/**
- * Schema v2 canonical signed payload (current). Order is locked.
- * Reordering or removing a field breaks every previously-issued
- * receipt's signature, so any change here MUST come with a schema
- * version bump and a v1-compatible verification path.
- *
- * v2 added (vs v1): policyVersion, tenantId, environment.
- */
+/** Current pre-execution authorization receipt schema. */
 export interface ReceiptCanonical {
   schemaVersion: "2";
   receiptId: string;
@@ -125,7 +92,7 @@ export interface ReceiptCanonical {
   timestamp: string;
 }
 
-/** Frozen v1 schema. Kept for verification of pre-v0.1.1 receipts. */
+/** Frozen v1 receipt schema retained for legacy verification. */
 export interface ReceiptCanonicalV1 {
   schemaVersion: "1";
   receiptId: string;
@@ -148,6 +115,57 @@ export interface Receipt extends ReceiptCanonical {
   actorRole?: string;
   approvedBy?: string;
   approvalReason?: ApprovalResult["reason"];
+}
+
+/**
+ * Signed post-execution record. Receipt proves pre-invocation authorization;
+ * ExecutionOutcome proves the result observed after an ALLOW invocation.
+ */
+export interface ExecutionOutcomeCanonical {
+  schemaVersion: "1";
+  outcomeId: string;
+  authorizationReceiptId: string;
+  authorizationProofChainHash: string;
+  capabilityId: string;
+  action: string;
+  decision: "ALLOW";
+  executionAttempted: true;
+  executionStatus: ExecutionStatus;
+  invocationHash: string;
+  resultHash: string;
+  errorCode: string;
+  policyVersion: string;
+  tenantId: string;
+  environment: string;
+  completedAt: string;
+  signingKeyId: string;
+  signatureAlgorithm: "Ed25519";
+  outcomeHash: string;
+}
+
+export interface ExecutionOutcome extends ExecutionOutcomeCanonical {
+  signature: string;
+}
+
+export interface VerifyExecutionOutcomeResult {
+  outcomeId?: string;
+  schemaValid: boolean;
+  hashValid: boolean;
+  signaturePresent: boolean;
+  keyResolved: boolean;
+  signatureValid: boolean;
+  linkValid: boolean | null;
+  consistencyValid: boolean;
+  verificationStatus:
+    | "VERIFIED"
+    | "UNSIGNED"
+    | "KEY_NOT_FOUND"
+    | "HASH_MISMATCH"
+    | "SIGNATURE_INVALID"
+    | "INCONSISTENT"
+    | "AUTHORIZATION_LINK_INVALID"
+    | "ERROR";
+  error: string | null;
 }
 
 export interface VerifyResult {
@@ -219,6 +237,28 @@ export interface StorageDriver {
   listSnapshots?(): Promise<ChainSnapshot[]>;
 }
 
+export interface OutcomeStorageDriver {
+  appendOutcome(outcome: ExecutionOutcome): Promise<void>;
+  lastOutcome(): Promise<ExecutionOutcome | null>;
+  listOutcomes(): Promise<ExecutionOutcome[]>;
+  getOutcome(outcomeId: string): Promise<ExecutionOutcome | null>;
+}
+
+export class JsonlOutcomeStorage implements OutcomeStorageDriver {
+  constructor(opts?: { dir?: string; file?: string });
+  appendOutcome(outcome: ExecutionOutcome): Promise<void>;
+  lastOutcome(): Promise<ExecutionOutcome | null>;
+  listOutcomes(): Promise<ExecutionOutcome[]>;
+  getOutcome(outcomeId: string): Promise<ExecutionOutcome | null>;
+}
+
+export class MemoryOutcomeStorage implements OutcomeStorageDriver {
+  appendOutcome(outcome: ExecutionOutcome): Promise<void>;
+  lastOutcome(): Promise<ExecutionOutcome | null>;
+  listOutcomes(): Promise<ExecutionOutcome[]>;
+  getOutcome(outcomeId: string): Promise<ExecutionOutcome | null>;
+}
+
 export interface EscalationOptions {
   threshold: number;
   windowMs: number;
@@ -263,11 +303,6 @@ export const WIRE_VERSION: "v0.3-experimental";
 export interface GatewayOptions {
   policy: PolicyRuleset;
   capabilities: Record<string, ToolCapability>;
-  /**
-   * Active signing key. Either `signingKey` or `keyRing` is required.
-   * Passing a `keyRing` enables `Gateway.rotateKey()`; a bare `signingKey`
-   * does not.
-   */
   signingKey?: SigningKey;
   keyRing?: KeyRing;
   storage: StorageDriver;
@@ -275,16 +310,7 @@ export interface GatewayOptions {
   rateLimiter?: RateLimiter;
   escalation?: EscalationOptions;
   connectedMode?: ConnectedModeOptions;
-  /**
-   * Tenant or project identifier. Bound into the canonical signed
-   * payload — receipts from different tenants cannot be confused
-   * even when they share a chain on disk. Defaults to `"local"`.
-   */
   tenantId?: string;
-  /**
-   * Deployment environment ("dev", "staging", "prod", ...). Bound
-   * into the canonical signed payload. Defaults to `"local"`.
-   */
   environment?: string;
   approval?: {
     enabled?: boolean;
@@ -301,6 +327,7 @@ export interface GatewayOptions {
 export type GatewayEvent =
   | "decision"
   | "receipt"
+  | "outcome"
   | "denial"
   | "error"
   | "rotation"
@@ -326,6 +353,7 @@ export class Gateway {
   readonly environment: string;
   readonly policyVersion: string;
   readonly connectedSyncer: ConnectedSyncer | null;
+  signingKey: SigningKey;
   registerCapability(capability: ToolCapability): void;
   setPolicy(rules: PolicyRuleset): void;
   setRateLimits(rules: Record<string, RateLimitRule>): void;
@@ -345,6 +373,7 @@ export class Gateway {
   }): Promise<Receipt>;
   on(event: "decision", l: (e: { evaluation: PolicyEvaluation; invocation: ToolInvocation }) => void): this;
   on(event: "receipt", l: (r: Receipt) => void): this;
+  on(event: "outcome", l: (o: ExecutionOutcome) => void): this;
   on(event: "denial", l: (e: { receipt: Receipt; evaluation?: PolicyEvaluation; approval?: ApprovalResult; reason?: string; hardfail?: boolean; rateLimited?: boolean }) => void): this;
   on(event: "error", l: (e: { receipt: Receipt; err: Error; invocation: ToolInvocation }) => void): this;
   on(event: "rotation", l: (e: { snapshot: ChainSnapshot }) => void): this;
@@ -363,10 +392,43 @@ export function loadOrCreateSigningKey(opts?: {
   kid?: string;
 }): Promise<SigningKey>;
 
+export function generateSigningKey(kid?: string): SigningKey;
+
 export function verifyReceipt(
   receipt: Receipt,
   publicKey: import("node:crypto").KeyObject
 ): VerifyResult;
+
+export function issueExecutionOutcome(args: {
+  authorizationReceipt: Receipt;
+  executionStatus: ExecutionStatus;
+  result?: unknown;
+  errorCode?: string;
+  signingKey: SigningKey;
+  completedAt?: string;
+  outcomeId?: string;
+}): ExecutionOutcome;
+
+export function validateExecutionOutcomeShape(
+  outcome: ExecutionOutcome
+): true;
+
+export function verifyExecutionOutcome(
+  outcome: ExecutionOutcome,
+  publicKey: import("node:crypto").KeyObject | null,
+  authorizationReceipt?: Receipt
+): VerifyExecutionOutcomeResult;
+
+export function computeExecutionResultHash(result: unknown): string;
+export function computeExecutionOutcomeHash(outcome: ExecutionOutcomeCanonical): string;
+export function canonicalExecutionOutcomeCore(outcome: ExecutionOutcomeCanonical): string;
+export function canonicalExecutionOutcomePayload(outcome: ExecutionOutcomeCanonical): string;
+
+export const EXECUTION_OUTCOME_SCHEMA_VERSION: "1";
+export const EXECUTION_OUTCOME_SIGNATURE_ALGORITHM: "Ed25519";
+export const EXECUTION_OUTCOME_CORE_FIELD_ORDER: readonly string[];
+export const EXECUTION_OUTCOME_FIELD_ORDER: readonly string[];
+export const EXECUTION_OUTCOME_ALLOWED_FIELDS: readonly string[];
 
 export function canonicalReceiptPayload(
   r: ReceiptCanonical | ReceiptCanonicalV1

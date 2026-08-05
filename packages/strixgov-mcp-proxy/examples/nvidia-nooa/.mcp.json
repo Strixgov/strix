@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "strix_secure_coding": {
+      "command": "node",
+      "args": [
+        "./packages/strixgov-mcp-proxy/bin/strix-mcp-proxy.mjs",
+        "--config",
+        "./packages/strixgov-mcp-proxy/examples/nvidia-nooa/proxy-config.json"
+      ],
+      "env": {
+        "STRIX_TRUSTED_ACTOR_ID": "spiffe://openshell.local/nooa/remediator",
+        "STRIX_TRUSTED_ACTOR_ROLE": "agent",
+        "STRIX_REQUIRE_TRUSTED_IDENTITY": "true",
+        "STRIX_TENANT_ID": "nvidia-nooa-demo",
+        "STRIX_ENVIRONMENT": "openshell"
+      },
+      "transport": "stdio"
+    }
+  }
+}

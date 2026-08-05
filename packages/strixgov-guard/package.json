@@ -1,0 +1,40 @@
+{
+  "name": "@strixgov/guard",
+  "version": "0.1.0",
+  "description": "The seatbelt for MCP agents — one command wraps your MCP servers with Strix governance: writes require human approval, reads pass, every action produces a signed receipt.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "strix-guard": "bin/strix-guard.mjs"
+  },
+  "exports": {
+    ".": {
+      "import": "./src/index.mjs"
+    }
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "ai-agents",
+    "governance",
+    "approval",
+    "execution-control",
+    "strix"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/strixgov-guard"
+  }
+}

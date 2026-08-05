@@ -626,12 +626,20 @@ test("approval.type: 'file' with ~/ requestDir expands to os.homedir()", async (
 });
 
 test("approval.type: 'terminal' is the explicit legacy default (passes through; denies in non-TTY)", async () => {
-  // node:test inherits the parent process's stdin TTY-ness. When run from
-  // a real terminal, terminalApprove's early "non-TTY → PROMPT_FAILED" guard
-  // doesn't fire, so it falls back to waiting on the timeout — verifying the
-  // longer DENY-on-timeout path is still active. Short timeout so the test
-  // doesn't sit for 60s; we're pinning the "type: 'terminal' is passed
-  // through to the gateway" behavior, not the specific deny reason.
+  // Under `node --test` neither stdio end is a TTY, so terminalApprove's
+  // "non-TTY → PROMPT_FAILED" guard fires immediately and nothing is written
+  // to stdout. That guard used to be unreachable (it compared `isTTY ===
+  // false`, but Node leaves `isTTY` undefined on a pipe rather than setting
+  // it false), so this test instead fell through to a real prompt banner
+  // written into the runner's own serialized stdout channel — which is what
+  // made this FILE intermittently fail with "Unable to deserialize cloned
+  // data", ~1% of runs and much more often under CPU load. See
+  // tool-gateway's approval.test.mjs for the guard's own regression pins.
+  //
+  // We're pinning "type: 'terminal' is passed through to the gateway and
+  // denies headlessly", not the specific deny reason — hence the loose regex.
+  // timeoutMs stays low so a future regression that DOES reach the prompt
+  // path fails fast instead of sitting for 60s.
   const ctx = await startProxyWithApproval({
     enabled: true,
     type: "terminal",

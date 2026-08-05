@@ -29,7 +29,9 @@ import {
   verifyCtInclusion,
   verifyCtConsistency,
   verifySwarm,
+  verifyLoop,
   verifyTrustMark,
+  exportOfflineBundle,
 } from "../src/index.mjs";
 
 /**
@@ -102,7 +104,11 @@ Usage:
   strix-verify ct inclusion <evidenceHash> [--ct-base <url>] [--proof <file>]
   strix-verify ct consistency <sth1.json> <sth2.json> [--ct-base <url>] [--proof <file>]
   strix-verify swarm <swarmRunId> [--base <url>] [--proof <file>] [--json]
+  strix-verify loop <loopId> [--base <url>] [--proof <file>] [--jwks <path>] [--json]
   strix-verify trustmark <grantId> [--proof-base <url>] [--jwks-base <url>] [--revocations <url>] [--json]
+  strix-verify disclosure <bundle.json> [--jwks <path>] [--json]
+  strix-verify agent-session <bundle.json> [--jwks <path>] [--json]
+  strix-verify proof export <evidenceId> [-o <path>] [--proof-base <url>] [--json]
 
 Options:
   --proof-base <url>      Base URL for proof API (default: https://www.strixgov.com)
@@ -118,6 +124,7 @@ Examples:
   strix-verify 42 --include-attestations
   strix-verify approval <artifactId>
   strix-verify quorum <decisionId>
+  strix-verify proof export 42 -o bundle.json
 
 What evidence verification does:
   1. Fetches the evidence record from the proof API
@@ -126,6 +133,15 @@ What evidence verification does:
   4. Verifies the Ed25519 signature
   5. Verifies the SHA-256 evidence hash
   6. Reports pass/fail with cryptographic details
+
+What proof export does (NOT verification — a separate step by design):
+  1. Fetches the offline proof bundle from the public producer route
+  2. Writes it to disk (default: evidence_v1_<id>.bundle.json, or --json to
+     print to stdout instead)
+  3. Prints the follow-up command to actually verify it offline
+  A 501 (trust-anchor prerequisites not installed on this deployment) or a
+  404/422 response is forwarded with its real structured reason — never a
+  fabricated bundle.
 
 What approval verification does (Phase 3):
   1. Fetches a signed approval artifact (or all artifacts for a decision)
@@ -337,6 +353,308 @@ if (args[0] === "swarm") {
     process.exit(r.verificationStatus === "VERIFIED" ? 0 : 1);
   } catch (err) {
     console.error(`strix-verify swarm: ${err.message}`);
+    process.exit(2);
+  }
+}
+
+// Selective-disclosure bundle (run_commitment_v1) — independent offline
+// verification: own SCJ-compatible canonicalization + own RFC 6962 walk
+// (src/disclosure.mjs; zero shared code with the producer). Without --jwks
+// the verdict caps at UNVERIFIABLE, never INVALID (SD-5), and every result
+// prints "Completeness: NOT PROVEN" (SD-1 — a root proves inclusion +
+// consistency of the presented slice, structurally never the whole run).
+if (args[0] === "disclosure") {
+  let jwksPath = null;
+  let jsonOut = false;
+  const positional = [];
+  for (let i = 1; i < args.length; i++) {
+    if (args[i] === "--jwks" && args[i + 1]) jwksPath = args[++i];
+    else if (args[i] === "--json") jsonOut = true;
+    else positional.push(args[i]);
+  }
+  const bundlePath = positional[0];
+  if (!bundlePath) {
+    console.error(
+      "Missing bundle path. Usage: strix-verify disclosure <bundle.json> [--jwks <path>] [--json]",
+    );
+    process.exit(2);
+  }
+  try {
+    const { verifyDisclosureBundle } = await import("../src/disclosure.mjs");
+    const bundle = JSON.parse(await fs.readFile(bundlePath, "utf8"));
+    const jwks = jwksPath ? JSON.parse(await fs.readFile(jwksPath, "utf8")) : null;
+    const r = verifyDisclosureBundle(bundle, jwks ? { jwks } : {});
+    if (jsonOut) {
+      console.log(JSON.stringify(r, null, 2));
+    } else {
+      const p = bundle?.commitment?.payload ?? {};
+      console.log(`Disclosure bundle:   ${bundlePath}`);
+      console.log(`  Run:               ${p.runId ?? "(unknown)"} (${p.runKind ?? "?"})`);
+      console.log(`  Committed at:      ${p.committedAt ?? "?"}`);
+      console.log(`  Leaves committed:  ${p.leafCount ?? "?"}`);
+      console.log(`  Records disclosed: ${bundle?.disclosed?.length ?? 0}`);
+      console.log(`  Verdict:           ${r.verdict}`);
+      console.log(`  Reasons:           ${r.reasons.join(", ")}`);
+      for (const pr of r.perRecord) {
+        console.log(`    leaf ${pr.leafIndex}: ${pr.verdict} (${pr.reason})`);
+      }
+      console.log(`  Completeness:      NOT PROVEN — a root proves the slice`);
+      console.log(`                     belongs to the sealed run, never that`);
+      console.log(`                     it is the whole run.`);
+      if (!jwksPath) {
+        console.log(`  Note: no --jwks supplied; verdict capped at UNVERIFIABLE.`);
+      }
+    }
+    process.exit(r.verdict === "VERIFIED" ? 0 : r.verdict === "UNVERIFIABLE" ? 3 : 1);
+  } catch (err) {
+    console.error(`strix-verify disclosure: ${err.message}`);
+    process.exit(2);
+  }
+}
+
+// Governed agent navigation session (agent_navigation_evidence_v1 sealed under
+// a run_commitment_v1 of runKind "agent_session") — independent offline
+// verification: own SCJ-compatible canonicalization, own per-event content
+// addressing, own chain walk, own RFC 6962 Merkle root (src/agent-session.mjs;
+// zero shared code with the producer). Without --jwks the verdict caps at
+// UNVERIFIABLE, never INVALID (NAV-7). Every result prints the two honesty
+// boundaries: completeness is NOT PROVEN (NAV-3) and the verdict says nothing
+// about whether the review's findings are correct (NAV-4).
+if (args[0] === "agent-session") {
+  let jwksPath = null;
+  let jsonOut = false;
+  const positional = [];
+  for (let i = 1; i < args.length; i++) {
+    if (args[i] === "--jwks" && args[i + 1]) jwksPath = args[++i];
+    else if (args[i] === "--json") jsonOut = true;
+    else positional.push(args[i]);
+  }
+  const bundlePath = positional[0];
+  if (!bundlePath) {
+    console.error(
+      "Missing bundle path. Usage: strix-verify agent-session <bundle.json> [--jwks <path>] [--json]",
+    );
+    process.exit(2);
+  }
+  try {
+    const { verifyAgentSessionBundle } = await import("../src/agent-session.mjs");
+    const bundle = JSON.parse(await fs.readFile(bundlePath, "utf8"));
+    const jwks = jwksPath ? JSON.parse(await fs.readFile(jwksPath, "utf8")) : null;
+    const r = verifyAgentSessionBundle(bundle, jwks ? { jwks } : {});
+    if (jsonOut) {
+      console.log(JSON.stringify(r, null, 2));
+    } else {
+      const p = bundle?.commitment?.payload ?? {};
+      const screens = new Set(
+        (Array.isArray(bundle?.events) ? bundle.events : [])
+          .map((e) => e?.payload?.screen)
+          .filter((s) => typeof s === "string"),
+      );
+      console.log(`Agent session bundle: ${bundlePath}`);
+      console.log(`  Session:            ${p.runId ?? "(unknown)"}`);
+      console.log(`  Capability:         ${bundle?.events?.[0]?.payload?.capabilityId ?? "?"}`);
+      console.log(`  Committed at:       ${p.committedAt ?? "?"}`);
+      console.log(`  Events committed:   ${p.leafCount ?? "?"}`);
+      console.log(`  Events presented:   ${r.eventCount}`);
+      console.log(`  Screens observed:   ${screens.size}`);
+      console.log(`  Chain head:         ${r.chainHead ?? "(none)"}`);
+      console.log(`  Verdict:            ${r.verdict}`);
+      console.log(`  Reasons:            ${r.reasons.join(", ")}`);
+      console.log(`  Anchored by:        ${r.integrityAnchoredBy}`);
+      const fb = r.findingsBinding ?? { verdict: "?", reasons: [], perFinding: [] };
+      console.log(`  Findings binding:   ${fb.verdict} (${fb.reasons.join(", ")})`);
+      for (const pf of fb.perFinding) {
+        if (pf.verdict !== "VERIFIED") {
+          console.log(`    ${pf.findingId}: ${pf.verdict} (${pf.reason})`);
+        }
+      }
+      console.log(`  Completeness:       NOT PROVEN — this proves the presented`);
+      console.log(`                      events are the ones sealed under the`);
+      console.log(`                      signed root, in that order, unedited.`);
+      console.log(`                      It cannot prove the agent recorded`);
+      console.log(`                      everything it did.`);
+      console.log(`  Review correctness: NOT PROVEN — findings are a model's`);
+      console.log(`                      opinion, bound to observed screens but`);
+      console.log(`                      never certified by this verdict.`);
+      if (!jwksPath) {
+        console.log(`  Note: no --jwks supplied; verdict capped at UNVERIFIABLE.`);
+      }
+    }
+    // Exit code is the worst of session integrity and finding binding: a
+    // deliverable whose findings cite screens that were never visited is not
+    // a clean pass, even when the session itself verifies.
+    const rank = { VERIFIED: 0, UNVERIFIABLE: 3, INVALID: 1 };
+    const worst =
+      r.verdict === "INVALID" || r.findingsBinding?.verdict === "INVALID"
+        ? "INVALID"
+        : r.verdict === "UNVERIFIABLE"
+          ? "UNVERIFIABLE"
+          : "VERIFIED";
+    process.exit(rank[worst]);
+  } catch (err) {
+    console.error(`strix-verify agent-session: ${err.message}`);
+    process.exit(2);
+  }
+}
+
+// Governed Loop v1 — independent lifecycle-chain verification. Fetches
+// GET /api/public/proof/loop/<id> and re-derives LP-9 chain integrity + LP-7
+// terminal state with the verifier's own hash + Ed25519 algebra. Per
+// docs/architecture/governed-loop-v1.md.
+if (args[0] === "loop") {
+  let base = null;
+  let proofPath = null;
+  let jwksPath = null;
+  let jsonOut = false;
+  const positional = [];
+  for (let i = 1; i < args.length; i++) {
+    if (args[i] === "--base" && args[i + 1]) base = args[++i];
+    else if (args[i] === "--proof" && args[i + 1]) proofPath = args[++i];
+    else if (args[i] === "--jwks" && args[i + 1]) jwksPath = args[++i];
+    else if (args[i] === "--json") jsonOut = true;
+    else positional.push(args[i]);
+  }
+
+  try {
+    const loopId = positional[0];
+    if (!loopId) {
+      console.error(
+        "Missing loopId. Usage: strix-verify loop <loopId> [--base <url>] [--proof <file>] [--jwks <path>] [--json]",
+      );
+      process.exit(2);
+    }
+    const opts = {};
+    if (base) opts.base = base;
+    if (proofPath) opts.proof = JSON.parse(await fs.readFile(proofPath, "utf8"));
+    if (jwksPath) {
+      const parsed = await readJsonFile(jwksPath);
+      opts.jwks = "keys" in parsed ? parsed : { keys: [parsed] };
+    }
+
+    const r = await verifyLoop(loopId, opts);
+
+    if (jsonOut) {
+      console.log(JSON.stringify(r, null, 2));
+    } else {
+      console.log();
+      console.log(`@strixgov/verifier — Governed Loop v1`);
+      console.log("─".repeat(56));
+      console.log(`  Loop:              ${r.loopId ?? loopId}`);
+      console.log(`  Chain OK (LP-9):   ${r.chainOk ?? "—"}`);
+      console.log(`  Terminal state:    ${r.terminalState ?? "—"}`);
+      if (r.counts) {
+        console.log(`  Iterations:        ${r.counts.iterations}`);
+        console.log(`  Admitted:          ${r.counts.admitted}`);
+        console.log(`  Denied:            ${r.counts.denied}`);
+        console.log(`  Blocked branches:  ${r.counts.blockedBranches}`);
+      }
+      if (r.signatures) {
+        console.log(`  Signatures valid:  ${r.signatures.valid}/${r.signatures.checked}`);
+      }
+      console.log(`  Status:            ${r.verificationStatus}`);
+      if (r.reason) console.log(`  Reason:            ${r.reason}`);
+      if (r.agreesWithServer !== null && r.agreesWithServer !== undefined) {
+        console.log(`  Agrees w/ server:  ${r.agreesWithServer}`);
+      }
+      if (r.error) console.log(`  Error:             ${r.error}`);
+      console.log();
+    }
+    if (r.error || r.verificationStatus === "ERROR") process.exit(2);
+    // Only VERIFIED is a success exit — UNVERIFIABLE means signatures were
+    // never checked (chain integrity only) and must not read as "passed".
+    process.exit(r.verificationStatus === "VERIFIED" ? 0 : 1);
+  } catch (err) {
+    console.error(`strix-verify loop: ${err.message}`);
+    process.exit(2);
+  }
+}
+
+// Offline proof bundle export — the customer-facing CLI half of
+// docs/architecture/offline-proof-bundle-v1.md §"Export surface" (the other
+// half is the Console "Download proof bundle" button). Fetches the
+// already-live producer route and writes the bundle to a file. Deliberately
+// does NOT verify — export and verify stay two separate commands, same as
+// everywhere else in this CLI: `node scripts/verify-offline-bundle.mjs` (or
+// the offline bundle verifier in solo-builder-core) is the next step.
+if (args[0] === "proof") {
+  const sub = args[1];
+  if (sub !== "export") {
+    console.error(`Unknown proof subcommand: ${sub ?? "(none)"}. Expected 'export'.`);
+    process.exit(2);
+  }
+
+  let proofBase = null;
+  let outPath = null;
+  let jsonOut = false;
+  const positional = [];
+  for (let i = 2; i < args.length; i++) {
+    if ((args[i] === "-o" || args[i] === "--output") && args[i + 1]) outPath = args[++i];
+    else if (args[i] === "--proof-base" && args[i + 1]) proofBase = args[++i];
+    else if (args[i] === "--json") jsonOut = true;
+    else positional.push(args[i]);
+  }
+
+  const evidenceId = positional[0];
+  if (!evidenceId) {
+    console.error(
+      "Missing evidenceId. Usage: strix-verify proof export <evidenceId> [-o <path>] [--proof-base <url>] [--json]",
+    );
+    process.exit(2);
+  }
+
+  try {
+    const opts = {};
+    if (proofBase) opts.proofBase = proofBase;
+    const result = await exportOfflineBundle(evidenceId, opts);
+
+    if (!result.ok) {
+      if (jsonOut) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        console.log();
+        console.log(`@strixgov/verifier — Offline Proof Bundle Export`);
+        console.log("─".repeat(56));
+        console.log(`  Evidence ID:       ${evidenceId}`);
+        console.log(`  HTTP status:       ${result.status}`);
+        console.log(`  Error:             ${result.error ?? "(unknown)"}`);
+        if (result.message) console.log(`  Message:           ${result.message}`);
+        if (result.prerequisites) {
+          console.log(`  Prerequisites:     ${result.prerequisites.status}`);
+          for (const item of result.prerequisites.items ?? []) {
+            console.log(`    ${item.ready ? "✓" : "✗"} ${item.id}`);
+          }
+        }
+        console.log();
+        console.log(`  (no file written)`);
+        console.log();
+      }
+      // A structured non-200 answer (404/422/429/501) is a real, non-network
+      // answer — FAILED semantics (exit 1), not ERROR (exit 2).
+      process.exit(1);
+    }
+
+    const defaultName = `evidence_v1_${evidenceId}.bundle.json`;
+    const target = outPath ?? defaultName;
+    const serialized = JSON.stringify(result.bundle, null, 2);
+
+    if (jsonOut) {
+      console.log(serialized);
+    } else {
+      await fs.writeFile(target, serialized, "utf8");
+      console.log();
+      console.log(`@strixgov/verifier — Offline Proof Bundle Export`);
+      console.log("─".repeat(56));
+      console.log(`  Evidence ID:       ${evidenceId}`);
+      console.log(`  HTTP status:       ${result.status}`);
+      console.log(`  Written to:        ${target}`);
+      console.log();
+      console.log(`  This command exports only — it does not verify. Next step:`);
+      console.log(`    node scripts/verify-offline-bundle.mjs ${target}`);
+      console.log();
+    }
+    process.exit(0);
+  } catch (err) {
+    console.error(`strix-verify proof export: ${err.message}`);
     process.exit(2);
   }
 }
@@ -629,12 +947,32 @@ const BOLD = "\x1b[1m";
 
 function statusColor(status) {
   if (status === "VERIFIED") return GREEN;
-  if (status === "LEGACY_UNSIGNED" || status === "UNSIGNED") return YELLOW;
+  // UNVERIFIABLE is amber, never red: an unresolvable key means "cannot
+  // verify", not "invalid". Painting it red is the false-negative the
+  // Proof Explorer's four-state vocabulary exists to prevent.
+  if (
+    status === "LEGACY_UNSIGNED" ||
+    status === "UNSIGNED" ||
+    status === "UNVERIFIABLE"
+  ) {
+    return YELLOW;
+  }
   return RED;
 }
 
 function checkMark(ok) {
   return ok ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
+}
+
+/** Tri-state marker: true / false / null ("not checked"). */
+function triMark(v) {
+  if (v === true) return `${GREEN}✓${RESET}`;
+  if (v === false) return `${RED}✗${RESET}`;
+  return `${DIM}–${RESET}`;
+}
+
+function fmtTri(v) {
+  return v === null || v === undefined ? "not checked" : String(v);
 }
 
 try {
@@ -687,23 +1025,48 @@ try {
       console.log();
     }
 
+    console.log(`${BOLD}Record${RESET}`);
+    console.log(`${"─".repeat(52)}`);
+    console.log(`${DIM}Record type:${RESET}     ${result.recordType ?? "unknown"}`);
+    console.log(`${DIM}Schema version:${RESET}  ${result.schemaVersion ?? "unknown"}`);
+    console.log(`${DIM}Signature alg:${RESET}   ${result.signatureAlgorithm ?? "n/a"}`);
+    console.log(`${DIM}Signing key:${RESET}     ${record?.signingKeyId ?? "none"}`);
+    console.log();
+
     console.log(`${BOLD}Verification Results${RESET}`);
     console.log(`${"─".repeat(52)}`);
+    // When no key resolved, no signature check ran — so `hashValid` (which in
+    // SE v1 is established by the signature) was not evaluated. Printing a red
+    // ✗ false there reads as a failed check rather than an absent one.
+    const hashChecked = result.signatureAlgorithm !== null;
     console.log(
-      `  ${checkMark(result.hashValid)} Hash valid:        ${result.hashValid}`
+      `  ${hashChecked ? checkMark(result.hashValid) : triMark(null)} ` +
+        `Hash valid:          ${hashChecked ? result.hashValid : "not checked"}`
     );
     console.log(
-      `  ${checkMark(result.signaturePresent)} Signature present: ${result.signaturePresent}`
+      `  ${triMark(result.chainValid)} Chain valid:         ${fmtTri(result.chainValid)}`
     );
     console.log(
-      `  ${checkMark(result.signatureValid)} Signature valid:   ${result.signatureValid}`
+      `  ${checkMark(result.signaturePresent)} Signature present:   ${result.signaturePresent}`
     );
+    console.log(
+      `  ${checkMark(result.signatureValid)} Signature valid:     ${result.signatureValid}`
+    );
+    if (result.chainValid === null && result.chainReason) {
+      console.log(`       ${DIM}chain: ${result.chainReason}${RESET}`);
+    }
     console.log();
 
     const color = statusColor(result.verificationStatus);
     console.log(
       `  ${BOLD}Status: ${color}${result.verificationStatus}${RESET}`
     );
+    if (result.verificationReason) {
+      console.log(`  ${DIM}Reason: ${result.verificationReason}${RESET}`);
+      if (result.verificationReasonText) {
+        console.log(`  ${DIM}        ${result.verificationReasonText}${RESET}`);
+      }
+    }
     console.log();
 
     if (result.verificationStatus === "VERIFIED") {
@@ -720,9 +1083,25 @@ try {
       console.log(
         `${YELLOW}Hash integrity can still be verified but provenance cannot.${RESET}`
       );
+    } else if (result.verificationStatus === "UNVERIFIABLE") {
+      // Cannot verify is not proven wrong. Saying "tampered" here would be a
+      // false accusation against a record that may be perfectly valid against
+      // a JWKS this verifier was never given.
+      console.log(
+        `${YELLOW}This record could NOT be verified, and that is not the same as invalid.${RESET}`
+      );
+      console.log(
+        `${YELLOW}No conclusion about tampering is warranted. Supply the correct JWKS${RESET}`
+      );
+      console.log(
+        `${YELLOW}with --jwks-base <url> and re-run before drawing any conclusion.${RESET}`
+      );
     } else {
       console.log(
-        `${RED}Verification failed. The record may have been tampered with.${RESET}`
+        `${RED}A signing key resolved and the signature did not verify over the${RESET}`
+      );
+      console.log(
+        `${RED}canonical payload. This record does not match what was signed.${RESET}`
       );
     }
     console.log();

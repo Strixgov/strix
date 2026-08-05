@@ -1,6 +1,6 @@
 {
   "name": "@strixgov/tool-gateway",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Local-first governed tool execution gateway for AI agents. Read/write classification, policy evaluation, signed execution receipts, multi-key rotation with cross-signed chain snapshots, per-capability rate limits, threshold-based escalation, file/webhook approvers, signed shared capability registry, and opt-in connected mode (v0.4-stable wire format with timestamp+nonce replay defense) for upstream sync — no Strix account required, local-first by default.",
   "license": "MIT",
   "type": "module",

@@ -25,6 +25,22 @@ import crypto from "node:crypto";
 const DEFAULT_TIMEOUT_MS = 60_000;
 
 /**
+ * True only when both streams are real TTYs.
+ *
+ * Deliberately tests `=== true` rather than `!== false`: Node marks a TTY
+ * stream with `isTTY === true` and leaves the property `undefined` on pipes,
+ * files and sockets, so a `!== false` / `=== false` test silently treats every
+ * headless process as interactive.
+ *
+ * @param {NodeJS.ReadStream | undefined} stdin
+ * @param {NodeJS.WriteStream | undefined} stdout
+ * @returns {boolean}
+ */
+function isInteractiveTty(stdin, stdout) {
+  return Boolean(stdin) && Boolean(stdout) && stdin.isTTY === true && stdout.isTTY === true;
+}
+
+/**
  * @param {import("./types.d.ts").ToolCapability} capability
  * @param {import("./types.d.ts").ToolInvocation} invocation
  * @param {import("./types.d.ts").ApprovalPromptOptions} [opts]
@@ -35,14 +51,31 @@ export async function terminalApprove(capability, invocation, opts = {}) {
   const stdout = opts.stdout ?? process.stdout;
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  // Headless / non-interactive — fail closed.
-  if (!stdin || stdin.isTTY === false || (process.stdout && stdout.isTTY === false && stdout === process.stdout)) {
-    if (process.stdin.isTTY !== true) {
-      return {
-        approved: false,
-        reason: "PROMPT_FAILED",
-      };
-    }
+  // Headless / non-interactive — fail closed BEFORE writing anything.
+  //
+  // Node sets `isTTY` to `true` on a TTY stream and leaves it `undefined`
+  // otherwise; it is NEVER set to `false`. The previous guard compared
+  // `isTTY === false`, so it could not fire for a piped or spawned process:
+  // terminalApprove fell through and wrote a human prompt banner to stdout,
+  // then blocked on readline for the full timeout (default 60s).
+  //
+  // That is not merely a cosmetic prompt in the wrong place. This gateway's
+  // primary consumer is @strixgov/mcp-proxy, an MCP server whose JSON-RPC
+  // channel IS stdout — a banner written there corrupts the protocol stream
+  // the client is parsing. It is also what made
+  // mcp-proxy's proxy-end-to-end.test.mjs flaky: under `node --test` the
+  // child's stdout carries the runner's V8-serialized protocol, and the
+  // stray write surfaced as
+  // "Unable to deserialize cloned data due to invalid or unsupported version".
+  //
+  // Interactive means BOTH ends are a real TTY. Callers that inject their own
+  // streams (tests, embedders) are honored as given, so a mock with
+  // `isTTY: true` still exercises the prompt path.
+  if (!isInteractiveTty(stdin, stdout)) {
+    return {
+      approved: false,
+      reason: "PROMPT_FAILED",
+    };
   }
 
   const banner = formatPrompt(capability, invocation, opts.prompt);

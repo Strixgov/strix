@@ -35,9 +35,14 @@ import {
   verifyReceipt,
   verifySnapshot,
 } from "../src/index.mjs";
+import { expandTilde } from "../src/paths.mjs";
 
-const HOME =
-  process.env.STRIX_GATEWAY_HOME ?? path.join(os.homedir(), ".strix-gateway");
+// Expand tilde on the user-supplied home so `STRIX_GATEWAY_HOME=~/foo` works.
+// KEY_DIR / POLICY_FILE / the storage dir all derive from HOME, so this one
+// expansion covers every path the CLI touches.
+const HOME = expandTilde(
+  process.env.STRIX_GATEWAY_HOME ?? path.join(os.homedir(), ".strix-gateway"),
+);
 const POLICY_FILE = path.join(HOME, "policy.json");
 const KEY_DIR = path.join(HOME, "keys");
 

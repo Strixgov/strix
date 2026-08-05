@@ -5,6 +5,21 @@ All notable changes to `@strixgov/capabilities-mcp-common` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2]
+
+### Fixed
+- `peerDependencies["@strixgov/tool-gateway"]` was published as `^0.4.1`,
+  which SEMVER-excludes `@strixgov/tool-gateway@0.5.0` (the release that
+  fixed a `terminalApprove` stdout-write defect affecting headless callers,
+  most notably `@strixgov/mcp-proxy`). The in-repo workspace range was
+  corrected to `^0.5.0` in the 0.5.0 release commit, but that fix never
+  reached npm because this package wasn't republished alongside it — the
+  live `0.1.1` package.json still declared `^0.4.1`. This release carries
+  no other change; it exists solely to publish the already-corrected range.
+  The dependency is optional (`peerDependenciesMeta.optional: true`), so
+  the impact was a peer-dependency warning under strict peer resolution,
+  not a hard install failure.
+
 ## [0.1.1]
 
 Notion pack updated to match the modern `@notionhq/notion-mcp-server`

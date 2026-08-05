@@ -1,0 +1,56 @@
+{
+  "serverId": "nooa-secure-coding",
+  "upstream": {
+    "command": "node",
+    "args": [
+      "./packages/strixgov-mcp-proxy/examples/nvidia-nooa/demo-upstream.mjs"
+    ]
+  },
+  "capabilities": [
+    {
+      "id": "mcp.nooa-secure-coding.inspect_repository",
+      "name": "inspect_repository",
+      "risk": "LOW",
+      "mode": "READ",
+      "description": "Inspect repository metadata without modification."
+    },
+    {
+      "id": "mcp.nooa-secure-coding.propose_patch",
+      "name": "propose_patch",
+      "risk": "HIGH",
+      "mode": "WRITE",
+      "description": "Create a patch proposal without merging it."
+    },
+    {
+      "id": "mcp.nooa-secure-coding.merge_production",
+      "name": "merge_production",
+      "risk": "CRITICAL",
+      "mode": "WRITE",
+      "description": "Merge an approved commit to production."
+    },
+    {
+      "id": "mcp.nooa-secure-coding.rotate_credentials",
+      "name": "rotate_credentials",
+      "risk": "CRITICAL",
+      "mode": "WRITE",
+      "description": "Rotate a production credential."
+    }
+  ],
+  "policy": {
+    "rules": {
+      "mcp.nooa-secure-coding.inspect_repository": "ALLOW",
+      "mcp.nooa-secure-coding.propose_patch": "ALLOW",
+      "mcp.nooa-secure-coding.merge_production": "APPROVAL_REQUIRED",
+      "mcp.nooa-secure-coding.rotate_credentials": "DENY"
+    },
+    "default": "DENY"
+  },
+  "approval": {
+    "enabled": true,
+    "type": "file",
+    "requestDir": "./.strix-nooa/approvals",
+    "timeoutMs": 300000
+  },
+  "storagePath": "./.strix-nooa/evidence",
+  "keyPath": "./.strix-nooa/keys"
+}

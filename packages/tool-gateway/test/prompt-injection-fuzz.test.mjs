@@ -225,36 +225,47 @@ test("FUZZ-1: all registered capabilities are recognised by PolicyEngine", () =>
 
 // ── Core: adversarial corpus must always be DENY'd ─────────────────────────
 
-test("FUZZ-2: adversarial corpus — all entries are denied (permissive policy)", () => {
-  const failures = [];
+// Typed-rejection reasons: a fail-closed verdict must carry one of these, never
+// a bare/absent reason. (gate-assurance G-CB-2 / review §I.9.)
+const TYPED_REJECTION_REASONS = new Set(["UNKNOWN_CAPABILITY", "MALFORMED_INVOCATION"]);
 
-  for (const { id, attackClass } of adversarialCorpus) {
+test("FUZZ-2: adversarial corpus — every entry gets a TYPED denial; a throw is a separate availability failure, never a pass", () => {
+  const notDenied = [];   // returned something other than DENY
+  const wrongReason = []; // DENY but not a typed-rejection reason (or not the pinned one)
+  const crashes = [];     // evaluate() THREW — tracked distinctly, NOT counted as a block
+
+  for (const { id, attackClass, expectReason } of adversarialCorpus) {
     let result;
     try {
       // @ts-ignore — intentionally passing malformed values in CLASS F
       result = engine.evaluate({ capabilityId: id });
-    } catch {
-      // An exception from a malformed input is also acceptable (fail-closed)
+    } catch (err) {
+      // A thrown exception is NOT a pass. The engine must fail closed with a
+      // typed verdict, not by crashing. Record it as a distinct availability
+      // failure so a future regression that throws can never masquerade as a block.
+      crashes.push(`[${attackClass}] "${String(id).slice(0, 60)}" threw ${String(err && err.message).slice(0, 60)}`);
       continue;
     }
     if (result.decision !== "DENY") {
-      failures.push({
-        id: String(id).slice(0, 80),
-        attackClass,
-        decision: result.decision,
-        reason: result.reason,
-      });
+      notDenied.push(`[${attackClass}] "${String(id).slice(0, 60)}" → ${result.decision} (${result.reason})`);
+      continue;
+    }
+    if (!TYPED_REJECTION_REASONS.has(result.reason)) {
+      wrongReason.push(`[${attackClass}] "${String(id).slice(0, 60)}" → DENY but untyped reason "${result.reason}"`);
+      continue;
+    }
+    // Where the corpus pins an exact reason, enforce it.
+    if (expectReason && result.reason !== expectReason) {
+      wrongReason.push(`[${attackClass}] "${String(id).slice(0, 60)}" → reason "${result.reason}" (expected "${expectReason}")`);
     }
   }
 
-  if (failures.length > 0) {
-    const lines = failures.map(
-      (f) => `  [${f.attackClass}] "${f.id}" → ${f.decision} (${f.reason})`,
-    );
-    assert.fail(
-      `${failures.length} adversarial inputs were NOT denied:\n${lines.join("\n")}`,
-    );
-  }
+  const problems = [];
+  if (notDenied.length) problems.push(`${notDenied.length} adversarial inputs were NOT denied:\n  ${notDenied.join("\n  ")}`);
+  if (wrongReason.length) problems.push(`${wrongReason.length} denied without the expected typed reason:\n  ${wrongReason.join("\n  ")}`);
+  if (crashes.length) problems.push(`${crashes.length} CRASHED the engine (must fail closed with a verdict, not throw):\n  ${crashes.join("\n  ")}`);
+
+  assert.equal(problems.length, 0, `Fuzz typed-rejection failures:\n${problems.join("\n")}`);
 });
 
 // ── Class-level breakdown tests (aid diagnosis when FUZZ-2 fails) ──────────
@@ -262,21 +273,36 @@ test("FUZZ-2: adversarial corpus — all entries are denied (permissive policy)"
 for (const attackClass of ["FABRICATED", "PROMPT_INJECTION", "NEAR_MISS", "SCOPE_AMPLIFICATION", "PATH_TRAVERSAL"]) {
   const classCorpus = adversarialCorpus.filter((e) => e.attackClass === attackClass);
 
-  test(`FUZZ-3-${attackClass}: ${classCorpus.length} inputs in class ${attackClass} are all denied`, () => {
-    for (const { id } of classCorpus) {
+  test(`FUZZ-3-${attackClass}: ${classCorpus.length} inputs in class ${attackClass} get a typed denial and never crash`, () => {
+    const crashes = [];
+    for (const { id, expectReason } of classCorpus) {
       let result;
       try {
         // @ts-ignore
         result = engine.evaluate({ capabilityId: id });
-      } catch {
-        continue; // exception = fail-closed, acceptable
+      } catch (err) {
+        // Throwing is an availability failure, not a block — surface it.
+        crashes.push(`"${String(id).slice(0, 60)}" threw ${String(err && err.message).slice(0, 60)}`);
+        continue;
       }
       assert.equal(
         result.decision,
         "DENY",
         `[${attackClass}] "${String(id).slice(0, 60)}" should be DENY, got ${result.decision} (${result.reason})`,
       );
+      const typed = expectReason
+        ? result.reason === expectReason
+        : TYPED_REJECTION_REASONS.has(result.reason);
+      assert.ok(
+        typed,
+        `[${attackClass}] "${String(id).slice(0, 60)}" DENY reason "${result.reason}" is not a typed rejection${expectReason ? ` (expected "${expectReason}")` : ""}`,
+      );
     }
+    assert.deepEqual(
+      crashes,
+      [],
+      `[${attackClass}] engine crashed instead of failing closed with a verdict:\n  ${crashes.join("\n  ")}`,
+    );
   });
 }
 

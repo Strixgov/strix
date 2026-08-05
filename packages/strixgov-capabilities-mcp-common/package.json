@@ -1,6 +1,6 @@
 {
   "name": "@strixgov/capabilities-mcp-common",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Pre-classified capability registry for popular MCP servers (Slack, GitHub, Linear, Notion, Filesystem, Postgres, Email/SMTP/Gmail). Drop-in starter for @strixgov/tool-gateway.",
   "license": "MIT",
   "type": "module",
@@ -53,7 +53,7 @@
     "test": "node --test"
   },
   "peerDependencies": {
-    "@strixgov/tool-gateway": "^0.4.1"
+    "@strixgov/tool-gateway": "^0.5.0"
   },
   "peerDependenciesMeta": {
     "@strixgov/tool-gateway": {

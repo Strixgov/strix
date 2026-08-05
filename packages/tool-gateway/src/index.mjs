@@ -27,6 +27,21 @@ export {
   GENESIS_PROOF_CHAIN_HASH,
 } from "./receipts.mjs";
 export {
+  issueExecutionOutcome,
+  verifyExecutionOutcome,
+  validateExecutionOutcomeShape,
+  computeExecutionResultHash,
+  computeExecutionOutcomeHash,
+  canonicalExecutionOutcomeCore,
+  canonicalExecutionOutcomePayload,
+  newExecutionOutcomeId,
+  EXECUTION_OUTCOME_SCHEMA_VERSION,
+  EXECUTION_OUTCOME_SIGNATURE_ALGORITHM,
+  EXECUTION_OUTCOME_CORE_FIELD_ORDER,
+  EXECUTION_OUTCOME_FIELD_ORDER,
+  EXECUTION_OUTCOME_ALLOWED_FIELDS,
+} from "./outcomes.mjs";
+export {
   canonicalReceiptPayload,
   canonicalJSON,
   RECEIPT_FIELD_ORDER,
@@ -50,6 +65,12 @@ export {
   MemoryStorage,
   DEFAULT_STORAGE_DIR,
 } from "./storage.mjs";
+export {
+  JsonlOutcomeStorage,
+  MemoryOutcomeStorage,
+  DEFAULT_OUTCOME_STORAGE_DIR,
+  OUTCOMES_FILE,
+} from "./outcome-storage.mjs";
 export {
   terminalApprove,
   fileApprover,

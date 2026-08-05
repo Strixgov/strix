@@ -1,0 +1,41 @@
+{
+  "name": "@strixgov/mcp-credentials",
+  "version": "0.1.0",
+  "description": "OS-keychain credential store for upstream MCP server tokens. Store once, never re-paste.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./src/types.d.ts",
+      "import": "./src/index.mjs"
+    }
+  },
+  "bin": {
+    "strix-mcp-credentials": "./bin/strix-mcp-credentials.mjs"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "keywords": [
+    "strix",
+    "mcp",
+    "credentials",
+    "keychain",
+    "governance"
+  ],
+  "optionalDependencies": {
+    "keytar": "^7.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/strixgov-mcp-credentials"
+  }
+}

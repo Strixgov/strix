@@ -167,6 +167,26 @@ which upstream commit the current `main` corresponds to.
 If you spot drift between this repo's `src/index.mjs` and the published
 npm package, that's a sync bug — please file an issue.
 
+### Two completeness rules the sync now enforces
+
+Both were added after a 2026-07-30 audit found this tree had gone several
+releases without a sync, with real consequences worth stating plainly:
+
+1. **Every module the npm tarball ships is mirrored here.** The package
+   publishes `files: ["src/", "bin/", …]`, so *all* of `src/` reaches anyone
+   who installs it. Five of eight modules were absent from this repo — meaning
+   the code you were running could not be read where you were told to read it.
+   That is the one property an MIT verification primitive exists to provide.
+2. **Every test path cited in a public doc exists here.** Six tests were named
+   in `CHANGELOG.md` as the thing that locks a behaviour while being absent
+   from this tree, so a reader could not run the test they were pointed at.
+   If a public doc cites `test/<x>.test.mjs`, `<x>` and its fixtures belong in
+   `MIRROR_FILES`.
+
+Neither rule is cosmetic: the value of this repository is that a third party
+can read and run what they installed. A version label matching while the source
+is missing satisfies the letter of "in sync" and none of the point.
+
 ---
 
 ## What you can do with this repository
