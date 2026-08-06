@@ -13,7 +13,7 @@
   "evidenceHash": "9cdd9396ccdd9932404b0781cf6f5258868b63276a75cee02248a2796400034a",
   "proofChainHash": "9bcb4b3e16c2f1c8d37fb663dd6b03383a2b83f0113a6e72d96cb642aa6b4975",
   "timestamp": "2026-05-20T12:00:01.000Z",
-  "signature": "H2SvQvG4tXWC3DAQ6X7mSpXAfDiFRrdeQKlcSKPRjquhEb8jkFbY_XGuaOfOWtjChZgqvsgco2S0bd_f6K_ZDA",
+  "signature": "V7UYfBwBQSg3eSPgGIHlQrFWKcUOyFRFfDWEvtKW_iPbXe8frPgnu4HgxqAg2OIApj58lRZ9mvEjW81amoBrBw",
   "signingKeyId": "strix-test-2026-05",
   "_meta": {
     "description": "Sample TAMPERED tool-gateway receipt: evidenceHash last char flipped AFTER signing. Canonical bytes diverge from the signed bytes. Demonstrates SIGNATURE_INVALID detection at the cryptographic layer.",

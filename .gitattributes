@@ -1,0 +1,40 @@
+# Normalize line endings so a Windows checkout of the public Strixgov/strix
+# repo doesn't rewrite every file to CRLF on the next `git add`. Text is stored
+# LF in the repo; Git handles the working-copy conversion.
+#
+# Sibling of release/strixgov-skills/.gitattributes, which got this treatment
+# after "the churn seen during the 2026-07 manual sync". This tree did not, and
+# the 2026-08-05 operator push surfaced the consequence: every `git add` printed
+# "LF will be replaced by CRLF the next time Git touches it" across the mirror,
+# including the vendored verifier.
+#
+# The sharper reason, specific to this tree: plugins/strix-verifier/vendor/
+# PROVENANCE.json pins `vendoredTreeSha256`, a digest over the vendored file
+# CONTENTS. Any path that lands CRLF in that tree breaks the digest for every
+# public consumer re-verifying the plugin — a silent trust-artifact failure, not
+# just cosmetic churn. Keeping the mirror LF-only removes that failure mode by
+# construction.
+* text=auto eol=lf
+
+*.mjs   text eol=lf
+*.js    text eol=lf
+*.ts    text eol=lf
+*.cjs   text eol=lf
+*.json  text eol=lf
+*.jsonl text eol=lf
+*.md    text eol=lf
+*.py    text eol=lf
+*.sh    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.svg   text eol=lf
+LICENSE text eol=lf
+
+# Executable entry points must stay LF or they fail to run under sh on
+# Linux/macOS (`#!/usr/bin/env node` followed by CR is not a valid interpreter).
+plugins/strix-verifier/bin/strix-verify              text eol=lf
+plugins/strix-verifier/vendor/strixgov-verifier/bin/verify.mjs text eol=lf
+
+# The Windows launcher is the one deliberate exception: .cmd is parsed by
+# cmd.exe, which wants CRLF.
+*.cmd   text eol=crlf

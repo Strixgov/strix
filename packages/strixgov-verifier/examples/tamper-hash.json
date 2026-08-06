@@ -18,7 +18,7 @@
     "euAiActArticle28": false
   },
   "sourceApp": "strix-verifier-public-release-example",
-  "signature": "7a4TmxW2Smp9QYVxP7xs_MXeevwkOhrcttPT0SkA7EtGMCEWkTedm3GNT6OZ_3PaQK3hmClRvSl3Ey039EJ9DA",
+  "signature": "LIaXFTH2fFayMJA3BgUjiXtrrCD8Jv5KXY6gd7KE8e8p4fG9UuVThdQXDveUFdxXYe-fmttumG7_rS6uPEh3BQ",
   "_meta": {
     "description": "Sample TAMPERED record: evidenceHash last char flipped. Signature is the same as verified.json. Demonstrates HASH_MISMATCH detection.",
     "expectedStatus": "SIGNATURE_INVALID (canonical bytes diverge from signed)",

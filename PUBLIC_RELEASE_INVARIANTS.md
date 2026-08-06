@@ -109,6 +109,20 @@ staging tree before it is pushed here:
   mirror the package or to stop declaring a public source path it does not
   have; the lint refuses the inconsistent middle state.
 
+- **PR-7 — Line-ending pin.** This tree ships a `.gitattributes` pinning
+  `* text=auto eol=lf`. The sibling mirror for `Strixgov/skills` gained one
+  after the 2026-07 manual sync produced whole-tree churn; this tree did not,
+  and the 2026-08-05 operator push hit the same thing — every `git add`
+  reporting files as modified purely on line endings. The reason it is an
+  invariant rather than hygiene is narrower and sharper:
+  `plugins/strix-verifier/vendor/PROVENANCE.json` pins `vendoredTreeSha256`,
+  a digest over the vendored file **contents**. Any path that lands CRLF in
+  that tree breaks the digest for every public consumer re-verifying the
+  plugin — a silent trust-artifact failure, not a cosmetic one. Because the
+  sync into this repo is a filesystem mirror (rsync/robocopy), whatever Git
+  does on checkout in a contributor's clone is what the next sync diffs
+  against, so the pin has to live here rather than in anyone's local config.
+
 ---
 
 ## Sync guarantees
