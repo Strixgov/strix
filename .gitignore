@@ -1,0 +1,31 @@
+# Local artifacts that must never reach the public mirror.
+#
+# This file exists because the mirror is copied with `rsync --delete` /
+# `robocopy /MIR`, which is a FILESYSTEM mirror: it copies whatever is sitting
+# in the staged directory, tracked or not. Without a .gitignore in the PUBLIC
+# repo, a `git add -A` after that copy stages local junk and publishes it.
+#
+# On 2026-08-05 the sibling tree (release/strixgov-skills/) had no .gitignore
+# of its own, so `/MIR` PURGED the public repo's copy — and the very same push
+# then published a locally-generated Ed25519 demo key from `demo/.solo/`, which
+# that purged file had been ignoring. The file must live HERE, in staging, or
+# the next mirror deletes it again.
+#
+# scripts/verify-public-push-safety.mjs additionally refuses to push when the
+# staged tree contains files untracked in this monorepo — belt and braces, since
+# ignoring a file is not the same as noticing it.
+
+# Local Mode /strix-wire key material + run state (never publishable)
+.solo/
+
+# Dependency + build output
+node_modules/
+
+# Python bytecode / test caches
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# OS + editor noise
+.DS_Store
+*.log

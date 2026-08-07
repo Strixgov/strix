@@ -1,6 +1,6 @@
 {
   "name": "@strixgov/governed-action",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Wrap one consequential mutation — a REST call, a GitHub merge, any async operation — in a governed action that produces an independently verifiable signed receipt.",
   "type": "module",
   "publishConfig": {

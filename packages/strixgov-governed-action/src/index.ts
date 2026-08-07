@@ -44,12 +44,14 @@ export {
 export {
   isTraceOptionEnabled,
   resolveRunId,
+  traceHistoryFilePath,
   type TraceOption,
   type TraceHistoryEvent,
   type TraceSignalsWireSlot,
 } from './trace-history.js';
 
-import { recordAttemptAndBuildSlot, type TraceOption } from './trace-history.js';
+import { normalizeTenantId, recordAttemptAndBuildSlot, type TraceOption } from './trace-history.js';
+import { randomUuid, sha256Hex } from './sha256.js';
 
 const DEFAULT_URL = 'https://www.strixgov.com';
 const EVALUATE_PATH = '/api/v1/evaluate';
@@ -80,24 +82,10 @@ export class StrixUnreachable extends StrixError {
 
 // ── Hashing ────────────────────────────────────────────────────────────────
 
-async function sha256Hex(input: string): Promise<string> {
-  const bytes = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-function newEvidenceId(): string {
-  const c = globalThis.crypto as { randomUUID?: () => string; getRandomValues: (a: Uint8Array) => Uint8Array };
-  if (typeof c?.randomUUID === 'function') return c.randomUUID();
-  const b = new Uint8Array(16);
-  c.getRandomValues(b);
-  b[6] = (b[6] & 0x0f) | 0x40;
-  b[8] = (b[8] & 0x3f) | 0x80;
-  const h = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
-}
+// Both live in ./sha256.js so the Node-18 fallback exists in exactly one
+// place — see that module's header for why a bare `crypto.subtle` reference
+// is not safe at this package's declared minimum Node version.
+const newEvidenceId = randomUuid;
 
 // ── Transport ──────────────────────────────────────────────────────────────
 
@@ -247,7 +235,7 @@ export async function governedAction<T>(
   const timeout = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   let apiKey = (input.apiKey ?? e.STRIX_API_KEY ?? '').trim();
-  let tenantId = (input.tenantId ?? e.STRIX_TENANT_ID ?? '').trim();
+  let tenantId = normalizeTenantId(input.tenantId ?? e.STRIX_TENANT_ID);
   if (!apiKey || !tenantId) {
     const p = await provisionSandbox(base, timeout);
     apiKey = p.apiKey;
@@ -365,7 +353,7 @@ interface EvidenceArgs {
 }
 
 async function recordEvidence(p: EvidenceArgs): Promise<string> {
-  const evidenceId = newEvidenceId();
+  const evidenceId = await newEvidenceId();
   // Server-side dedup identity is (tenantId, evidenceHash). Binding the fresh
   // evidenceId into the hashed material makes every execution a distinct row
   // while keeping a retry of the SAME record idempotent.

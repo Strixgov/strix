@@ -22,14 +22,31 @@
  * silently. Turn it on globally with `STRIX_TRACE_SIGNALS_SDK=true`, or
  * per-call via `governedAction({ ..., trace: true }, op)`.
  *
- * DURABLE: history for a runId persists to disk (default
- * `.strix/trace/<runId>.json` under the current working directory,
+ * DURABLE: history for a run persists to disk (default
+ * `.strix/trace/<tenant>/<run>.json` under the current working directory,
  * overridable via `STRIX_TRACE_DIR` or the `traceDir` option) so a CI job or
  * long-running agent that restarts BETWEEN calls — the exact case a
  * ceremony script cannot cover — keeps contributing to the SAME run's
  * history instead of resetting it every process. `traceDir: false` (or
  * `STRIX_TRACE_DIR=false`) disables persistence for an in-memory-only,
  * per-process fallback.
+ *
+ * PARTITIONED BY TENANT, NOT ONLY BY RUN. History is keyed by the PAIR
+ * (tenantId, runId) in memory and on disk, and every stored event carries
+ * the tenantId that produced it. An earlier cut keyed on runId alone and
+ * stamped `tenantId` onto each event at SEND time from the CURRENT call, so
+ * two tenants sharing a runId did not merely see each other's events —
+ * each request RELABELED the other tenant's events as its own. That is both
+ * a leak (a foreign tenant's capabilityIds and payloadHashes ride this
+ * tenant's request body and land on its decision row) and a fabrication
+ * (the events assert a tenantId that did not take them). The zero-config
+ * path was the exposed one: with no runId declared, every call in a process
+ * shares one generated `processRunId`, which is exactly the shape of a
+ * multi-tenant service. `tenantId` is now READ BACK from the stored event
+ * and required to match, so the isolation is verified at the point of use
+ * rather than inferred from where the file happened to sit. `runId` is
+ * deliberately NOT given the same treatment: a mislabeled run is a
+ * telemetry-quality problem, a mislabeled tenant is a boundary violation.
  *
  * NOT A TRANSACTIONAL STORE: persistence is best-effort. Two concurrent
  * callers racing on the SAME runId can each read the prior history before
@@ -52,10 +69,18 @@
  * be a complete run history.
  */
 
+import { sha256Hex } from './sha256.js';
+
 const DEFAULT_MAX_EVENTS = 50;
 const DEFAULT_TRACE_DIR = '.strix/trace';
 
 export interface TraceHistoryEvent {
+  /**
+   * The tenant that produced this event. Stored, not derived at send time —
+   * see the PARTITIONED BY TENANT note in the module header. A loaded event
+   * whose tenantId does not match the caller's is never sent.
+   */
+  tenantId: string;
   seq: number;
   capabilityId: string;
   payloadHash: string;
@@ -120,6 +145,16 @@ function randomId(): string {
   return `run-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+/**
+ * The one definition of a tenant id's on-the-wire form. `governedAction()`
+ * calls this before it sends, and `traceHistoryFilePath()` calls it before it
+ * derives a path, so the two cannot drift into disagreeing about which file a
+ * given caller's history lives in.
+ */
+export function normalizeTenantId(raw: string | undefined | null): string {
+  return (raw ?? '').trim();
+}
+
 export function resolveRunId(explicit?: string): string {
   if (explicit && explicit.trim()) return explicit.trim();
   const fromEnv = env().STRIX_RUN_ID;
@@ -137,34 +172,83 @@ function resolveTraceDir(explicit?: string | false): string | null {
   return DEFAULT_TRACE_DIR;
 }
 
-/** Never let a runId (env-var or caller-supplied) escape the trace directory. */
-function sanitizeRunId(runId: string): string {
-  const cleaned = runId.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 200);
-  return cleaned || 'default';
+/**
+ * One filesystem-safe path segment for an identifier — never letting a
+ * caller-supplied or env-supplied value escape the trace directory, and
+ * never letting two DISTINCT identifiers land on one file.
+ *
+ * The second half is the part worth stating: a plain
+ * replace-unsafe-with-underscore rule is not injective, so `run/a` and
+ * `run_a` — or two tenant ids differing only in punctuation — would share a
+ * history file and silently merge. That is the same contamination the
+ * tenant partition exists to prevent, arriving through the filename
+ * instead. The sha256 suffix is over the RAW value, so distinct inputs
+ * cannot collide; the readable prefix is for a human reading `ls`, and is
+ * truncated (the digest, not the prefix, carries the identity).
+ */
+async function safeSegment(raw: string): Promise<string> {
+  const readable = raw.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 48) || 'id';
+  return `${readable}-${(await sha256Hex(raw)).slice(0, 32)}`;
 }
 
-// In-memory fallback, keyed by runId, for when disk is disabled or
-// unavailable — keeps THIS process's own calls contributing to the trace
+/**
+ * In-memory key for one (tenant, run) pair. `JSON.stringify` of the tuple is
+ * injective — unlike a delimiter-joined string, no value a caller supplies
+ * can make two distinct pairs collide.
+ */
+function historyKey(tenantId: string, runId: string): string {
+  return JSON.stringify([tenantId, runId]);
+}
+
+/** A stored event is usable only if it names the tenant asking for it. */
+function belongsToTenant(value: unknown, tenantId: string): boolean {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { tenantId?: unknown }).tenantId === tenantId
+  );
+}
+
+// In-memory fallback, keyed by (tenantId, runId), for when disk is disabled
+// or unavailable — keeps THIS process's own calls contributing to the trace
 // even with zero filesystem access (e.g. a sandboxed runtime).
 const memoryHistories = new Map<string, TraceHistoryEvent[]>();
 
+async function historyPath(
+  traceDir: string,
+  tenantId: string,
+  runId: string,
+): Promise<{ dir: string; file: string }> {
+  const { join } = await import('node:path');
+  const dir = join(traceDir, await safeSegment(tenantId));
+  return { dir, file: join(dir, `${await safeSegment(runId)}.json`) };
+}
+
 async function loadHistory(
+  tenantId: string,
   runId: string,
   traceDir: string | null,
 ): Promise<TraceHistoryEvent[]> {
   if (traceDir) {
     try {
       const { readFile } = await import('node:fs/promises');
-      const { join } = await import('node:path');
-      const path = join(traceDir, `${sanitizeRunId(runId)}.json`);
-      const text = await readFile(path, 'utf8');
+      const { file } = await historyPath(traceDir, tenantId, runId);
+      const text = await readFile(file, 'utf8');
       const parsed: unknown = JSON.parse(text);
-      if (Array.isArray(parsed)) return parsed as TraceHistoryEvent[];
+      // Every event must name THIS tenant. A file that does not is treated
+      // exactly like a corrupt one — dropped, never partially adopted. A
+      // pre-partition file written by an older version has no tenantId at
+      // all and cannot prove whose events it holds, so it is dropped for the
+      // same reason rather than inherited; losing one run's advisory history
+      // is the safe direction.
+      if (Array.isArray(parsed) && parsed.every((e) => belongsToTenant(e, tenantId))) {
+        return parsed as TraceHistoryEvent[];
+      }
     } catch {
       /* missing, unreadable, or corrupt — fall through to the in-memory copy */
     }
   }
-  return memoryHistories.get(runId) ?? [];
+  return memoryHistories.get(historyKey(tenantId, runId)) ?? [];
 }
 
 /**
@@ -182,28 +266,62 @@ async function loadHistory(
  * without full lock-based lost-update prevention.
  */
 async function saveHistory(
+  tenantId: string,
   runId: string,
   traceDir: string | null,
   events: TraceHistoryEvent[],
 ): Promise<void> {
-  memoryHistories.set(runId, events);
+  memoryHistories.set(historyKey(tenantId, runId), events);
   if (!traceDir) return;
   try {
     const { mkdir, writeFile, rename } = await import('node:fs/promises');
     const { join } = await import('node:path');
-    await mkdir(traceDir, { recursive: true });
-    const safeName = sanitizeRunId(runId);
-    const path = join(traceDir, `${safeName}.json`);
+    const { dir, file } = await historyPath(traceDir, tenantId, runId);
+    await mkdir(dir, { recursive: true });
     // Unique per-write suffix so two concurrent writers use DIFFERENT temp
     // files — without this, they could race on the same temp path and one's
     // rename would clobber mid-write, which is exactly the corruption this
-    // pattern exists to avoid.
-    const tmpPath = join(traceDir, `${safeName}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`);
+    // pattern exists to avoid. The temp file sits in the SAME tenant
+    // directory as its target so the rename stays within one filesystem.
+    const tmpPath = join(dir, `${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`);
     await writeFile(tmpPath, JSON.stringify(events), 'utf8');
-    await rename(tmpPath, path); // atomic on the same filesystem (POSIX + Windows NTFS)
+    await rename(tmpPath, file); // atomic on the same filesystem (POSIX + Windows NTFS)
   } catch {
     /* best-effort durability only — the in-memory copy above still holds for this process */
   }
+}
+
+/**
+ * Where one (tenant, run) history file lives — the SAME resolution the
+ * writer uses, exported so a caller (or a test) can locate, inspect, or
+ * delete it without re-deriving the naming rule. A second implementation of
+ * that rule could drift from this one and quietly point at the wrong file,
+ * which is the whole failure class `safeSegment` exists to close.
+ *
+ * Returns `null` when persistence is disabled for these options — there is
+ * no file, and saying so is more honest than returning a path that will
+ * never exist.
+ */
+export async function traceHistoryFilePath(input: {
+  tenantId: string;
+  runId?: string;
+  traceDir?: string | false;
+}): Promise<string | null> {
+  const traceDir = resolveTraceDir(input.traceDir);
+  if (!traceDir) return null;
+  // Normalize through the SAME functions the writer uses, never a second copy
+  // of the rule. `governedAction()` trims the tenant id and resolves the run
+  // id through `resolveRunId` (which trims, then falls back to STRIX_RUN_ID
+  // and finally this process's own id). Hashing the caller's raw string
+  // instead would hand back a path for a whitespace-padded identifier that
+  // nothing ever writes to — and a helper whose entire job is to locate or
+  // delete a run's history is worse than useless if it can point at a file
+  // that does not exist. An unusable tenant id gets the same honest `null` as
+  // disabled persistence: there is no file.
+  const tenantId = normalizeTenantId(input.tenantId);
+  if (!tenantId) return null;
+  const { file } = await historyPath(traceDir, tenantId, resolveRunId(input.runId));
+  return file;
 }
 
 export interface RecordAttemptInput {
@@ -232,10 +350,11 @@ export async function recordAttemptAndBuildSlot(
     const traceDir = resolveTraceDir(opts.traceDir);
     const maxEvents = opts.maxEvents ?? DEFAULT_MAX_EVENTS;
 
-    const existing = await loadHistory(runId, traceDir);
+    const existing = await loadHistory(input.tenantId, runId, traceDir);
     const nextSeq = existing.length > 0 ? existing[existing.length - 1].seq + 1 : 0;
 
     const entry: TraceHistoryEvent = {
+      tenantId: input.tenantId,
       seq: nextSeq,
       capabilityId: input.capabilityId,
       payloadHash: input.payloadHash,
@@ -250,11 +369,14 @@ export async function recordAttemptAndBuildSlot(
     };
 
     const updated = [...existing, entry].slice(-maxEvents);
-    await saveHistory(runId, traceDir, updated);
+    await saveHistory(input.tenantId, runId, traceDir, updated);
 
     const slot: TraceSignalsWireSlot = {
       schema: 'strix.trace-signals.v1',
-      events: updated.map((e) => ({ runId, tenantId: input.tenantId, ...e })),
+      // `tenantId` comes from the EVENT, never re-stamped from this call —
+      // loadHistory has already refused anything that does not name this
+      // tenant, so the wire value is read back rather than asserted.
+      events: updated.map((e) => ({ runId, ...e })),
     };
     if (opts.declaredPairs && opts.declaredPairs.length > 0) {
       slot.declaredPairs = opts.declaredPairs;

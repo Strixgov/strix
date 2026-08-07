@@ -131,13 +131,23 @@ await governedAction(
 );
 ```
 
-History for a run is durable (persisted under `.strix/trace/` by default, or
-`STRIX_TRACE_DIR`) so a CI job or long-running agent that restarts between
-calls keeps contributing to the same run instead of resetting it. This never
-changes a verdict and never blocks or fails your action — the server only
+History for a run is durable (persisted under `.strix/trace/<tenant>/` by
+default, or `STRIX_TRACE_DIR`) so a CI job or long-running agent that restarts
+between calls keeps contributing to the same run instead of resetting it. This
+never changes a verdict and never blocks or fails your action — the server only
 acts on it if the operator has separately enabled trace-signal recording on
 their side, and any failure here (disk unavailable, corrupt state) silently
 degrades to sending nothing.
+
+History is partitioned by **tenant as well as run**: two tenants sharing a
+`runId` never see each other's events, and a stored event that does not name
+the calling tenant is dropped rather than adopted. Use `traceHistoryFilePath()`
+if you need to locate or delete one run's history file.
+
+> **Upgrading from 0.1.0:** the on-disk layout gained the tenant segment, so
+> history written by 0.1.0 sits at the old path and is not read. Nothing
+> breaks — the affected runs simply start a fresh window. Old files can be
+> deleted.
 
 ## Notes
 
