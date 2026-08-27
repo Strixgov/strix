@@ -1,0 +1,31 @@
+{
+  "name": "@strixgov/repo-proof-contract",
+  "version": "0.1.0",
+  "description": "Canonical language-neutral contract for the Repo-to-Proof manifest. Schema is the source; TypeScript and Python bindings are generated from it.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./schema": "./schema/repo-proof-manifest-v1.schema.json",
+    "./typescript": "./generated/typescript/manifest-v1.ts",
+    "./python": "./generated/python/manifest_v1.py"
+  },
+  "files": [
+    "schema",
+    "generated",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "generate": "node scripts/generate-bindings.mjs",
+    "check:bindings": "node scripts/generate-bindings.mjs --check",
+    "test": "node --test test/*.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/strixgov-repo-proof-contract"
+  }
+}

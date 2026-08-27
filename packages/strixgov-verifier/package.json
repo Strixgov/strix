@@ -1,6 +1,6 @@
 {
   "name": "@strixgov/verifier",
-  "version": "1.22.0",
+  "version": "1.23.0",
   "description": "Independent verification of Strix governance evidence, approval artifacts, linked attestations, tool-gateway authorization receipts, signed execution outcomes, chain snapshots, and connected-mode wire envelopes. Offline-capable. No Strix account required.",
   "license": "MIT",
   "bin": {
@@ -27,6 +27,10 @@
     "./agent-session": {
       "import": "./src/agent-session.mjs",
       "default": "./src/agent-session.mjs"
+    },
+    "./physical-approval": {
+      "import": "./src/physical-approval.mjs",
+      "default": "./src/physical-approval.mjs"
     }
   },
   "type": "module",

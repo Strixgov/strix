@@ -5,6 +5,34 @@ All notable changes to `@strixgov/verifier` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.23.0] — 2026-08-21
+
+### Added
+
+- **`strix-verify physical-approval --proof <bundle.json>`** — independent,
+  fully offline verification of a Physical Approval Bridge v1 record from the
+  TENANT-AUTHENTICATED proof bundle
+  (`GET /api/v1/physical-approval/requests/<requestId>/proof`). Fetching a
+  bare `<requestId>` from the PUBLIC projection reports lifecycle facts, the
+  server-derived status, and the assurance block, then explains that the
+  public surface is REDACTED BY CONSTRUCTION (its signed bytes would expose
+  tenant/approver/actor/device identifiers) and points at the bundle — it
+  never fakes a verification it cannot perform. Bundle verification
+  re-derives the verdict with this package's own canonicalization,
+  content addressing, confirmation fingerprint, and Ed25519 verification
+  (`src/physical-approval.mjs` — zero shared code with the producer; the
+  producer's locked golden vectors are replayed as a conformance pin).
+  Honest boundary printed on every verdict: the result attests SIGNATURE +
+  BINDING between the presented request and response only — never approver
+  presence, organizational authority, quorum, or execution (those live in
+  kernel records with their own verifiers: `strix-verify quorum`,
+  `strix-verify <evidenceId>`). A missing device key caps at UNVERIFIABLE,
+  never INVALID.
+- New exports-map subpath **`@strixgov/verifier/physical-approval`**
+  (`verifyPhysicalApproval`, `derivePhysicalApprovalFingerprint`,
+  `canonicalizePhysicalApproval`, `physicalApprovalContentAddress`,
+  `PHYSICAL_APPROVAL_REASONS`).
+
 ## [1.22.0] — 2026-08-01
 
 ### Added

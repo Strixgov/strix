@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strixgov.com/schema/repo-proof-manifest-v1.schema.json",
+  "title": "Repo-to-Proof manifest v1",
+  "description": "THE canonical, language-neutral source for the Repo-to-Proof manifest. TypeScript and Python bindings are GENERATED from this file and are never hand-maintained (W0-0 Acceptance 1). Authority: the Strix Platform Architecture owner/operator. Consumers may propose changes; they may not redefine the contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "subject",
+    "selectedEffect",
+    "capabilityReconciliation",
+    "paths",
+    "enforcementBoundary",
+    "credentialHolders",
+    "attackApplicability",
+    "evidenceSources",
+    "claimCeiling"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "repo-proof-manifest-v1" },
+
+    "subject": {
+      "description": "W0-0 Acceptance 2: identity is resolvable origin plus an IMMUTABLE pinned revision. Branches, tags, display names and directory slugs are descriptive metadata and are NOT sufficient identity.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["origin", "commitSha"],
+      "properties": {
+        "origin": {
+          "description": "Canonical resolvable source origin.",
+          "type": "string",
+          "pattern": "^git\\+https://[^\\s#]+\\.git$"
+        },
+        "commitSha": {
+          "description": "FULL 40-character commit SHA. A tag or branch is movable and therefore never identity.",
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "displayLabel": {
+          "description": "Human-readable label ONLY. Never an identifier. Bare project names are not governance-bearing subjects.",
+          "type": "string"
+        },
+        "descriptiveRefs": {
+          "description": "Branches/tags recorded for humans. Explicitly not identity.",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "selectedEffect": {
+      "description": "The single consequential real-world effect this manifest is about.",
+      "type": "string",
+      "minLength": 1
+    },
+
+    "capabilityReconciliation": {
+      "description": "W0-0 §9.3, BINDING: the three capability vocabularies are reconciled through EXPLICIT NAMESPACED MAPPINGS and are never collapsed into one list. Each entry preserves all three roles and records how they relate and on whose authority.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["discoverySignal", "governedEffect", "enforcementAction", "disposition", "provenance"],
+        "properties": {
+          "discoverySignal": {
+            "description": "What GSD-1 detected, in GSD-1's own namespace. null when discovery found nothing for this effect — which is a real result, not a gap to fill.",
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "required": ["namespace", "id"],
+            "properties": {
+              "namespace": { "const": "gsd1" },
+              "id": { "type": "string" },
+              "occurrences": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "governedEffect": {
+            "description": "The real-world effect Strix claims to mediate, in the declaring party's namespace.",
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "required": ["namespace", "id"],
+            "properties": {
+              "namespace": { "enum": ["specimen-declared", "strix-effect"] },
+              "id": { "type": "string" }
+            }
+          },
+          "enforcementAction": {
+            "description": "What the Strix kernel actually evaluates, in the kernel's own namespace. null when no kernel action corresponds.",
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "required": ["namespace", "id"],
+            "properties": {
+              "namespace": { "const": "governed-action-types" },
+              "id": { "type": "string" }
+            }
+          },
+          "disposition": {
+            "description": "How the three relate. `unresolved` is a FIRST-CLASS OUTCOME, never a gap to be closed so a manifest validates.",
+            "enum": ["exact", "broader", "narrower", "composite", "unresolved", "inapplicable"]
+          },
+          "provenance": {
+            "description": "On whose authority the mapping is asserted. `derived` may never carry `exact` — that is the anti-aliasing rule.",
+            "enum": ["derived", "manually-reviewed", "specimen-declared"]
+          },
+          "note": { "type": "string" }
+        }
+      }
+    },
+
+    "paths": {
+      "description": "Every path the surface map resolved, with its disposition. RPF-2: the ungoverned set is enumerated, and an empty one requires positive proof rather than silence.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relevant", "irrelevant", "unresolved", "governed", "ungoverned", "ungovernedCompleteness"],
+      "properties": {
+        "relevant": { "$ref": "#/$defs/pathList" },
+        "irrelevant": { "$ref": "#/$defs/pathList" },
+        "unresolved": { "$ref": "#/$defs/pathList" },
+        "governed": { "$ref": "#/$defs/pathList" },
+        "ungoverned": { "$ref": "#/$defs/pathList" },
+        "ungovernedCompleteness": {
+          "description": "RPF-2. `enumerated` asserts the ungoverned set is complete and requires a derivedFrom surface map. `not-established` is honest and never renders as complete coverage.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state"],
+          "properties": {
+            "state": { "enum": ["enumerated", "not-established"] },
+            "derivedFrom": { "type": "string" }
+          }
+        }
+      }
+    },
+
+    "enforcementBoundary": {
+      "description": "RPF-3: names a real process or trust boundary. An in-process hook is declared as what it is and never as unbypassable.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "description", "unbypassableClaimed"],
+      "properties": {
+        "kind": { "enum": ["separate-process-broker", "in-process-hook", "host-pre-execution-hook", "network-proxy", "none"] },
+        "description": { "type": "string" },
+        "unbypassableClaimed": {
+          "description": "Must be false for in-process-hook (RPF-3).",
+          "type": "boolean"
+        }
+      }
+    },
+
+    "credentialHolders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["holder", "isolatedFromAgent"],
+        "properties": {
+          "holder": { "type": "string" },
+          "isolatedFromAgent": { "type": "boolean" }
+        }
+      }
+    },
+
+    "attackApplicability": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["attackClass", "applicable", "result"],
+        "properties": {
+          "attackClass": { "type": "string" },
+          "applicable": { "type": "boolean" },
+          "result": {
+            "description": "NOT_ESTABLISHED is distinct from PASSED and never substitutes for it.",
+            "enum": ["PASSED", "FAILED", "NOT_ESTABLISHED"]
+          },
+          "scope": { "enum": ["simulated", "live"] }
+        }
+      }
+    },
+
+    "evidenceSources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["family", "locator"],
+        "properties": {
+          "family": { "type": "string" },
+          "locator": { "type": "string" }
+        }
+      }
+    },
+
+    "claimCeiling": {
+      "description": "RPF-6: derived from evidence, never authored upward. The highest rung this manifest's evidence supports.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rung", "barred"],
+      "properties": {
+        "rung": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "barred": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  },
+
+  "$defs": {
+    "pathList": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "reason"],
+        "properties": {
+          "path": { "type": "string" },
+          "reason": { "type": "string" },
+          "capabilityId": { "type": "string" }
+        }
+      }
+    }
+  }
+}

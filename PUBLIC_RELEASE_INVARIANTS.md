@@ -55,6 +55,7 @@ exact path its published `package.json` declares in `repository.directory`:
 | `@strixgov/mcp-credentials` | `packages/strixgov-mcp-credentials/` |
 | `@strixgov/trust-mark-embed` | `packages/strixgov-trust-mark-embed/` |
 | `@strixgov/visual-receipts` | `packages/visual-receipts/` |
+| `@strixgov/repo-proof-contract` | `packages/strixgov-repo-proof-contract/` |
 
 Adding or removing a package is a deliberate change that updates this table
 **and** the locked `EXPECTED_PACKAGES` list in the upstream invariant lint

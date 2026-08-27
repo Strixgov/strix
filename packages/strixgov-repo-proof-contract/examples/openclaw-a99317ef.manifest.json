@@ -1,0 +1,124 @@
+{
+  "schemaVersion": "repo-proof-manifest-v1",
+  "subject": {
+    "origin": "git+https://github.com/openclaw/openclaw.git",
+    "commitSha": "a99317ef97af3fe657eb32d35e273004c681385b",
+    "displayLabel": "OpenClaw external reference integration",
+    "descriptiveRefs": [
+      "HEAD at time of scan — descriptive only, not identity"
+    ]
+  },
+  "selectedEffect": "outbound email send on behalf of a user",
+  "capabilityReconciliation": [
+    {
+      "discoverySignal": null,
+      "governedEffect": {
+        "namespace": "specimen-declared",
+        "id": "communication.email.send"
+      },
+      "enforcementAction": null,
+      "disposition": "unresolved",
+      "provenance": "manually-reviewed",
+      "note": "GSD-1 ran against the pinned subject and returned ZERO email.send candidates, and GSD-1 carries three email.send patterns (two high-confidence). Checked directly: the subject has zero email dependencies in any package.json and zero non-test sendMail/sendEmail call sites. So the effect is ABSENT FROM THE SUBJECT at this commit, not missed by discovery. No GOVERNED_ACTION_TYPE corresponds either. The specimen's governed effect therefore reconciles to nothing here, and the disposition stays unresolved."
+    }
+  ],
+  "paths": {
+    "relevant": [],
+    "irrelevant": [
+      {
+        "path": "<534 site(s) under filesystem.delete>",
+        "reason": "real consequential surface in the subject, but not the selected effect (outbound email send on behalf of a user)",
+        "capabilityId": "filesystem.delete"
+      },
+      {
+        "path": "<113 site(s) under ai.tool_use>",
+        "reason": "real consequential surface in the subject, but not the selected effect (outbound email send on behalf of a user)",
+        "capabilityId": "ai.tool_use"
+      },
+      {
+        "path": "<45 site(s) under database.delete>",
+        "reason": "real consequential surface in the subject, but not the selected effect (outbound email send on behalf of a user)",
+        "capabilityId": "database.delete"
+      },
+      {
+        "path": "<12 site(s) under ai.completion>",
+        "reason": "real consequential surface in the subject, but not the selected effect (outbound email send on behalf of a user)",
+        "capabilityId": "ai.completion"
+      },
+      {
+        "path": "<4 site(s) under infra.apply>",
+        "reason": "real consequential surface in the subject, but not the selected effect (outbound email send on behalf of a user)",
+        "capabilityId": "infra.apply"
+      },
+      {
+        "path": "<3 site(s) under infra.destroy>",
+        "reason": "real consequential surface in the subject, but not the selected effect (outbound email send on behalf of a user)",
+        "capabilityId": "infra.destroy"
+      },
+      {
+        "path": "<2 site(s) under data.export>",
+        "reason": "real consequential surface in the subject, but not the selected effect (outbound email send on behalf of a user)",
+        "capabilityId": "data.export"
+      },
+      {
+        "path": "<1 site(s) under storage.write>",
+        "reason": "real consequential surface in the subject, but not the selected effect (outbound email send on behalf of a user)",
+        "capabilityId": "storage.write"
+      }
+    ],
+    "unresolved": [],
+    "governed": [],
+    "ungoverned": [],
+    "ungovernedCompleteness": {
+      "state": "enumerated",
+      "derivedFrom": "GSD-1 scan of a99317ef97af3fe657eb32d35e273004c681385b — 714 candidates, 0 governed"
+    }
+  },
+  "enforcementBoundary": {
+    "kind": "none",
+    "description": "No enforcement boundary exists between Strix and this subject at this commit. The specimen's separate-process broker governs a simulated OpenClaw seam, not this repository.",
+    "unbypassableClaimed": false
+  },
+  "credentialHolders": [
+    {
+      "holder": "not established — no live integration with this subject",
+      "isolatedFromAgent": false
+    }
+  ],
+  "attackApplicability": [
+    {
+      "attackClass": "unauthorized-capability",
+      "applicable": false,
+      "result": "NOT_ESTABLISHED",
+      "scope": "simulated"
+    },
+    {
+      "attackClass": "payload-mutation",
+      "applicable": false,
+      "result": "NOT_ESTABLISHED",
+      "scope": "simulated"
+    },
+    {
+      "attackClass": "replay",
+      "applicable": false,
+      "result": "NOT_ESTABLISHED",
+      "scope": "simulated"
+    }
+  ],
+  "evidenceSources": [
+    {
+      "family": "gsd1-discovery",
+      "locator": "scan of a99317ef97af3fe657eb32d35e273004c681385b"
+    }
+  ],
+  "claimCeiling": {
+    "rung": 0,
+    "barred": [
+      "Strix governs OpenClaw",
+      "Strix governs email execution in this subject",
+      "the selected effect is governed",
+      "any bypass-resistance claim",
+      "any live-integration claim"
+    ]
+  }
+}

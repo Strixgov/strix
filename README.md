@@ -46,6 +46,7 @@ not resolve them yet. Listed so the set is complete rather than flattering.
 | [`@strixgov/capabilities-odysseus`](packages/strixgov-capabilities-odysseus/) | Pre-classified capability registry for the Odysseus self-hosted AI workspace (shell, files, email, web, scheduler, memory, secrets, MCP passthrough). |
 | [`@strixgov/mcp-credentials`](packages/strixgov-mcp-credentials/) | OS-keychain credential store for upstream MCP server tokens. Store once, never re-paste. |
 | [`@strixgov/healthcare-demo`](packages/strixgov-healthcare-demo/) | Healthcare governance demo surface. Synthetic data only. |
+| [`@strixgov/repo-proof-contract`](packages/strixgov-repo-proof-contract/) | Language-neutral contract for the Repo-to-Proof manifest. The JSON Schema is the source; the TypeScript and Python bindings are generated from it, and `npm run check:bindings` re-derives them to prove the committed copies still match. |
 
 Each package is self-contained under `packages/<name>/`, at the exact
 path its published `package.json` declares in `repository.directory`, so

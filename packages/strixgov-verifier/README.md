@@ -51,7 +51,7 @@ verdict, no Strix server on the trust path. See the `visual` subcommand
 below for the matching CLI form.
 
 `@strixgov/verifier` is a **public reference implementation of AARM Core
-R6** (tamper-evident receipts) — the Cloud Security Alliance's open
+R5** (tamper-evident receipts) — the Cloud Security Alliance's open
 specification for runtime governance of autonomous AI actions. Full
 AARM mapping in the Standards alignment section below.
 
@@ -124,11 +124,15 @@ continues to evolve.
   links are cryptographically bound in every signed payload today.
   A full chain walk from a given record to the genesis record is
   on the roadmap but not yet surfaced in the public REST or CLI APIs.
-- **Cryptographic agent identity binding.** Verifiable agent identity
-  (the largest AARM Extended capability) is planned for a subsequent
-  release alongside the MCP gateway tooling. The current package
-  covers AARM Core R1–R6 in full; identity binding is the next
-  roadmap milestone and is not in scope for this release.
+- **Cryptographic agent identity binding — verified elsewhere, not
+  here.** Identity binding is **AARM Core R6** (not an Extended
+  capability, as an earlier revision of this file said), and it has
+  shipped: agent actor attestation is live in production. What this
+  package provides is the canonical payload builder, so a third party
+  can reconstruct the exact signed bytes. It exports no verify function
+  and no CLI subcommand for attestations — `verifyActorAttestation` in
+  `@strixgov/sdk` does that. So this package covers Core R5 as a
+  reference implementation and does not, on its own, cover R6.
 
 **What we explicitly do not claim:**
 
@@ -402,14 +406,25 @@ full specification text lives at [aarm.dev](https://aarm.dev/) (donated to
 CSA by Vanta, paper [arXiv:2602.09433](https://arxiv.org/abs/2602.09433)).
 
 `@strixgov/verifier` is a **public reference implementation of AARM
-Core R6** — tamper-evident receipts independently verifiable using
-Ed25519 + JWKS, with no vendor trust path. The verifier covers Core
-R1–R6 in full, with the next milestones (walk-to-genesis chain
-verification + cryptographic agent identity binding) on the published
-roadmap.
+Core R5** — tamper-evident receipts independently verifiable using
+Ed25519 + JWKS, with no vendor trust path.
 
-The per-requirement mapping (Core R1–R6, Extended) lives at
-[strixgov.com/partners/aarm](https://www.strixgov.com/partners/aarm).
+**Core R6 (identity binding) has shipped, but not in this package** —
+this package builds the canonical attestation payload; verification
+lives in `@strixgov/sdk`. Walk-to-genesis chain verification remains on
+the published roadmap.
+
+> **Numbering note.** An earlier revision of this file mapped R6 to
+> tamper-evident receipts and listed identity binding as an unshipped
+> *Extended* capability. AARM has since renumbered: **R5 is
+> tamper-evident receipts, R6 is identity binding**, and identity
+> binding has shipped.
+
+A companion mapping of AARM expectations to Strix engineering primitives
+lives at [strixgov.com/partners/aarm](https://www.strixgov.com/partners/aarm).
+That page is deliberately **not** organized by requirement number — it pairs
+each expectation with the primitive that implements it, and the
+requirement-numbered view is the table above.
 
 [csa-aarm-wg]: https://cloudsecurityalliance.org/research/working-groups/ai-systems-management
 
