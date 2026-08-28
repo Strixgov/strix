@@ -5,6 +5,33 @@ All notable changes to `@strixgov/verifier` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.24.0] — 2026-08-28
+
+### Added
+
+- **`@strixgov/verifier/device-attestation`** — the AA-2 (Device Attestation
+  v1) verifier: the 9-rule ADR-016 evaluation, the 12 `aa2_` reason codes, and
+  the locked 3-pair DEVICE-PRE-2 matrix, conformance-locked against the 15
+  published vectors. Zero shared code with the producer.
+
+### Fixed
+
+- **The AA-2 verifier was unshippable and nothing said so.** `src/device-attestation.mjs`
+  and its `./device-attestation` export landed in this package after 1.23.0 was
+  published (1.23.0 was cut for the Physical Approval Bridge) and the version was
+  never bumped — so the module existed in the repository and in the public mirror
+  while `@strixgov/verifier@1.23.0` on npm carried neither the file nor the export
+  declaration. Anyone importing the documented subpath got "package subpath not
+  exported".
+
+  `lint-distribution-truth --registry` reported the package LIVE and in sync
+  throughout, because it compares VERSIONS and the repository version already
+  equalled the published one. The AA-2 lane's mirror-registration check was green
+  for the same reason it was designed to be: the files are in `MIRROR_FILES`, and
+  reaching the mirror is not reaching npm. Both gates were honest about what they
+  measured and neither measured publishability — see the new EXPORT_MISSING check
+  in `scripts/lint-distribution-truth.mjs`.
+
 ## [1.23.0] — 2026-08-21
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "@strixgov/swarm-adapter",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Bring your swarm. Strix governs it. A framework-neutral bridge that turns a real multi-agent run (Claude Agent SDK / CrewAI / LangGraph / OpenAI Swarm) into signed delegations + governed tool calls + independently-verifiable proof.",
   "type": "module",
   "publishConfig": {

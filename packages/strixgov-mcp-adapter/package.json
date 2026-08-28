@@ -1,6 +1,6 @@
 {
   "name": "@strixgov/mcp-adapter",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "One-call governance for any MCP server. Wraps every tool.call() with policy evaluation, signed execution receipts, and an optional approval gate — no changes to your tool implementations required.",
   "license": "Elastic-2.0",
   "type": "module",
@@ -22,7 +22,7 @@
     "demo": "node bin/demo.mjs"
   },
   "dependencies": {
-    "@strixgov/verifier": "^1.10.1"
+    "@strixgov/verifier": "^1.22.0"
   },
   "peerDependencies": {
     "@strixgov/tool-gateway": ">=0.4.1"

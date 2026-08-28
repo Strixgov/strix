@@ -5,6 +5,26 @@ All notable changes to `@strixgov/mcp-adapter` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3]
+
+Dependency-floor correction. No change to the adapter, the receipt format, the
+signing flow, or any runtime behavior.
+
+### Fixed
+- **`@strixgov/verifier` floor raised `^1.10.1` -> `^1.22.0`.** This package's
+  README documents `import { verifyExecutionOutcomeRecord } from
+  "@strixgov/verifier/execution-outcome"`, and that subpath first appears in the
+  verifier's published `exports` map at **1.22.0**. The declared floor permitted
+  1.10.1, where the documented import fails with "package subpath not exported"
+  — a declared contract the resolved dependency does not honour. The floor is
+  the lowest version that actually honours every documented import, not the
+  newest available.
+- **Stopped resolving a deprecated version.** The workspace lockfile had frozen
+  `@strixgov/verifier@1.10.1`, which npm marks deprecated ("Documentation
+  hygiene patch in 1.10.2+"), so every install surfaced a deprecation warning
+  for a dependency the caret range already permitted to be current. Lockfile
+  refreshed.
+
 ## [0.1.2]
 
 License-fidelity patch. No functional change to the adapter, the receipt

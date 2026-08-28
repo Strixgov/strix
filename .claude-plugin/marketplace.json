@@ -11,7 +11,7 @@
       "name": "strix-verifier",
       "source": "./plugins/strix-verifier",
       "description": "Independently verify Strix governance evidence, approval artifacts, quorums, tool-gateway receipts, CT proofs, and agent-swarm runs. Ed25519 + JWKS, offline-capable, no Strix account required.",
-      "version": "1.22.0",
+      "version": "1.24.0",
       "category": "security",
       "tags": ["governance", "verification", "ed25519", "proof", "ai-governance", "audit"],
       "license": "MIT",

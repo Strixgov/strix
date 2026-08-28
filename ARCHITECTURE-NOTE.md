@@ -2,7 +2,7 @@
 
 **The Strix architecture for governing AI agent execution**
 
-**Version 1.0 · Published 2026-08-27 · Maintained at this URL; corrections are recorded in the change history at the end, never silently edited.**
+**Version 1.0.1 · Published 2026-08-27 · Maintained at this URL; corrections are recorded in the change history at the end, never silently edited.**
 
 ---
 
@@ -144,8 +144,14 @@ npx @strixgov/verifier@latest swarm swarm_live_1783626787019_lpb1
 
 Human-readable views of the same records:
 
-- <https://www.strixgov.com/proof/5686>
+- <https://verify.strixgov.com/r/5686> — the public receipt inspector. It
+  fetches the JWKS and computes the verdict in your browser; it does not
+  display a verdict served by Strix, and it shows the server's own claim
+  separately so the two never blur.
 - <https://www.strixgov.com/proof/swarm/swarm_live_1783626787019_lpb1>
+
+The signed record itself is served as JSON at
+<https://www.strixgov.com/api/public/proof/5686>.
 
 Public artifacts:
 
@@ -167,3 +173,4 @@ That thesis is not asserted from memory; it has a public record. The independent
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-08-27 | Initial publication. |
+| 1.0.1 | 2026-08-27 | Corrected the human-readable link for record 5686. v1.0 linked `/proof/5686`, which is keyed by a record's evidence hash rather than its record id and returned "Invalid Evidence ID". Now links the public receipt inspector, which is keyed by record id and computes its verdict in the reader's browser. The verifier commands were unaffected and unchanged. |
