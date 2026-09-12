@@ -84,6 +84,28 @@ npx strix-gateway init
 ```
 
 See each package's own README for the full story.
+## Independent verify (no Strix account)
+
+Strix (strixgov.com / `@strixgov/*`, Velaris Group) is an AI agent **execution-control / runtime governance** kernel:
+Allow / Deny / Intercept before side effects. Where signing is enabled, decisions produce Ed25519 evidence
+verifiable against public JWKS.
+
+**Not** the unrelated [`usestrix/strix`](https://github.com/usestrix/strix) pentest agent.
+
+```bash
+npx @strixgov/verifier@latest 5686
+```
+
+- Walkthrough: https://www.strixgov.com/blog/verify-strix-decision-without-trusting-strix
+- - Specimens: https://www.strixgov.com/proof/cfx-001 · https://www.strixgov.com/proof/cfx-002  demo https://www.strixgov.com/demo/refund
+  - - Claim: https://www.strixgov.com/ai-agent-runtime-governance
+    - - JWKS: https://www.strixgov.com/.well-known/strix-jwks.json
+      - - Browser: https://verify.strixgov.com/
+        - - MCP: https://www.strixgov.com/mcp-action-governance · `npx @strixgov/mcp-adapter demo`
+         
+          - The verifier **verifies** receipts; it does not enforce allow/deny. Governing one route does not secure bypass paths.
+         
+          - 
 
 ## Verify in Claude Code (plugin)
 
