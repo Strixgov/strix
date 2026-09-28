@@ -1,0 +1,67 @@
+{
+  "vector_id": "xag-neg-16-retired-key",
+  "schema_version": "strix-execution-authority-v1",
+  "category": "negative",
+  "description": "The signing key has been rotated out (retired).",
+  "grant": {
+    "payload": {
+      "schemaVersion": "strix-execution-authority-v1",
+      "grantId": "xg:conformance-0001",
+      "issuer": "https://authority.strix.test",
+      "signingKeyId": "strix-authority-conformance-2026-09",
+      "tenantId": "oem-consumer-synthetic-01",
+      "principalId": "agent:refund-assistant",
+      "proposalId": "xp:order-7731:refund",
+      "action": "payments.refund.issue",
+      "consequenceId": "refund:order-7731:98900",
+      "executionRoute": "POST /refunds",
+      "payloadCommitment": "47a90b513c6f65885d73aacc25a5a70d04d6749987c802fe94fe4f911b132c58",
+      "currentStateCommitment": "b2f9e65a328af8687160cae3d3c725be7205df7374a48db030add28f8aa072ad",
+      "strixDecisionId": "cmconformance0002",
+      "strixCapabilityId": "execution.authority.grant",
+      "approvalsRequired": 2,
+      "approvalsGranted": 2,
+      "issuedAt": "2026-09-24T12:05:00.000Z",
+      "notBefore": "2026-09-24T12:05:00.000Z",
+      "expiresAt": "2026-09-24T12:35:00.000Z",
+      "singleUse": true
+    },
+    "signature": "3dw4-j0-6fAKUF1Adz8KYvA4jO1JfSlFlGxkYiZ7H6h9ljWZ9oi3Yq0F5mLNbdjAk5e8CQwPireQnGeLNmWABw",
+    "algorithm": "Ed25519",
+    "canonicalization": "strix-canonical-json-v1"
+  },
+  "verification_inputs": {
+    "trust": {
+      "issuer": "https://authority.strix.test",
+      "keys": [
+        {
+          "kid": "strix-authority-conformance-2026-09",
+          "publicKeySpkiBase64": "MCowBQYDK2VwAyEAF1G6lwRYCk1RTxVy4ZavQxasEnF3MWB9k6XgQu+1b1M=",
+          "status": "retired",
+          "notBefore": "2026-01-01T00:00:00Z",
+          "notAfter": "2027-01-01T00:00:00Z"
+        }
+      ],
+      "revocations": {
+        "keyIds": [],
+        "grantIds": []
+      },
+      "maxLifetimeMs": 3600000
+    },
+    "expected_execution": {
+      "tenantId": "oem-consumer-synthetic-01",
+      "principalId": "agent:refund-assistant",
+      "proposalId": "xp:order-7731:refund",
+      "action": "payments.refund.issue",
+      "consequenceId": "refund:order-7731:98900",
+      "executionRoute": "POST /refunds",
+      "payloadCommitment": "47a90b513c6f65885d73aacc25a5a70d04d6749987c802fe94fe4f911b132c58",
+      "currentStateCommitment": "b2f9e65a328af8687160cae3d3c725be7205df7374a48db030add28f8aa072ad"
+    },
+    "as_of": "2026-09-24T12:10:00.000Z"
+  },
+  "expected": {
+    "valid": false,
+    "reason": "AUTHORITY_KEY_INVALID"
+  }
+}

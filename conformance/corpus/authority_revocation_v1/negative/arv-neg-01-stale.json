@@ -1,0 +1,47 @@
+{
+  "vector_id": "arv-neg-01-stale",
+  "category": "negative",
+  "description": "Past validUntil the document is refused, never read as \"nothing revoked\".",
+  "document": {
+    "payload": {
+      "schemaVersion": "strix-authority-revocation-v1",
+      "issuer": "https://authority.strix.test",
+      "signingKeyId": "strix-authority-conformance-2026-09",
+      "generation": 3,
+      "publishedAt": "2026-09-24T12:00:00.000Z",
+      "validUntil": "2026-09-24T12:05:00.000Z",
+      "revokedGrantIds": [
+        "sg:conformance-0001"
+      ],
+      "revokedKeyIds": []
+    },
+    "signature": "v8Db-3hbPZlBxlVQVDt_SaMdtOgTehmlVBr0KpwHgDOU4YMTRSAQoDlAhcdb-0BKKMOh7pd7emgVGGh584zjCw",
+    "algorithm": "Ed25519",
+    "canonicalization": "rcm-canonical-json-v1"
+  },
+  "verification_inputs": {
+    "issuer": "https://authority.strix.test",
+    "keys": [
+      {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "x": "F1G6lwRYCk1RTxVy4ZavQxasEnF3MWB9k6XgQu-1b1M",
+        "kid": "strix-authority-conformance-2026-09",
+        "use": "sig",
+        "alg": "EdDSA",
+        "key_ops": [
+          "verify"
+        ],
+        "purpose": "strix-authority-grant",
+        "status": "active",
+        "notBefore": "2026-01-01T00:00:00Z",
+        "notAfter": "2027-01-01T00:00:00Z"
+      }
+    ],
+    "as_of": "2026-09-24T12:05:00.000Z"
+  },
+  "expected": {
+    "valid": false,
+    "reason": "REVOCATION_STALE"
+  }
+}
