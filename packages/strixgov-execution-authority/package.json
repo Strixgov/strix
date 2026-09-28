@@ -1,0 +1,52 @@
+{
+  "name": "@strixgov/execution-authority",
+  "version": "0.1.0",
+  "description": "The external SDK for the Strix Execution Authority Boundary: ask Strix for bounded authority over one exact proposed action, redeem it immediately before the handler runs, report the outcome, and independently verify the signed evidence. Zero shared code with the Strix issuer.",
+  "type": "module",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepublishOnly": "npm run build && node --test test/*.test.mjs"
+  },
+  "keywords": [
+    "strix",
+    "governance",
+    "ai-agents",
+    "execution-authority",
+    "ed25519",
+    "verifiable"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/strixgov-execution-authority"
+  },
+  "dependencies": {
+    "@strixgov/verifier": "^1.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
