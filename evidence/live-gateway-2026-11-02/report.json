@@ -1,0 +1,69 @@
+{
+  "schema": "strix-live-gateway-check/v1",
+  "at": "2026-11-02T02:52:15.434Z",
+  "mode": "live (api.anthropic.com)",
+  "model": "claude-haiku-5-5",
+  "checks": [
+    {
+      "id": "real API accepts the forwarded request",
+      "result": "PASS",
+      "detail": "HTTP 200, model claude-haiku-5-5, 85 in / 135 out"
+    },
+    {
+      "id": "the provider saw tokens, not values",
+      "result": "PASS",
+      "detail": "the model repeated 3 token(s) and no invented value"
+    },
+    {
+      "id": "values are restored for the client",
+      "result": "PASS",
+      "detail": "all three invented values are back in the client's answer"
+    },
+    {
+      "id": "a blocked category is refused before any call leaves",
+      "result": "PASS",
+      "detail": "HTTP 422, upstream calls made for it: 0"
+    },
+    {
+      "id": "run logs verify and hold no value or key",
+      "result": "PASS",
+      "detail": "3 logs, chains intact"
+    },
+    {
+      "id": "no byte that left the gateway holds an invented value",
+      "result": "PASS",
+      "detail": "2 upstream request(s) hashed and captured; 0 held a value"
+    }
+  ],
+  "roundTrips": [
+    {
+      "n": 1,
+      "method": "POST",
+      "path": "/v1/messages",
+      "requestSha256": "531c79fdbae1514d23408d8fe34ab9dd77511c267bf67f44633c4867483ca639",
+      "requestBytes": 260,
+      "requestHoldsInventedValue": false,
+      "responseStatus": 200,
+      "responseSha256": "69f81e394fb20a9d4fcede664e559ccf5640f441bbf3f3e76d830bfcc43160d6",
+      "responseBytes": 1796
+    },
+    {
+      "n": 2,
+      "method": "POST",
+      "path": "/v1/messages",
+      "requestSha256": "531c79fdbae1514d23408d8fe34ab9dd77511c267bf67f44633c4867483ca639",
+      "requestBytes": 260,
+      "requestHoldsInventedValue": false,
+      "responseStatus": 200,
+      "responseSha256": "713c87d3d47d72cb1724e35ac155148c6bc91696c7bb482d6c732f1a2dd48d3d",
+      "responseBytes": 1740
+    }
+  ],
+  "capture": "request-N.json and response-N.json written beside this report: the request files are what left the gateway (tokens only)",
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "inconclusive": 0
+  },
+  "claim": "One run, three requests, invented identifiers. Establishes what the real API accepted and returned on this run; not coverage of other routes, models, streaming or tool use."
+}
