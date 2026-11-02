@@ -97,6 +97,19 @@ Marketing-bundle invariants (no separate linter today; check by hand at sync tim
 - No build step. The bundle is whatever's needed for `npx http-server` to serve it.
 - Asset weight stays within reason for a public git repo (per-bundle target: < 25 MB committed). The mp4 in `marketing/mcp-tool-gateway/assets/` is the largest item today at ~13 MB.
 
+Evidence surface, under `evidence/<run>/`:
+
+| Artifact | Status | Notes |
+|---|---|---|
+| Retained run evidence (report, captured request and response bytes, `RETAINED.json`, `SHA256SUMS`, `VERIFY.md`) | This repo | **Not a mirror of upstream source.** Copies of run output, pinned by SHA-256, placed here so a reader can check them without access to a private repository. The source of the check is `strix-governed-egress-web`; this directory has no byte-for-byte upstream counterpart, so a sync that mirrors the tree should leave `evidence/` in place. |
+| `evidence/README.md` | This repo | Index of the retained runs and what each shows. |
+
+Evidence invariants (checked by hand when a run is added):
+
+- Each `evidence/<run>/` folder holds only invented values, no real person or document, and no key, token or local path.
+- Files are never edited after they are recorded; a new run goes in a new folder. `VERIFY.md` is the one file that may be corrected, and it is not hash-pinned.
+- Each folder states what it shows and what it does not.
+
 Sync tooling (upstream, in the monorepo):
 [`scripts/sync-verifier-to-public-release.mjs`](../../scripts/sync-verifier-to-public-release.mjs)
 mirrors the verifier (with fixture + golden regeneration);
