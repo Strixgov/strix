@@ -1,0 +1,1 @@
+{"model":"claude-haiku-5-5","max_tokens":200,"messages":[{"role":"user","content":"Patient Name: [PERSON_1]\nMember ID: [ID_NUMBER_1]\nDate of Birth: [DATE_1]\n\nRepeat back each of the three lines above, exactly as written, one per line, and nothing else."}]}

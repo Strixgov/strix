@@ -1,0 +1,56 @@
+{
+  "schema": "strix-retained-evidence/v1",
+  "kind": "live-gateway-check",
+  "runAt": "2026-11-02T02:52:15.434Z",
+  "runMode": "live (api.anthropic.com)",
+  "model": "claude-haiku-5-5",
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "inconclusive": 0
+  },
+  "retainedAt": "2026-11-02T02:52:22.548Z",
+  "retainedBy": {
+    "script": "scripts/release-gate-retain-evidence.mjs",
+    "scriptSha256": "2c7aa105f50d2f017e53e1db094a691252d64ee07c911a5de3434a0bfea4f152",
+    "gitCommit": "9513cace9895dba80690273ea689a97e78e21ab0"
+  },
+  "files": [
+    {
+      "file": "report.json",
+      "sha256": "d2f269dfed6d1d580f7f1d0cf36b6ac2fc8e241a40b907edd11d807c9c147db7",
+      "bytes": 2329
+    },
+    {
+      "file": "request-1.json",
+      "sha256": "531c79fdbae1514d23408d8fe34ab9dd77511c267bf67f44633c4867483ca639",
+      "bytes": 260
+    },
+    {
+      "file": "request-2.json",
+      "sha256": "531c79fdbae1514d23408d8fe34ab9dd77511c267bf67f44633c4867483ca639",
+      "bytes": 260
+    },
+    {
+      "file": "response-1.json",
+      "sha256": "69f81e394fb20a9d4fcede664e559ccf5640f441bbf3f3e76d830bfcc43160d6",
+      "bytes": 1796
+    },
+    {
+      "file": "response-2.json",
+      "sha256": "713c87d3d47d72cb1724e35ac155148c6bc91696c7bb482d6c732f1a2dd48d3d",
+      "bytes": 1740
+    }
+  ],
+  "checksBeforeRetaining": [
+    "every round trip in the report has its request and response file in the capture folder",
+    "each captured file's sha256 and byte count match the report",
+    "no captured request holds an invented value",
+    "no retained file holds an API key shape",
+    "the capture folder holds nothing the report does not list"
+  ],
+  "notRetained": [
+    "the run's three gateway logs: the check writes them to a temporary folder and does not keep them, so they cannot be retained after the fact"
+  ],
+  "claim": "These are the report and the exact request and response bytes of one live run, as the run's own report recorded them. Retention pins the bytes; it does not re-run the check or widen what the run covered."
+}
