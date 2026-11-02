@@ -34,10 +34,20 @@ values. `response-1.json` is what came back.
 
 ## What this shows, and what it does not
 
-Shows: for one model, the Messages route, non-streaming, text only and three invented values, the provider received
-tokens rather than values, the values were restored for the client, a blocked category was refused before any call left,
-and the run logs verified and held no value or key.
+**Checkable from the files in this folder** (checks 1, 2 and 6 in `report.json`):
+- the provider accepted the forwarded request (HTTP 200, `response-N.json`);
+- what left the gateway held tokens such as `[PERSON_1]`, not the invented values (`request-N.json`);
+- the model's answer repeats those tokens (`response-N.json`).
 
-Does not show: behaviour with real documents, other models or routes, streaming, an accuracy rate, or anything about
-payer or clinical outcomes. The SHA-256 list proves the files are unchanged since they were recorded; it does not by itself
-prove who ran them or when. Hosting this folder somewhere public does not add that proof either.
+**Recorded in `report.json` only, not checkable from these files** (checks 3, 4 and 5): that the values were restored for the
+client, that a blocked category was refused before any call left (HTTP 422, zero upstream calls), and that the run logs
+verified and held no value or key. The client-side answer, the refused request and the logs were not retained, so these three
+rest on the script's own report.
+
+Scope: one model, the Messages route, non-streaming, text only, three invented values. The two captured requests are
+byte-identical (same hash); the two responses differ. The `thinking` blocks in the responses carry opaque provider signatures.
+
+Does not show: behaviour with real documents, other models or routes, streaming, an accuracy rate, or anything about payer or
+clinical outcomes. Nothing here lets you confirm the calls reached `api.anthropic.com` rather than a stand-in, beyond the
+provider's own message ids. The SHA-256 list proves the files are unchanged since they were recorded; it does not prove who
+ran them or when, and hosting this folder publicly does not add that proof. `VERIFY.md` itself is not hash-pinned.
