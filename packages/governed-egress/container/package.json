@@ -1,0 +1,11 @@
+{
+  "name": "strix-egress-proxy-image",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Runtime dependencies for the governed egress proxy container. Mirrors the package's own pinned dependencies; the lockfile carries integrity hashes so `npm ci` installs exactly these bytes.",
+  "type": "module",
+  "dependencies": {
+    "@napi-rs/canvas": "1.0.9",
+    "pdfjs-dist": "6.3.289"
+  }
+}

@@ -269,7 +269,18 @@ export class StrixExecutionAuthorityClient {
   }
 }
 
+/**
+ * Strix problems arrive in two shapes: the authority routes' `{error:{code,message}}`
+ * and the v1 auth layer's `{error:"<message>", code?}` (a 401 for a bad
+ * credential or an unknown tenant). Both are problems, never answers.
+ */
 function problemFrom(r: { status: number; json: unknown }): StrixUnavailableError {
-  const err = ((r.json ?? {}) as { error?: { code?: string; message?: string } }).error;
-  return new StrixUnavailableError(err?.code ?? `HTTP_${r.status}`, err?.message ?? `HTTP ${r.status}`, r.status);
+  const j = (r.json ?? {}) as { error?: unknown; code?: unknown; message?: unknown };
+  if (j.error && typeof j.error === 'object') {
+    const err = j.error as { code?: string; message?: string };
+    return new StrixUnavailableError(err.code ?? `HTTP_${r.status}`, err.message ?? `HTTP ${r.status}`, r.status);
+  }
+  const code = typeof j.code === 'string' ? j.code : `HTTP_${r.status}`;
+  const message = typeof j.error === 'string' ? j.error : typeof j.message === 'string' ? j.message : `HTTP ${r.status}`;
+  return new StrixUnavailableError(code, message, r.status);
 }

@@ -7,36 +7,44 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "default": "./dist/index.js"
     },
     "./graph": {
+      "types": "./dist/graph/index.d.ts",
       "import": "./dist/graph/index.js",
-      "types": "./dist/graph/index.d.ts"
+      "default": "./dist/graph/index.js"
     },
     "./transaction-proof": {
+      "types": "./dist/transaction-proof/index.d.ts",
       "import": "./dist/transaction-proof/index.js",
-      "types": "./dist/transaction-proof/index.d.ts"
+      "default": "./dist/transaction-proof/index.js"
     },
     "./mcp-proof": {
+      "types": "./dist/mcp-proof/index.d.ts",
       "import": "./dist/mcp-proof/index.js",
-      "types": "./dist/mcp-proof/index.d.ts"
+      "default": "./dist/mcp-proof/index.js"
     },
     "./proof-bundle": {
+      "types": "./dist/proof-bundle/index.d.ts",
       "import": "./dist/proof-bundle/index.js",
-      "types": "./dist/proof-bundle/index.d.ts"
+      "default": "./dist/proof-bundle/index.js"
     },
     "./swarm": {
+      "types": "./dist/swarm/index.d.ts",
       "import": "./dist/swarm/index.js",
-      "types": "./dist/swarm/index.d.ts"
+      "default": "./dist/swarm/index.js"
     },
     "./jwks": {
+      "types": "./dist/jwks/index.d.ts",
       "import": "./dist/jwks/index.js",
-      "types": "./dist/jwks/index.d.ts"
+      "default": "./dist/jwks/index.js"
     },
     "./web": {
+      "types": "./dist/web/index.d.ts",
       "import": "./dist/web/index.js",
-      "types": "./dist/web/index.d.ts"
+      "default": "./dist/web/index.js"
     }
   },
   "scripts": {

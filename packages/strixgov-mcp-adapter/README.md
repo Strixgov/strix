@@ -20,7 +20,10 @@ execution are different claims.
    hash, and proof-chain link.
 2. **Execution outcome** — persisted after an allowed invocation. It links to the
    authorization receipt and binds `SUCCEEDED`, `FAILED`, or `UNKNOWN`, plus the
-   result hash or error code.
+   result hash or error code. A tool that throws, or that returns a result with
+   `isError: true` (the usual way an MCP tool reports failure), is `FAILED`; the
+   second carries `errorCode: "TOOL_REPORTED_ERROR"`. Before 0.1.4 the second
+   case was signed `SUCCEEDED`.
 
 A denied or unapproved action has no execution outcome because the handler was
 not invoked. This distinction prevents a pre-execution decision from being

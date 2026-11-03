@@ -28,11 +28,40 @@ export interface DeviceAttestationVerification {
   reason: string | null;
 }
 
+/**
+ * What `renderDeviceClassBlock` ACTUALLY returns.
+ *
+ * CORRECTED 2026-09-06. This declaration previously read
+ * `{ attested, verified, reason, deviceClass, attestationProtocol }` — a shape
+ * the implementation has never produced. `device-attestation.mjs` returns
+ * `claimedClass` / `verificationReason` and no `attested` field at all, and
+ * because this `.d.ts` is hand-written alongside a `.mjs` module with nothing
+ * keeping the two in step, the declaration was simply wrong and TypeScript
+ * repeated it to every consumer as fact.
+ *
+ * The cost was real and downstream: strix-platform's console wrote its badge
+ * against the declared shape (correctly, given what the types said), bridged
+ * the two with an `as` assertion that looked like a same-shape cast, and so
+ * read `attested` as `undefined` at runtime. `undefined` is falsy, the badge
+ * branches on it, and a VERIFIED attestation and a REJECTED one both rendered
+ * as "No device attestation" — the two outcomes AA-2 exists to distinguish,
+ * collapsed into the one that says nothing happened.
+ *
+ * Two naming choices here are deliberate rather than cosmetic:
+ *
+ * - `claimedClass`, not `deviceClass`. It is the class the attestation
+ *   payload CLAIMS. A consumer must not present it as established until
+ *   `verified === true`.
+ * - There is no `attested`. This function cannot know whether an attestation
+ *   was present — it renders the same all-null block for "no record" and for
+ *   "a record with nothing resolvable". Only a caller holding the record can
+ *   tell those apart, so that field belongs to the caller's own type, never
+ *   to this one.
+ */
 export interface DeviceClassBlock {
-  attested: boolean;
+  claimedClass: DeviceClass | null;
   verified: boolean | null;
-  reason: string | null;
-  deviceClass: DeviceClass | null;
+  verificationReason: string | null;
   attestationProtocol: AttestationProtocol | null;
 }
 

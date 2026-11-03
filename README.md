@@ -30,6 +30,7 @@ for how changes flow.
 | [`@strixgov/guard`](packages/strixgov-guard/) | The seatbelt for MCP agents — one command wraps your MCP servers with Strix governance: writes require human approval, reads pass, and every action produces a signed receipt. | [`@strixgov/guard`](https://www.npmjs.com/package/@strixgov/guard) |
 | [`@strixgov/mcp-token-validator`](packages/strixgov-mcp-token-validator/) | Independent validator for Strix `execution_authorization_v1` tokens. Drop into your own MCP server, proxy, or credential broker to enforce capability-scoped governance — no Strix runtime dependency, no network calls, Ed25519 against your trusted JWKS using only `node:crypto`. | [`@strixgov/mcp-token-validator`](https://www.npmjs.com/package/@strixgov/mcp-token-validator) |
 | [`@strixgov/rcm-reference`](packages/strixgov-rcm-reference/) | Canonical governed-agent **reference architecture** for healthcare revenue-cycle management. The same prior-auth agent runs the same task ungoverned vs. governed across six real-world failure modes, on a real X12 278 surface, synthetic patients only. Dependency-free ESM; `node --test`, no install. | [`@strixgov/rcm-reference`](https://www.npmjs.com/package/@strixgov/rcm-reference) |
+| [`@strixgov/execution-authority`](packages/strixgov-execution-authority/) | External SDK for bounded authority over one exact proposed action, redemption before handler entry, outcome reporting and independent evidence verification. npm 0.1.0 is published; this tree prepares 0.1.1. SDK publication does not establish a deployed authority service or a live integration. | [`@strixgov/execution-authority`](https://www.npmjs.com/package/@strixgov/execution-authority) |
 
 ### Source-available here, not yet on npm
 
@@ -47,6 +48,7 @@ not resolve them yet. Listed so the set is complete rather than flattering.
 | [`@strixgov/mcp-credentials`](packages/strixgov-mcp-credentials/) | OS-keychain credential store for upstream MCP server tokens. Store once, never re-paste. |
 | [`@strixgov/healthcare-demo`](packages/strixgov-healthcare-demo/) | Healthcare governance demo surface. Synthetic data only. |
 | [`@strixgov/repo-proof-contract`](packages/strixgov-repo-proof-contract/) | Language-neutral contract for the Repo-to-Proof manifest. The JSON Schema is the source; the TypeScript and Python bindings are generated from it, and `npm run check:bindings` re-derives them to prove the committed copies still match. |
+| [`@strixgov/governed-egress`](packages/governed-egress/) | Governed AI Egress, self-hosted: a drop-in proxy for OpenAI- and Anthropic-shaped chat calls that detects identifiers, tokenizes them before release, re-scans, and releases only the exact bytes it authorized; a container build; and a Claude Code prompt hook. A clean result means no findings by its detector, not that the text contains no sensitive data. Elastic-2.0. |
 
 Each package is self-contained under `packages/<name>/`, at the exact
 path its published `package.json` declares in `repository.directory`, so
@@ -84,28 +86,6 @@ npx strix-gateway init
 ```
 
 See each package's own README for the full story.
-## Independent verify (no Strix account)
-
-Strix (strixgov.com / `@strixgov/*`, Velaris Group) is an AI agent **execution-control / runtime governance** kernel:
-Allow / Deny / Intercept before side effects. Where signing is enabled, decisions produce Ed25519 evidence
-verifiable against public JWKS.
-
-**Not** the unrelated [`usestrix/strix`](https://github.com/usestrix/strix) pentest agent.
-
-```bash
-npx @strixgov/verifier@latest 5686
-```
-
-- Walkthrough: https://www.strixgov.com/blog/verify-strix-decision-without-trusting-strix
-- - Specimens: https://www.strixgov.com/proof/cfx-001 · https://www.strixgov.com/proof/cfx-002  demo https://www.strixgov.com/demo/refund
-  - - Claim: https://www.strixgov.com/ai-agent-runtime-governance
-    - - JWKS: https://www.strixgov.com/.well-known/strix-jwks.json
-      - - Browser: https://verify.strixgov.com/
-        - - MCP: https://www.strixgov.com/mcp-action-governance · `npx @strixgov/mcp-adapter demo`
-         
-          - The verifier **verifies** receipts; it does not enforce allow/deny. Governing one route does not secure bypass paths.
-         
-          - 
 
 ## Verify in Claude Code (plugin)
 
@@ -158,8 +138,9 @@ cd packages/strixgov-verifier && npm test
 
 Two-tier, and frozen in CI (`scripts/lint-license-parity.mjs`). The open
 trust primitives — `@strixgov/verifier`, `@strixgov/tool-gateway`, and the
-two `@strixgov/capabilities-*` packs — are **MIT**; the MCP runtime adapter
-`@strixgov/mcp-adapter` is **Elastic License 2.0** (source-available; free
+two `@strixgov/capabilities-*` packs — are **MIT**; the runtime control
+surfaces `@strixgov/mcp-adapter`, `@strixgov/mcp-proxy` and `@strixgov/governed-egress`
+are **Elastic License 2.0** (source-available; free
 to use, not to resell as a competing managed service). The repository root
 is MIT. Each package declares its own license — see [LICENSE](LICENSE), each
 package's own `LICENSE`, and [LICENSING_BOUNDARY.md](LICENSING_BOUNDARY.md).

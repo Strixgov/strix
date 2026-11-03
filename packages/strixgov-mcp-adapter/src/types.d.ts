@@ -57,7 +57,15 @@ export interface GovernMCPServerOptions {
   onOutcome?: (outcome: import("@strixgov/tool-gateway").ExecutionOutcome) => void;
 }
 
+/** errorCode signed on an outcome whose tool returned `isError: true`. */
+export const TOOL_REPORTED_ERROR: "TOOL_REPORTED_ERROR";
+
 export interface GovernedExecution<TResult = unknown> {
+  /**
+   * True when the call was allowed and the handler returned. A tool that
+   * returned `isError: true` still has `ok: true` here (its error result is
+   * passed back to the client), but its signed `executionOutcome` is FAILED.
+   */
   ok: boolean;
   decision: "ALLOW" | "DENY" | "APPROVAL_REQUIRED";
   authorizationReceipt: import("@strixgov/tool-gateway").Receipt;

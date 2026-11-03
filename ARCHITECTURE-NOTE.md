@@ -83,7 +83,7 @@ The important point is not merely that all seven things exist. It is that **Stri
 These are the compact public form of the invariants the architecture enforces:
 
 1. **Nothing governed executes before evaluation.** The boundary is on the execution path; a governed action that skips evaluation does not run.
-2. **Authority is re-evaluated at the point of use — it is not inherited.** A prior approval, a parent agent's grant, or a role held yesterday does not carry forward on its own; each action earns its own answer.
+2. **Authority is not inherited — each action carries its own grant, re-validated at the point of use.** A prior approval, a parent agent's grant, or a role held yesterday does not carry forward on its own; each action earns its own answer. Re-validated, not re-derived: the grant's signature, payload binding, tenant, scope, expiry, revocation and single-use are all checked and it is atomically consumed, which means a bounded stale-state window inside its short lifetime is accepted by design.
 3. **Approval binds to the exact action** — its scope, target, and payload. Change the payload after approval and the approval no longer applies.
 4. **Execution authority is bounded, single-use, expiring, and revocable.** Authority to act once is not authority to act again.
 5. **A governed high-consequence action produces evidence, or it is blocked.** Evidence is a precondition of the side effect, not a log written afterward if convenient.
