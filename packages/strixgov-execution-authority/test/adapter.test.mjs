@@ -118,6 +118,25 @@ const trustRoutes = (overrides = {}) => (url) => {
   return null;
 };
 
+for (const [body, code] of [
+  [{ error: 'Invalid service credential', code: 'INVALID_CREDENTIAL' }, 'INVALID_CREDENTIAL'],
+  [{ error: 'Unknown tenant' }, 'HTTP_401'],
+]) {
+  test(`evaluate preserves string-form auth errors (${code}) without entering the handler`, async () => {
+    const c = counter();
+    await withStrix(() => ({ status: 401, body }), async ({ client, seen }) => {
+      const r = await executeGoverned({ client, proposal: proposal(), presenter: 'handler:1', handler: c.handler });
+      assert.equal(r.status, 'UNAVAILABLE');
+      assert.equal(r.code, code);
+      assert.equal(r.detail, `${code}: ${body.error}`);
+      assert.equal(r.handlerEntered, false);
+      assert.equal(c.entered, 0);
+      assert.equal(seen.length, 1, 'auth failure must not reach redemption or outcome reporting');
+      assert.ok(seen[0].url.startsWith('/api/v1/authority/requests/'));
+    });
+  });
+}
+
 function counter() {
   const c = { entered: 0, executions: [] };
   c.handler = async (execution) => {
@@ -188,6 +207,8 @@ test('REQUIRE_APPROVAL and evaluate-REFUSED never reach redemption, and the hand
 for (const [label, consumeAnswer, expectStatus, expectCode] of [
   ['Strix refuses the consumption (replay / mismatch / revoked)', { status: 409, body: { status: 'REFUSED', reasonCode: 'GRANT_ALREADY_CONSUMED', detail: 'spent', refusalEvidenceId: 'xg:test-0001:refusal:1' } }, 'REFUSE', 'GRANT_ALREADY_CONSUMED'],
   ['Strix cannot answer (500)', { status: 500, body: { error: { code: 'INTERNAL', message: 'boom', status: 500 } } }, 'UNAVAILABLE', 'INTERNAL'],
+  ['auth rejects a string error with a code (401)', { status: 401, body: { error: 'Invalid service credential', code: 'INVALID_CREDENTIAL' } }, 'UNAVAILABLE', 'INVALID_CREDENTIAL'],
+  ['auth rejects a string error without a code (401)', { status: 401, body: { error: 'Unknown tenant' } }, 'UNAVAILABLE', 'HTTP_401'],
   ['Strix is dormant (503)', { status: 503, body: { error: { code: 'AUTHORITY_DORMANT', message: 'off', status: 503 } } }, 'UNAVAILABLE', 'AUTHORITY_DORMANT'],
   ['the consume response is not JSON', { status: 200, raw: 'not json' }, 'UNAVAILABLE', 'MALFORMED_RESPONSE'],
   ['the consume response is a 200 without CONSUMED', { status: 200, body: { status: 'OK' } }, 'UNAVAILABLE', 'HTTP_200'],
@@ -208,6 +229,7 @@ for (const [label, consumeAnswer, expectStatus, expectCode] of [
       assert.equal(r.handlerEntered, false);
       assert.equal(c.entered, 0);
       assert.equal(r.status === 'REFUSE' ? r.reasonCode : r.code, expectCode);
+      if (r.status === 'UNAVAILABLE' && typeof consumeAnswer?.body?.error === 'string') assert.equal(r.detail, `${expectCode}: ${consumeAnswer.body.error}`);
       if (r.status === 'REFUSE') assert.equal(r.refusalEvidenceId, 'xg:test-0001:refusal:1');
       assert.ok(!seen.some((s) => s.url.includes('/outcome')), 'no outcome is reported for a handler that never ran');
     });

@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Strix · Cryptographic execution control for healthcare AI agents</title>
-  <meta name="description" content="Strix governs every AI agent action that touches PHI. Cryptographic receipts at the moment of execution. HIPAA Technical Safeguards + EU AI Act compliance flags derived from the verification outcome — never asserted. One command demo: npx @strixgov/healthcare-demo">
+  <meta name="description" content="A local synthetic healthcare workflow demonstrates redaction, Ed25519 signing, and verifier-derived technical indicators; not production-wide enforcement or compliance certification.">
 
   <meta property="og:type" content="website">
   <meta property="og:title" content="Strix · Execution control for healthcare AI agents">
-  <meta property="og:description" content="Cryptographic governance for clinical AI workflows. HIPAA + EU AI Act flag derivations. One-line demo: npx @strixgov/healthcare-demo">
+  <meta property="og:description" content="Cryptographic governance for clinical AI workflows. HIPAA + EU AI Act flag derivations. Source-workspace synthetic demo">
   <meta property="og:url" content="https://verify.strixgov.com/healthcare/">
   <meta name="twitter:card" content="summary_large_image">
 
@@ -30,7 +30,7 @@
       <nav class="mast-nav">
         <a href="../">strix-verify</a>
         <a href="https://github.com/Strixgov/strix" target="_blank" rel="noopener">github</a>
-        <a href="https://www.npmjs.com/package/@strixgov/healthcare-demo" target="_blank" rel="noopener">npm</a>
+        <a href="https://github.com/Strixgov/strix" target="_blank" rel="noopener">source</a>
       </nav>
     </div>
   </header>
@@ -52,8 +52,8 @@
         That's Strix. Open-source verifier. No accounts. No vendor lock-in.
       </p>
       <div class="hc-cta">
-        <code class="hc-cta-cmd">npx @strixgov/healthcare-demo</code>
-        <span class="hc-cta-note">30-second demo · runs offline · no real PHI · no Strix backend</span>
+        <code class="hc-cta-cmd">pnpm --filter @strixgov/healthcare-demo demo</code>
+        <span class="hc-cta-note">Local source-workspace demo · run pnpm install first · synthetic data · no Strix backend</span>
       </div>
     </section>
 
@@ -86,7 +86,7 @@
           <div class="hc-flow-num">2</div>
           <div class="hc-flow-body">
             <h3>Classify</h3>
-            <p>The kernel identifies PHI fields and applies HIPAA Safe Harbor redaction (§164.514(b)(2)): patient name redacted, DOB bucketed to a 10-year age range, MRN tokenized.</p>
+            <p>The local synthetic fixture redacts configured fields, groups age into a bracket, and tokenizes a fictional MRN. It does not demonstrate HIPAA Safe Harbor de-identification.</p>
           </div>
         </div>
         <div class="hc-flow-step">
@@ -107,7 +107,7 @@
 
       <div class="hc-act-cta">
         See the full clinical workflow run locally on your machine:
-        <code>npx @strixgov/healthcare-demo</code>
+        <code>pnpm --filter @strixgov/healthcare-demo demo</code>
       </div>
     </section>
 
@@ -115,7 +115,7 @@
 
     <section class="hc-section">
       <p class="hc-eyebrow hc-eyebrow-green">Regulatory mapping</p>
-      <h2 class="hc-h2">Three frameworks. One receipt. Every flag <em>derived</em>, never asserted.</h2>
+      <h2 class="hc-h2">Technical indicator mappings from one synthetic receipt — not compliance certification.</h2>
 
       <p class="hc-prose">
         Strix doesn't let the producer claim compliance. The signing host can't write <code>article28_audit_ready: true</code> into a record and have the verifier honor it. Every flag below is derived by the verifier from independently-checkable cryptographic evidence — that asymmetry is the load-bearing trust property.
@@ -174,7 +174,7 @@
       </div>
 
       <p class="hc-footnote">
-        Strix asserts only the three HIPAA Technical Safeguards that derive from cryptographic evidence. Administrative safeguards (§164.308) and Physical safeguards (§164.310) are covered-entity responsibilities outside the per-record evidence surface. Workforce training and workstation security require organizational programs, not cryptographic primitives.
+        The demonstration derives three technical mappings; it does not establish satisfaction of HIPAA Technical Safeguards. Administrative safeguards (§164.308) and Physical safeguards (§164.310) are covered-entity responsibilities outside the per-record evidence surface. Workforce training and workstation security require organizational programs, not cryptographic primitives.
       </p>
     </section>
 
@@ -187,12 +187,12 @@
       <div class="hc-cases">
         <article class="hc-case">
           <h3>Revenue Cycle Management</h3>
-          <p>AI agents handling eligibility checks, prior-auth, denial management, appeals. Every payer-facing action signs a receipt with the actor's role, the patient's de-identified eligibility, and the policy decision. Audit-ready before the auditor asks.</p>
+          <p>AI agents handling eligibility checks, prior-auth, denial management, appeals. A deployed integration would need to govern each registered payer-facing action and retain independently reviewable evidence. This synthetic demonstration does not establish that coverage.</p>
           <code class="hc-case-cap">capability: rcm.eligibility.check</code>
         </article>
         <article class="hc-case">
           <h3>Medicaid Enrollment Platforms</h3>
-          <p>Auto-fill, eligibility determination, application submission to state systems. Strix signs each state-facing call with the applicant's de-identified profile and the verified third-party data sources used. Improper-payment audits become a verifier query.</p>
+          <p>Auto-fill, eligibility determination, application submission to state systems. A production state-system integration requires separate authorization, coverage evidence, and verification; none is proven by this local fixture.</p>
           <code class="hc-case-cap">capability: medicaid.application.submit</code>
         </article>
         <article class="hc-case">
@@ -210,7 +210,7 @@
       <div class="hc-close-grid">
         <div class="hc-close-cell">
           <p class="hc-eyebrow">1. Run the synthetic clinical workflow locally</p>
-          <code class="hc-close-cmd">npx @strixgov/healthcare-demo</code>
+          <code class="hc-close-cmd">pnpm --filter @strixgov/healthcare-demo demo</code>
           <p class="hc-close-note">~3 seconds. No real PHI. No Strix backend. Prints the full flag derivation.</p>
         </div>
         <div class="hc-close-cell">

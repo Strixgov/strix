@@ -5,6 +5,17 @@ All notable changes to `@strixgov/verifier` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.24.1] — 2026-09-10
+
+### Fixed
+
+- **`device-attestation.d.ts` declared a return shape `renderDeviceClassBlock`
+  never produced.** Runtime returns `{ claimedClass, verified,
+  verificationReason, attestationProtocol }`; the published type declared
+  `{ attested, verified, reason, deviceClass, attestationProtocol }`. The
+  fix landed on `main` 2026-09-06 but the version was never bumped, so
+  `1.24.0` shipped the stale declaration to every TypeScript consumer of the
+  `/device-attestation` subpath. Types-only republish; no runtime change.
 ## [1.24.0] — 2026-08-28
 
 ### Added

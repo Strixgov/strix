@@ -1,0 +1,279 @@
+{
+  "reportVersion": 1,
+  "detector": {
+    "name": "strix-pattern-phi",
+    "version": "0.8.0"
+  },
+  "verification": {
+    "name": "strix-release-verification",
+    "version": "0.4.0"
+  },
+  "corpus": {
+    "version": "0.2.0",
+    "documents": 24,
+    "sha256": "02e16d042b132541287302f538243a1d6633e8eb5d503402714e7c61a68405ac"
+  },
+  "byCategory": [
+    {
+      "category": "PATIENT_NAME",
+      "identifiers": 5,
+      "detectedAsCategory": 5,
+      "detectedAny": 5,
+      "survivedRelease": 0,
+      "inRefusedDocuments": 0
+    },
+    {
+      "category": "DATE",
+      "identifiers": 6,
+      "detectedAsCategory": 6,
+      "detectedAny": 6,
+      "survivedRelease": 0,
+      "inRefusedDocuments": 0
+    },
+    {
+      "category": "MRN",
+      "identifiers": 3,
+      "detectedAsCategory": 3,
+      "detectedAny": 3,
+      "survivedRelease": 0,
+      "inRefusedDocuments": 0
+    },
+    {
+      "category": "SSN",
+      "identifiers": 4,
+      "detectedAsCategory": 4,
+      "detectedAny": 4,
+      "survivedRelease": 0,
+      "inRefusedDocuments": 0
+    },
+    {
+      "category": "PHONE",
+      "identifiers": 4,
+      "detectedAsCategory": 4,
+      "detectedAny": 4,
+      "survivedRelease": 0,
+      "inRefusedDocuments": 0
+    },
+    {
+      "category": "EMAIL",
+      "identifiers": 2,
+      "detectedAsCategory": 2,
+      "detectedAny": 2,
+      "survivedRelease": 0,
+      "inRefusedDocuments": 0
+    },
+    {
+      "category": "ADDRESS",
+      "identifiers": 5,
+      "detectedAsCategory": 5,
+      "detectedAny": 5,
+      "survivedRelease": 0,
+      "inRefusedDocuments": 0
+    },
+    {
+      "category": "INSURANCE_ID",
+      "identifiers": 4,
+      "detectedAsCategory": 4,
+      "detectedAny": 4,
+      "survivedRelease": 0,
+      "inRefusedDocuments": 0
+    },
+    {
+      "category": "OTHER_ID",
+      "identifiers": 3,
+      "detectedAsCategory": 3,
+      "detectedAny": 3,
+      "survivedRelease": 0,
+      "inRefusedDocuments": 0
+    },
+    {
+      "category": "PAYMENT_CARD",
+      "identifiers": 3,
+      "detectedAsCategory": 3,
+      "detectedAny": 3,
+      "survivedRelease": 0,
+      "inRefusedDocuments": 0
+    },
+    {
+      "category": "FINANCIAL_ACCOUNT",
+      "identifiers": 2,
+      "detectedAsCategory": 2,
+      "detectedAny": 2,
+      "survivedRelease": 0,
+      "inRefusedDocuments": 0
+    },
+    {
+      "category": "TAX_ID",
+      "identifiers": 1,
+      "detectedAsCategory": 1,
+      "detectedAny": 1,
+      "survivedRelease": 0,
+      "inRefusedDocuments": 0
+    }
+  ],
+  "decoys": 18,
+  "decoysFlagged": 0,
+  "flaggedDecoyDocs": [],
+  "survivedIn": [],
+  "heldOut": {
+    "version": "0.1.0",
+    "documents": 13,
+    "sha256": "fdd90da20c0471441de2406353bb2d75e75b22418c4879f595f449a6a7a6d610",
+    "byCategory": [
+      {
+        "category": "PATIENT_NAME",
+        "identifiers": 2,
+        "detectedAsCategory": 2,
+        "detectedAny": 2,
+        "survivedRelease": 0,
+        "inRefusedDocuments": 0
+      },
+      {
+        "category": "DATE",
+        "identifiers": 3,
+        "detectedAsCategory": 3,
+        "detectedAny": 3,
+        "survivedRelease": 0,
+        "inRefusedDocuments": 0
+      },
+      {
+        "category": "MRN",
+        "identifiers": 1,
+        "detectedAsCategory": 1,
+        "detectedAny": 1,
+        "survivedRelease": 0,
+        "inRefusedDocuments": 0
+      },
+      {
+        "category": "SSN",
+        "identifiers": 1,
+        "detectedAsCategory": 1,
+        "detectedAny": 1,
+        "survivedRelease": 0,
+        "inRefusedDocuments": 0
+      },
+      {
+        "category": "ADDRESS",
+        "identifiers": 2,
+        "detectedAsCategory": 2,
+        "detectedAny": 2,
+        "survivedRelease": 0,
+        "inRefusedDocuments": 0
+      },
+      {
+        "category": "INSURANCE_ID",
+        "identifiers": 1,
+        "detectedAsCategory": 1,
+        "detectedAny": 1,
+        "survivedRelease": 0,
+        "inRefusedDocuments": 0
+      }
+    ],
+    "decoys": 10,
+    "decoysFlagged": 0,
+    "flaggedDecoyDocs": [],
+    "survivedIn": []
+  },
+  "hardCases": [
+    {
+      "round": "1",
+      "documents": 16,
+      "byCategory": [
+        {
+          "category": "PATIENT_NAME",
+          "identifiers": 11,
+          "detectedAsCategory": 4,
+          "detectedAny": 4,
+          "survivedRelease": 7,
+          "inRefusedDocuments": 0
+        },
+        {
+          "category": "FINANCIAL_ACCOUNT",
+          "identifiers": 3,
+          "detectedAsCategory": 3,
+          "detectedAny": 3,
+          "survivedRelease": 0,
+          "inRefusedDocuments": 0
+        }
+      ],
+      "decoys": 29,
+      "decoysFlagged": 0,
+      "misses": [
+        "lone-surname-1",
+        "unlisted-name-1",
+        "unlisted-name-2",
+        "unlisted-name-3",
+        "non-latin-1",
+        "non-latin-2",
+        "non-latin-3"
+      ]
+    },
+    {
+      "round": "2",
+      "documents": 26,
+      "byCategory": [
+        {
+          "category": "PATIENT_NAME",
+          "identifiers": 20,
+          "detectedAsCategory": 7,
+          "detectedAny": 7,
+          "survivedRelease": 13,
+          "inRefusedDocuments": 0
+        },
+        {
+          "category": "FINANCIAL_ACCOUNT",
+          "identifiers": 3,
+          "detectedAsCategory": 3,
+          "detectedAny": 3,
+          "survivedRelease": 0,
+          "inRefusedDocuments": 0
+        }
+      ],
+      "decoys": 47,
+      "decoysFlagged": 3,
+      "misses": [
+        "word-name-grace",
+        "word-name-hope",
+        "word-name-will",
+        "word-name-summer",
+        "word-name-faith",
+        "place-surname-lincoln",
+        "same-token-mayo",
+        "brand-name-allegra",
+        "brand-name-ambrose",
+        "family-surname",
+        "non-latin-place-han",
+        "non-latin-place-cyrillic",
+        "non-latin-place-arabic"
+      ]
+    },
+    {
+      "round": "long",
+      "documents": 4,
+      "byCategory": [
+        {
+          "category": "PATIENT_NAME",
+          "identifiers": 9,
+          "detectedAsCategory": 0,
+          "detectedAny": 0,
+          "survivedRelease": 9,
+          "inRefusedDocuments": 0
+        }
+      ],
+      "decoys": 9,
+      "decoysFlagged": 0,
+      "misses": [
+        "long-positions-900",
+        "long-positions-900",
+        "long-positions-900",
+        "long-positions-2400",
+        "long-positions-2400",
+        "long-positions-2400",
+        "long-positions-2400",
+        "long-window-edges",
+        "long-window-edges"
+      ]
+    }
+  ],
+  "proves": "MEASURED_ON_THIS_CORPUS_ONLY"
+}

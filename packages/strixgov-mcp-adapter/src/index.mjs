@@ -32,6 +32,18 @@ export { classifyMcpTool };
 
 const DEFAULT_KERNEL_URL = "https://www.strixgov.com";
 
+/** errorCode signed on an outcome whose tool returned `isError: true`. */
+export const TOOL_REPORTED_ERROR = "TOOL_REPORTED_ERROR";
+
+/**
+ * True when an MCP CallToolResult reports a tool-level error. Only the
+ * literal `true` counts: a truthy string or number is not the MCP flag, and
+ * reading it as one would turn malformed results into failures by accident.
+ */
+function reportsToolError(result) {
+  return result !== null && typeof result === "object" && result.isError === true;
+}
+
 export function loadConnectedModeFromEnv() {
   const apiKey = process.env.STRIX_API_KEY;
   const tenantId = process.env.STRIX_TENANT_ID;
@@ -214,7 +226,15 @@ export function governMCPServer(tools, opts = {}) {
       };
     }
 
-    const executionStatus = raw.ok ? "SUCCEEDED" : "FAILED";
+    // MCP tools report most failures by RETURNING a result with
+    // `isError: true`, not by throwing. The handler finishing is not the
+    // tool succeeding, so a result flagged as an error is signed FAILED.
+    // Without this, a DROP TABLE that Postgres refused was signed
+    // SUCCEEDED while the database said otherwise. The call's return
+    // value is unchanged: the client still receives the tool's error
+    // result, as MCP intends.
+    const toolReportedError = raw.ok && reportsToolError(raw.result);
+    const executionStatus = raw.ok && !toolReportedError ? "SUCCEEDED" : "FAILED";
     let executionOutcome;
     try {
       // Always read the gateway's active key at outcome time. If a key ring was
@@ -224,7 +244,7 @@ export function governMCPServer(tools, opts = {}) {
         authorizationReceipt: raw.receipt,
         executionStatus,
         result: raw.result,
-        errorCode: raw.error?.code,
+        errorCode: toolReportedError ? TOOL_REPORTED_ERROR : raw.error?.code,
         signingKey: gateway.signingKey,
       });
       await outcomeStorage.appendOutcome(executionOutcome);

@@ -69,7 +69,7 @@ The order is the point, and it is enforced on every path:
 
 ```ts
 await governedAction(
-  { capabilityId: 'payments.refund.issue', payload: { orderId, amountCents } },
+  { capabilityId: 'finance.refund.issue', payload: { orderId, amountCents } },
   () => stripe.refunds.create({ payment_intent: pi }),
 );
 ```

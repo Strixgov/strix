@@ -54,8 +54,8 @@ export function printParityPanel() {
     console.log(`        ${r.file}`);
   }
   console.log("\n  Same five invariants, same boundary: nothing executes without evaluation;");
-  console.log("  authority is re-evaluated at point-of-use; the signing key is out of the");
-  console.log("  agent's reach; and a third party verifies without trusting the agent.");
+  console.log("  each action carries its own grant, re-validated at point-of-use; the key is");
+  console.log("  out of the agent's reach; and a third party verifies without trusting it.");
   console.log("\n  The gateway is the local embodiment; the Console is the production kernel.");
   console.log("  This demo runs the local seam — flip STRIX_KERNEL_URL/--connected to sync to the kernel.");
 }

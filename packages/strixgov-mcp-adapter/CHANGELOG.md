@@ -5,6 +5,33 @@ All notable changes to `@strixgov/mcp-adapter` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4]
+
+A tool that reports an error is now recorded as failed. No change to the
+execution-outcome schema, the receipt format or the verifier.
+
+### Fixed
+- **A tool result with `isError: true` is signed `FAILED`, not `SUCCEEDED`.**
+  MCP tools report most failures by returning a result flagged `isError: true`
+  rather than by throwing. The adapter recorded a failure only when the handler
+  threw, so a tool that returned an error was signed as having succeeded. Found
+  by running `@strixgov/mcp-proxy@0.2.0` against a real Postgres 16: a
+  `DROP TABLE` sent to a read tool was refused by Postgres ("cannot execute
+  DROP TABLE in a read-only transaction") while its signed outcome said
+  `SUCCEEDED`. Such outcomes now carry `executionStatus: "FAILED"`,
+  `errorCode: "TOOL_REPORTED_ERROR"` (exported as `TOOL_REPORTED_ERROR`) and an
+  empty `resultHash`, the same shape a thrown failure already had, so every
+  existing verifier accepts them unchanged.
+- Only the literal `isError: true` counts. A truthy string or number is not the
+  MCP flag.
+
+### Unchanged
+- The call's return value. `executeTool` still returns `ok: true` with the
+  tool's error result, and `callTool` still returns that result instead of
+  throwing, so the MCP client sees the tool's own error as MCP intends.
+- Outcomes already signed are not re-signed. A record from 0.1.3 or earlier
+  that says `SUCCEEDED` may describe a tool that returned an error.
+
 ## [0.1.3]
 
 Dependency-floor correction. No change to the adapter, the receipt format, the

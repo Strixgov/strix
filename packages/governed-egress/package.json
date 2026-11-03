@@ -1,0 +1,84 @@
+{
+  "name": "@strixgov/governed-egress",
+  "version": "0.1.0",
+  "license": "Elastic-2.0",
+  "description": "Strix Governed AI Egress \u2014 data-release control immediately before external AI execution. Detects sensitive data, de-identifies by consistent tokenization, re-scans, and binds a single-use egress authorization to the exact sanitized artifact so the artifact authorized is provably the artifact released. Ships a self-hosted drop-in proxy (strix-egress-proxy), a container build, and a Claude Code prompt hook (strix-egress-prompt-hook). Elastic-2.0: free to self-host for your own use; see COMMERCIAL.md.",
+  "keywords": [
+    "strix",
+    "ai-egress",
+    "phi",
+    "de-identification",
+    "data-loss-prevention",
+    "proxy",
+    "anthropic",
+    "openai",
+    "claude-code",
+    "governance"
+  ],
+  "homepage": "https://www.strixgov.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Strixgov/strix",
+    "directory": "packages/governed-egress"
+  },
+  "type": "module",
+  "main": "./src/index.mjs",
+  "types": "./types.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types.d.ts",
+      "import": "./src/index.mjs",
+      "default": "./src/index.mjs"
+    },
+    "./adapters/anthropic": {
+      "import": "./src/adapters/anthropic/index.mjs",
+      "default": "./src/adapters/anthropic/index.mjs"
+    },
+    "./proxy": {
+      "types": "./types.d.ts",
+      "import": "./src/proxy/server.mjs",
+      "default": "./src/proxy/server.mjs"
+    },
+    "./prompt-hook": {
+      "types": "./src/hooks/prompt-hook.d.ts",
+      "import": "./src/hooks/prompt-hook.mjs",
+      "default": "./src/hooks/prompt-hook.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "node --test",
+    "demo": "node demo/run-demo.mjs",
+    "demo:check": "node demo/run-demo.mjs --check",
+    "demo:ui": "node demo/run-demo.mjs --check --html",
+    "demo:rehearse": "bash demo/rehearsal/run.sh",
+    "proxy": "node bin/strix-egress-proxy.mjs"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "1.0.9",
+    "pdfjs-dist": "6.3.289"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "bin": {
+    "strix-egress-proxy": "./bin/strix-egress-proxy.mjs",
+    "strix-egress-prompt-hook": "./bin/strix-egress-prompt-hook.mjs",
+    "strix-egress-verify-evidence": "./bin/strix-egress-verify-evidence.mjs"
+  },
+  "files": [
+    "src/",
+    "bin/",
+    "examples/",
+    "types.d.ts",
+    "container/",
+    "Dockerfile",
+    ".dockerignore",
+    "README.md",
+    "COMMERCIAL.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

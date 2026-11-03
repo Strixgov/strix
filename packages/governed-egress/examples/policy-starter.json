@@ -1,0 +1,18 @@
+{
+  "policyId": "starter-egress",
+  "policyVersion": "0.1.0",
+  "dataEgress": {
+    "externalAI": {
+      "default": "deny",
+      "phi": {
+        "action": "sanitize",
+        "requirePostTransformVerification": true,
+        "failClosed": true
+      },
+      "destinations": {
+        "anthropic": { "enabled": true, "allowedData": ["deidentified", "non_sensitive"] },
+        "openai": { "enabled": true, "allowedData": ["deidentified", "non_sensitive"] }
+      }
+    }
+  }
+}
