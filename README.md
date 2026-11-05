@@ -89,24 +89,24 @@ See each package's own README for the full story.
 
 ## Verify in Claude Code (plugin)
 
-A Claude Code plugin wraps the same verifier as a `/strix-verify` slash
-command, an MCP server, and an opt-in stop hook — so you can verify a
-Strix-governed record from inside a session. It vendors
-`@strixgov/verifier`, so it launches offline; Strix is never on the trust
-path, and nothing in the plugin decides a verdict (it shells out to the
-verifier and relays its exit code).
+A Claude Code plugin wraps the same verifier as a slash command, an MCP
+server, and an opt-in stop hook — so you can verify a Strix-governed record
+from inside a session. It vendors `@strixgov/verifier`, so it launches
+offline; Strix is never on the trust path, and nothing in the plugin decides a
+verdict (it shells out to the verifier and relays its exit code).
+
+The plugin is published from the one public Strix marketplace,
+[`Strixgov/skills`](https://github.com/Strixgov/skills); this repository is
+the package source mirror and carries no marketplace of its own.
 
 ```
-/plugin marketplace add Strixgov/strix
+/plugin marketplace add Strixgov/skills
 /plugin install strix-verifier@strixgov
-/strix-verify 5686
+/strix-verifier:strix-verify 5686
 ```
 
-The marketplace manifest is at this repo's root
-(`.claude-plugin/marketplace.json`) and the plugin lives at
-[`plugins/strix-verifier/`](plugins/strix-verifier/). Live verification
-fetches the proof record + JWKS from `www.strixgov.com`; see the
-[plugin README](plugins/strix-verifier/) for fully-offline and
+Live verification fetches the proof record + JWKS from `www.strixgov.com`; see
+the plugin README in Strixgov/skills for fully-offline and
 restricted-environment (egress-blocked) options.
 
 ## Marketing assets

@@ -1,6 +1,6 @@
 {
   "name": "@strixgov/guard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The seatbelt for MCP agents — one command wraps your MCP servers with Strix governance: writes require human approval, reads pass, every action produces a signed receipt.",
   "license": "MIT",
   "type": "module",
@@ -15,6 +15,7 @@
   "files": [
     "bin/",
     "src/",
+    "test/",
     "README.md",
     "LICENSE"
   ],

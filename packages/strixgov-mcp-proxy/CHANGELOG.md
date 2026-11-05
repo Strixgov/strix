@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1]
+
+### Fixed
+- `npm test` in the published package crashed with a missing
+  `scripts/preflight.mjs` (the tarball did not ship `scripts/`). `test` now runs
+  `scripts/run-tests.mjs`, which runs the suite in a source checkout and, in an
+  installed copy, exits non-zero with an explanation rather than crashing or
+  passing on zero tests. Reported by an external tester.
+
 ## [0.2.0]
 
 Minor, not a patch: this release carries the already-merged shadow-discovery

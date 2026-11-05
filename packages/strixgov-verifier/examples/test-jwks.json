@@ -1,9 +1,9 @@
 {
   "keys": [
     {
+      "kty": "OKP",
       "crv": "Ed25519",
       "x": "UZOYH-tYTskvj_0MVlsfh3II4KemzsVa5xRSEeZ4OWk",
-      "kty": "OKP",
       "kid": "strix-test-2026-05",
       "use": "sig",
       "alg": "EdDSA"

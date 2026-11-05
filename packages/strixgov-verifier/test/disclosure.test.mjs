@@ -10,7 +10,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createPrivateKey, createPublicKey } from "node:crypto";
+import { createHash, createPrivateKey, createPublicKey, sign as cryptoSign } from "node:crypto";
 import {
   DISCLOSURE_REASONS,
   rootFromInclusionPath,
@@ -138,4 +138,71 @@ test("malformed envelope fails closed: SCHEMA_INVALID", () => {
   const res = verifyDisclosureBundle({ bundleVersion: 2 }, { jwks: JWKS });
   assert.equal(res.verdict, "INVALID");
   assert.deepEqual(res.reasons, [DISCLOSURE_REASONS.SCHEMA_INVALID]);
+});
+
+
+function canonicalizeForTest(value) {
+  if (value === null || typeof value === "number" || typeof value === "boolean") return JSON.stringify(value);
+  if (typeof value === "string") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalizeForTest).join(",")}]`;
+  return `{${Object.keys(value).sort().map(k => `${JSON.stringify(k)}:${canonicalizeForTest(value[k])}`).join(",")}}`;
+}
+
+function ecrBundle() {
+  const ecr = {
+    schema: "strix.execution-covenant-record",
+    schemaVersion: "1.0",
+    recordId: "ecr-golden-1"
+  };
+  const ecrHash = createHash("sha256").update(Buffer.from(canonicalizeForTest(ecr), "utf8")).digest("hex");
+  const rootHash = rootFromInclusionPath(ecrHash, 0, 1, []);
+  const payload = {
+    schemaVersion: 1,
+    commitmentId: "rc_ecr_golden_1",
+    runId: "ecr_golden_1",
+    runKind: "execution_covenant",
+    tenantId: "tenant-golden",
+    environment: "test",
+    leafCount: 1,
+    rootHash,
+    leafHashAlgorithm: "sha256-rfc6962",
+    committedAt: "2026-10-06T12:00:00Z"
+  };
+  const privateKey = createPrivateKey({ key: Buffer.from(TEST_PKCS8_B64, "base64"), format: "der", type: "pkcs8" });
+  const signature = cryptoSign(null, Buffer.from(canonicalizeForTest(payload), "utf8"), privateKey).toString("base64");
+  return {
+    bundleVersion: 1,
+    commitment: {
+      payload,
+      signature,
+      signatureAlgorithm: "Ed25519",
+      signingKeyId: "strix-test-golden-v1"
+    },
+    disclosed: [{
+      leafIndex: 0,
+      leafHash: ecrHash,
+      inclusionPath: [],
+      record: {
+        schema: "strix.execution-covenant-publication",
+        schemaVersion: "1.0",
+        ecrHash,
+        ecr
+      },
+      contentAddressField: "ecrHash"
+    }]
+  };
+}
+
+test("ECR publication record verifies through existing run_commitment_v1 disclosure path", () => {
+  const res = verifyDisclosureBundle(ecrBundle(), { jwks: JWKS });
+  assert.equal(res.verdict, "VERIFIED");
+  assert.equal(res.completeness, "NOT_PROVEN");
+});
+
+test("ECR body mutation is independently detected even when the committed ecrHash field is unchanged", () => {
+  const b = ecrBundle();
+  b.disclosed[0].record.ecr.recordId = "tampered";
+  const res = verifyDisclosureBundle(b, { jwks: JWKS });
+  assert.equal(res.verdict, "INVALID");
+  assert.equal(res.perRecord[0].reason, DISCLOSURE_REASONS.RECORD_INVALID);
 });

@@ -69,14 +69,15 @@ they are not part of the `EXPECTED_PACKAGES` set):
 
 | Surface | Path | Purpose |
 |---|---|---|
-| Claude Code marketplace | `.claude-plugin/marketplace.json` | Makes `/plugin marketplace add Strixgov/strix` resolve. |
-| Strix Verifier plugin | `plugins/strix-verifier/` | The plugin the marketplace installs; vendors `@strixgov/verifier`. |
 | Marketing bundles | `marketing/` | Public-source launch material. |
 
-The marketplace + plugin are mirrored by
-`scripts/sync-plugin-to-public-release.mjs` (verbatim copy; nothing
-rewritten). The manifest references its plugin by a path relative to the
-repo root (`./plugins/strix-verifier`), which is why both live at the root.
+**No Claude Code marketplace or plugins live here (since 2026-11-05).** The
+one public Strix marketplace is `Strixgov/skills`, mirrored from
+`release/strixgov-skills/` by `scripts/sync-plugin-to-public-release.mjs`.
+This repository previously carried a second catalog with the same name
+(`strixgov`); two catalogs with one name clash in an installer, so it was
+removed. A push of this tree must delete `.claude-plugin/` and `plugins/` from
+the public repository (the runbook's `rsync --delete` does so).
 
 ---
 

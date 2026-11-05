@@ -5,6 +5,37 @@ All notable changes to `@strixgov/verifier` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [1.24.2] — 2026-11-04
+
+### Fixed
+
+- **#2710: evidence summaries could display unsigned fields beside VERIFIED.**
+  Human summaries now use the authenticated SE-v1 payload; conflicting API
+  fields fail with `FIELD_MISMATCH` and exit 1. Academy's writer timestamp is
+  checked as `hashedAt` and displayed from the signed payload, rather than
+  its separate database insertion time. Evidence-content SHA-256 is recomputed
+  locally for the fixed Academy eight-field profile (with the restricted
+  historical seven-field AI/cron fallback), independently of the signature
+  and server verdicts. Missing inputs/unsupported profiles report `hashValid:
+  null` and `SIGNED_ENVELOPE_ONLY`, never a fabricated hash success. Malformed
+  signed envelopes and declared unsupported algorithms are explicit failures.
+  Single-record chain verification remains not checked. No frozen signed bytes,
+  producer, signing key or discovery contract changed. Registry publication and
+  installed-artifact acceptance are tracked separately from this release candidate.
+
+### Added
+
+- **Execution Covenant publication records in the existing disclosure verifier.**
+  `verifyDisclosureBundle` now recognizes
+  `strix.execution-covenant-publication@1.0`, independently re-canonicalizes
+  the enclosed ECR, recomputes its SHA-256, and requires that digest to match
+  the committed `ecrHash` leaf. The surrounding `run_commitment_v1` signature,
+  RFC 6962 inclusion proof, JWKS resolution, and `completeness: NOT_PROVEN`
+  semantics are unchanged. This adds no ECR-specific signing key or signature
+  format.
+
 ## [1.24.1] — 2026-09-10
 
 ### Fixed
@@ -734,3 +765,4 @@ key rotation with and without retention, record-not-found, and transport error.
 ### Added
 - Tool-gateway receipt verification (`receipt <path>`) and chain verification
   (`chain <path>`) for `@strixgov/tool-gateway` v1 + v2 receipts.
+

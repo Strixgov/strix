@@ -1,8 +1,8 @@
 {
-  "crv": "Ed25519",
-  "d": "MFkLuqCWCxHsuMSb5jKB2v4g4W3LoErp_D_7e3NGVPY",
-  "x": "UZOYH-tYTskvj_0MVlsfh3II4KemzsVa5xRSEeZ4OWk",
   "kty": "OKP",
+  "crv": "Ed25519",
+  "x": "UZOYH-tYTskvj_0MVlsfh3II4KemzsVa5xRSEeZ4OWk",
+  "d": "MFkLuqCWCxHsuMSb5jKB2v4g4W3LoErp_D_7e3NGVPY",
   "kid": "strix-test-2026-05",
   "_meta": {
     "warning": "THROWAWAY TEST PRIVATE KEY. Derived deterministically from a public seed label committed in scripts/generate-public-release-fixtures.mjs, so anyone reading that file can recompute it. ZERO production trust value. Never use for signing anything that needs to be trusted.",
