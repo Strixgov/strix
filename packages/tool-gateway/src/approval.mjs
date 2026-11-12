@@ -21,6 +21,12 @@ import readline from "node:readline";
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
+import {
+  normalizeApproverKeys,
+  verifyApprovalResponse,
+  sha256Hex,
+  DEFAULT_MAX_RESPONSE_AGE_MS,
+} from "./approval-signing.mjs";
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 
@@ -190,6 +196,13 @@ export function fileApprover(opts = {}) {
   const timeoutMs = opts.timeoutMs ?? 5 * 60_000; // 5 min default; CI is slow
   const pollIntervalMs = opts.pollIntervalMs ?? 250;
   const onRequestWritten = opts.onRequestWritten;
+  // When set, an APPROVING response must carry a valid signature from one of
+  // approverKeys over the exact request written below. Denials never need one
+  // (a forged denial can only deny). Misconfiguration throws here, at
+  // construction, never at the first approval.
+  const requireSigned = opts.requireSignedResponse === true;
+  const signingKeys = requireSigned ? normalizeApproverKeys(opts.approverKeys) : null;
+  const maxResponseAgeMs = opts.maxResponseAgeMs ?? DEFAULT_MAX_RESPONSE_AGE_MS;
 
   return async function fileApproverPrompt(capability, invocation, callOpts = {}) {
     const effectiveTimeout = callOpts.timeoutMs ?? timeoutMs;
@@ -197,6 +210,7 @@ export function fileApprover(opts = {}) {
     let requestId;
     let requestPath;
     let responsePath;
+    let requestSha256;
 
     const cleanup = async () => {
       if (requestPath) await fs.unlink(requestPath).catch(() => {});
@@ -228,7 +242,9 @@ export function fileApprover(opts = {}) {
           actorRole: invocation.actorRole,
         },
       };
-      await fs.writeFile(requestPath, JSON.stringify(request, null, 2), {
+      const requestText = JSON.stringify(request, null, 2);
+      requestSha256 = sha256Hex(requestText);
+      await fs.writeFile(requestPath, requestText, {
         mode: 0o600,
       });
       if (onRequestWritten) await onRequestWritten(requestPath, requestId);
@@ -249,6 +265,23 @@ export function fileApprover(opts = {}) {
           return { approved: false, reason: "PROMPT_FAILED" };
         }
         await cleanup();
+        if (resp && resp.approved === true && requireSigned) {
+          const v = verifyApprovalResponse({
+            response: resp,
+            requestId,
+            requestSha256,
+            keys: signingKeys,
+            maxAgeMs: maxResponseAgeMs,
+          });
+          if (!v.ok) return { approved: false, reason: v.reason };
+          // The approver identity comes from the verified key, never from
+          // text the response file supplies.
+          return {
+            approved: true,
+            reason: "USER_APPROVED",
+            approvedBy: `${v.approver.label} [key ${v.approver.kid.slice(0, 8)}]`,
+          };
+        }
         if (resp && resp.approved === true) {
           return {
             approved: true,

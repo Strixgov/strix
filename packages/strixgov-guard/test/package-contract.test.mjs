@@ -12,3 +12,12 @@ test("the published tarball ships the tests that `npm test` runs", () => {
   const tests = readdirSync(path.join(root, "test")).filter((f) => f.endsWith(".test.mjs"));
   assert.ok(tests.length >= 2, "expected real test files, not an empty glob");
 });
+
+test("npm test runs a shipped, fail-closed runner (no shell glob, works on Windows)", () => {
+  assert.equal(pkg.scripts.test, "node scripts/run-tests.mjs");
+  assert.ok(pkg.files.includes("scripts/"), 'package.json "files" must include scripts/');
+});
+
+test("engines declares Node 20+ (Node 18 is end of life)", () => {
+  assert.equal(pkg.engines.node, ">=20");
+});

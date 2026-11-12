@@ -451,6 +451,7 @@ function resolveApproval(approval, opts) {
         requestDir,
         timeoutMs: approval.timeoutMs,
         pollIntervalMs: approval.pollIntervalMs,
+        ...signedResponseOptions(approval),
       }),
     };
   }
@@ -479,6 +480,7 @@ function resolveApproval(approval, opts) {
         requestDir,
         timeoutMs: approval.timeoutMs,
         pollIntervalMs: approval.pollIntervalMs,
+        ...signedResponseOptions(approval),
         onAudit: (event) => audit(opts, event),
         fetchImpl: approval.fetchImpl, // programmatic/test seam; not JSON-configurable
       }),
@@ -488,6 +490,21 @@ function resolveApproval(approval, opts) {
   throw new Error(
     `startProxy: unknown approval.type '${type}' — expected "terminal", "file", "webhook", or "auto"`,
   );
+}
+
+/**
+ * Signed-approval settings from the JSON config. When `requireSignedResponse`
+ * is true, an approving response must be signed by one of `approverKeys`
+ * (see tool-gateway approval-signing). A bad value throws at startup via the
+ * approver's own validation, so a half-configured gate never runs.
+ */
+function signedResponseOptions(approval) {
+  if (approval.requireSignedResponse !== true) return {};
+  return {
+    requireSignedResponse: true,
+    approverKeys: approval.approverKeys,
+    maxResponseAgeMs: approval.maxResponseAgeMs,
+  };
 }
 
 /**

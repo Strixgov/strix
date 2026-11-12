@@ -63,6 +63,9 @@ export { HEALTHCARE_REFERENCE_POLICY } from './policy/healthcare-reference-polic
 export {
   mintEgressAuthorization,
   createInMemoryAuthorizationStore,
+  createFileAuthorizationStore,
+  normalizeGrantPrincipal,
+  principalAddress,
   bindingAddress,
   DEFAULT_AUTHORIZATION_TTL_MS,
 } from './authorization/authorize.mjs';

@@ -1,6 +1,6 @@
 {
   "name": "@strixgov/verify-embed",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "One-line embeddable <strix-verify> web component. Verifies Strix-governed evidence records client-side via WebCrypto + the public JWKS. No backend, no Strix runtime, no Strix account.",
   "type": "module",
   "main": "src/index.mjs",

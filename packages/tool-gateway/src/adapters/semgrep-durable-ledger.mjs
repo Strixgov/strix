@@ -4,6 +4,7 @@
  * hosts, network filesystems without O_EXCL guarantees, or compromised hosts.
  */
 import { mkdir, writeFile, readFile, open } from "node:fs/promises";
+import { isAbsolute } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { actionDigest } from "./semgrep-pinned.mjs";
@@ -14,7 +15,7 @@ function tokenKey(token) {
 }
 export class DurableApprovalLedger {
   constructor({ dir }) {
-    if (!dir || !dir.startsWith("/")) throw new TypeError("Absolute ledger directory required");
+    if (!dir || !isAbsolute(dir)) throw new TypeError("Absolute ledger directory required");
     this.dir = dir;
   }
   async issue({ tenantId, actorId, tool, args, ttlMs = 60000 }) {

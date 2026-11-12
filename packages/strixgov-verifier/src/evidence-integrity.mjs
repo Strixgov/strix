@@ -40,10 +40,56 @@ export function evidenceFieldMismatches(record, payload) {
  * Server hashMatch/recomputedHash/hashInputFields never select the algorithm
  * or supply the digest. Missing inputs are NOT_CHECKED. This does not
  * implement Console postReceipt hashing or timestamp search. */
-export function checkEvidenceContentHash(record, payload) {
+/** The actorRole Strix's decision-receipt writer (DecisionService.postReceipt)
+ * signs into every record it writes. It is a signed field, and that writer is
+ * the only one known to use the two-pass commitment below. */
+export const TWO_PASS_WRITER_ROLE = "decision-executor";
+
+/**
+ * Strix's decision-receipt writer commits evidenceHash = sha256 of the
+ * canonical envelope built with evidenceHash "PLACEHOLDER" (pass one), then
+ * signs the envelope carrying that hash (pass two). Anyone holding the signed
+ * envelope can reproduce pass one, so this check needs no server input.
+ *
+ * Other writers commit to content outside the envelope (Academy's eight
+ * fields, denial content, ...). Judging their hash with this construction
+ * reports correctly signed records as tampered, so:
+ *   reproduces              -> valid: true (a chance match is a collision)
+ *   no match, decision role -> valid: false (that writer always commits)
+ *   no match, other writer  -> valid: null, UNSUPPORTED_HASH_PROFILE
+ * `buildCanonical` is passed in to avoid a circular import with index.mjs.
+ */
+export function checkTwoPassEvidenceHash(record, payload, buildCanonical) {
+  const unavailable = (reason) => ({ valid: null, recomputedHash: null, profile: null, inputFields: [], reason });
+  if (typeof buildCanonical !== "function" || !payload || typeof payload !== "object"
+    || typeof payload.evidenceHash !== "string") {
+    return unavailable("EVIDENCE_HASH_INPUTS_MISSING");
+  }
+  let recomputedHash;
+  try {
+    const pass1 = buildCanonical({
+      ...payload,
+      evidenceHash: "PLACEHOLDER",
+      sourceApp: typeof payload.schemaVersion === "number" ? "academy-platform" : undefined,
+    });
+    recomputedHash = createHash("sha256").update(pass1, "utf8").digest("hex");
+  } catch {
+    return unavailable("EVIDENCE_HASH_INPUTS_MISSING");
+  }
+  const inputFields = ["signedEnvelope"];
+  if (recomputedHash === payload.evidenceHash) {
+    return { valid: true, recomputedHash, profile: "se_v1_two_pass_v1", inputFields, reason: "EVIDENCE_HASH_MATCH" };
+  }
+  if (payload.actorRole === TWO_PASS_WRITER_ROLE) {
+    return { valid: false, recomputedHash, profile: "se_v1_two_pass_v1", inputFields, reason: "EVIDENCE_HASH_MISMATCH" };
+  }
+  return unavailable("UNSUPPORTED_HASH_PROFILE");
+}
+
+export function checkEvidenceContentHash(record, payload, buildCanonical) {
   const unavailable = (reason) => ({ valid: null, recomputedHash: null, profile: null, inputFields: [], reason });
   if (record.sourceApp !== "academy-platform" && typeof payload?.schemaVersion !== "number") {
-    return unavailable("UNSUPPORTED_HASH_PROFILE");
+    return checkTwoPassEvidenceHash(record, payload, buildCanonical);
   }
   const timestamp = record.hashedAt ?? payload?.createdAt ?? record.createdAt;
   const input = {
@@ -59,7 +105,12 @@ export function checkEvidenceContentHash(record, payload) {
   if (!HASH_FIELDS.every((k) => input[k] === null || typeof input[k] === "string")
     || !["actorEmail", "reason"].every((k) => Object.hasOwn(record, k))
     || typeof record.evidenceHash !== "string") {
-    return unavailable("EVIDENCE_HASH_INPUTS_MISSING");
+    // Academy's eight inputs are not all in this response. The two-pass
+    // check needs only the signed envelope; it passes on a reproducing
+    // commitment, fails only for a decision receipt, and otherwise reports
+    // UNSUPPORTED_HASH_PROFILE.
+    const twoPass = checkTwoPassEvidenceHash(record, payload, buildCanonical);
+    return twoPass.valid === null ? unavailable("EVIDENCE_HASH_INPUTS_MISSING") : twoPass;
   }
   const digest = (value) => createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex");
   let recomputedHash = digest(input);

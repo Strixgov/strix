@@ -1,6 +1,6 @@
 {
   "name": "@strixgov/tool-gateway",
-  "version": "0.5.0",
+  "version": "0.5.2",
   "description": "Local-first governed tool execution gateway for AI agents. Read/write classification, policy evaluation, signed execution receipts, multi-key rotation with cross-signed chain snapshots, per-capability rate limits, threshold-based escalation, file/webhook approvers, signed shared capability registry, and opt-in connected mode (v0.4-stable wire format with timestamp+nonce replay defense) for upstream sync — no Strix account required, local-first by default.",
   "license": "MIT",
   "type": "module",
@@ -33,13 +33,26 @@
     "assets/",
     "README.md",
     "CHANGELOG.md",
-    "LICENSE"
+    "LICENSE",
+    "scripts/run-tests.mjs",
+    "test/adapters.test.mjs",
+    "test/approval-signing.test.mjs",
+    "test/approval.test.mjs",
+    "test/canonical.test.mjs",
+    "test/companion-pack-manifest.test.mjs",
+    "test/gateway.test.mjs",
+    "test/outcomes.test.mjs",
+    "test/policy.test.mjs",
+    "test/receipts.test.mjs",
+    "test/semgrep-durable-ledger.test.mjs",
+    "test/semgrep-pinned.test.mjs",
+    "test/wire-envelope-schema.test.mjs"
   ],
   "engines": {
     "node": ">=18.0.0"
   },
   "scripts": {
-    "test": "node --test",
+    "test": "node scripts/run-tests.mjs",
     "example:filesystem": "node examples/filesystem-example.mjs",
     "example:shell": "node examples/shell-example.mjs",
     "example:mcp": "node examples/mcp-example.mjs"

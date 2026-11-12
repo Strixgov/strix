@@ -81,6 +81,15 @@ export {
   DEFAULT_TIMEOUT_MS,
 } from "./approval.mjs";
 export {
+  APPROVAL_SIGNATURE_VERSION,
+  approverKeyId,
+  approvalPreimage,
+  signApprovalResponse,
+  verifyApprovalResponse,
+  normalizeApproverKeys,
+  sha256Hex,
+} from "./approval-signing.mjs";
+export {
   RateLimiter,
 } from "./rate-limit.mjs";
 export {

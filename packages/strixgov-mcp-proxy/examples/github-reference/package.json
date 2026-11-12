@@ -1,0 +1,23 @@
+{
+  "name": "@strixgov/github-mcp-reference-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline GitHub-shaped MCP acceptance demo; never contacts GitHub.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node acceptance.mjs",
+    "demo": "node acceptance.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@strixgov/capabilities-mcp-common": "0.1.2",
+    "@strixgov/guard": "0.1.4",
+    "@strixgov/mcp-adapter": "0.1.4",
+    "@strixgov/mcp-proxy": "0.2.3",
+    "@strixgov/tool-gateway": "0.5.2",
+    "@strixgov/verifier": "1.24.1"
+  }
+}

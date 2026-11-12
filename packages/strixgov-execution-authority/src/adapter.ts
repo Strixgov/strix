@@ -27,10 +27,27 @@ import { currentExecutionOf, type CurrentExecution, type GrantPayload, type Prop
 
 export type GovernedOutcome<T> =
   | { status: 'PERMIT'; handlerEntered: true; grant: GrantPayload; strixDecisionId: string; result: T; outcome: OutcomeResult | { status: 'UNREPORTED'; error: string } }
-  | { status: 'PERMIT_HANDLER_FAILED'; handlerEntered: true; grant: GrantPayload; strixDecisionId: string; error: string; outcome: OutcomeResult | { status: 'UNREPORTED'; error: string } }
+  /**
+   * The handler was entered and THREW. This does NOT mean the external effect
+   * failed: the error may have been raised after the consequence occurred (a
+   * timeout after the click landed). `consequenceEstablished` is the literal
+   * false. The consequence is unknown until destination read-back settles it.
+   * Do not dispatch again on the basis of this result.
+   */
+  | { status: 'PERMIT_HANDLER_THREW'; handlerEntered: true; consequenceEstablished: false; grant: GrantPayload; strixDecisionId: string; error: string; outcome: OutcomeResult | { status: 'UNREPORTED'; error: string } }
   | { status: 'REQUIRE_APPROVAL'; handlerEntered: false; strixDecisionId: string; approvalsRequired: number; approvalsGranted: number }
   | { status: 'REFUSE'; handlerEntered: false; refusedBy: 'strix' | 'local'; reasonCode: string; detail: string; strixDecisionId: string | null; mismatchedFields?: string[]; refusalEvidenceId?: string }
-  | { status: 'UNAVAILABLE'; handlerEntered: false; code: string; detail: string };
+  | { status: 'UNAVAILABLE'; handlerEntered: false; code: string; detail: string }
+  /**
+   * Redemption was ambiguous: Strix may have consumed the grant, and no
+   * definite answer came back. The handler was NOT entered.
+   *
+   * Do not execute, and do not retry. A reconciliation answer of CONSUMED is a
+   * fact about Strix's store; it is NOT permission to enter a handler later.
+   * Nothing in this SDK accepts a reconciliation result as an execution input,
+   * and redeem() permits only a fresh PERMIT on a grant that is still unconsumed.
+   */
+  | { status: 'REDEMPTION_INDETERMINATE'; handlerEntered: false; grantId: string; strixDecisionId: string; code: string; detail: string };
 
 export interface ExecuteGovernedInput<T> {
   client: StrixExecutionAuthorityClient;
@@ -80,6 +97,16 @@ export async function executeGoverned<T>(input: ExecuteGovernedInput<T>): Promis
   const redeemed: RedeemResult = await client.redeem(grant, execution, presenter);
 
   if (redeemed.status === 'UNAVAILABLE') return { status: 'UNAVAILABLE', handlerEntered: false, code: redeemed.code, detail: redeemed.detail };
+  if (redeemed.status === 'REDEMPTION_INDETERMINATE') {
+    return {
+      status: 'REDEMPTION_INDETERMINATE',
+      handlerEntered: false,
+      grantId: redeemed.grantId,
+      strixDecisionId: redeemed.strixDecisionId,
+      code: redeemed.code,
+      detail: redeemed.detail,
+    };
+  }
   if (redeemed.status === 'REFUSE') {
     return {
       status: 'REFUSE',
@@ -100,8 +127,11 @@ export async function executeGoverned<T>(input: ExecuteGovernedInput<T>): Promis
     result = await handler(execution, grant.payload);
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
-    const outcome = await report(client, grantId, { outcome: 'FAILED', handlerEntered: true, reportedBy: presenter, detail: error.slice(0, 500) });
-    return { status: 'PERMIT_HANDLER_FAILED', handlerEntered: true, grant: grant.payload, strixDecisionId: redeemed.strixDecisionId, error, outcome };
+    // A thrown handler does not establish that the consequence did not occur:
+    // it may have landed before the error (a timeout after the click). The
+    // honest terminal is UNKNOWN until destination read-back settles it.
+    const outcome = await report(client, grantId, { outcome: 'UNKNOWN', handlerEntered: true, reportedBy: presenter, detail: error.slice(0, 500) });
+    return { status: 'PERMIT_HANDLER_THREW', handlerEntered: true, consequenceEstablished: false, grant: grant.payload, strixDecisionId: redeemed.strixDecisionId, error, outcome };
   }
   const observed = input.observedConsequence ? input.observedConsequence(result) : null;
   const outcome = await report(client, grantId, { outcome: 'EXECUTED', handlerEntered: true, observedConsequence: observed, reportedBy: presenter });

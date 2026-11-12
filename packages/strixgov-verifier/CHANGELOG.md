@@ -7,7 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.24.2] — 2026-11-04
+## [1.25.0] — 2026-11-11
+
+### Fixed
+
+- **#2835: a record declaring an algorithm other than `Ed25519` verified.**
+  An explicit `signatureAlgorithm` other than exactly `"Ed25519"` (including
+  `"ed25519"`, `"RS256"`, a number or an empty string) is now refused as
+  `UNVERIFIABLE` / `UNSUPPORTED_ALGORITHM` before any key is fetched. A record
+  with no declaration predates the field and is read under the fixed SE v1
+  rule, reported as `INFERRED_SE_V1_LEGACY`.
+- **#2836: a record declaring schema version 2, or a malformed version,
+  verified.** A declared version other than `1` / `"1"` is refused as
+  `COMPLIANCE_VIOLATION` / `SIGNED_PAYLOAD_INVALID` before any key is fetched.
+  Nothing is normalized into 1.
+  Published 1.24.1 returned `VERIFIED` (or `SIGNATURE_INVALID` after a key
+  fetch) on all four declaration vectors in `conformance/corpus/se_v1`.
+
+### Added
+
+- **Decision-receipt evidence hashes are checked from the signed envelope.**
+  Strix's decision-receipt writer commits `evidenceHash` to its own envelope
+  (two-pass: SHA-256 of the envelope with `evidenceHash` `"PLACEHOLDER"`). The
+  verifier now reproduces that commitment with no server input:
+  - a reproducing commitment reports `hashValid: true` and scope
+    `SIGNED_ENVELOPE_AND_EVIDENCE_CONTENT`;
+  - a record signed as a decision receipt (`actorRole: "decision-executor"`)
+    whose hash does not reproduce is `COMPLIANCE_VIOLATION` /
+    `EVIDENCE_HASH_MISMATCH`;
+  - any other writer's hash commits to content outside the envelope and is
+    reported as not checked (`hashValid: null`, `UNSUPPORTED_HASH_PROFILE`),
+    never as tampering.
+  The Academy eight-field profile is unchanged and still takes precedence when
+  its inputs are present.
+
+## [1.24.2] — 2026-11-04 (prepared, never published; superseded by 1.25.0)
 
 ### Fixed
 

@@ -1,0 +1,125 @@
+name: publish @strixgov/governed-egress
+
+# Publishes @strixgov/governed-egress to npm WITH signed provenance, from this
+# public repository. Provenance (the npm "Built and signed on GitHub Actions"
+# badge, a Sigstore attestation linking the tarball to this commit and this
+# workflow) requires a PUBLIC repository; the upstream source repository is
+# private, which is why the publish happens here.
+#
+# This workflow does not decide what ships. The release candidate is built,
+# tested (full suite), reproduced from a clean export, installed in a clean
+# room and audited by the upstream release-candidate workflow. That run
+# records the tarball's sha256. This workflow re-packs the mirrored source,
+# and REFUSES to publish unless its tarball is byte-identical to that recorded
+# candidate. Equality is the bridge: the bytes that passed upstream are the
+# bytes published here.
+#
+# Operator setup (once):
+#   1. Create the GitHub environment `npm-publish` on this repository with a
+#      required reviewer. Every publish then waits for a human approval.
+#   2. Either configure npm trusted publishing for this package
+#      (npmjs.com -> package -> Settings -> Trusted publishing: GitHub Actions,
+#      Strixgov/strix, workflow publish-governed-egress.yml, environment
+#      npm-publish), or, for the FIRST publish before the package exists on
+#      npm, store an automation token as the environment secret NPM_TOKEN.
+#      Remove NPM_TOKEN once trusted publishing is configured.
+#
+# Run: Actions -> this workflow -> Run workflow, with the sha256 from the
+# upstream candidate's SHA256SUMS. Leave `publish` unchecked for a dry run.
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha256:
+        description: sha256 of the upstream release-candidate tarball (from its SHA256SUMS)
+        required: true
+        type: string
+      publish:
+        description: Actually publish (unchecked = dry run that stops before npm publish)
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: verify the candidate and publish with provenance
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      contents: read
+      id-token: write # Sigstore provenance / npm trusted publishing
+    steps:
+      - name: Refuse off main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::publish runs from refs/heads/main only (got $GITHUB_REF)"
+          exit 1
+
+      - name: Validate the expected hash
+        env:
+          EXPECTED: ${{ inputs.expected_sha256 }}
+        run: |
+          echo "$EXPECTED" | grep -Eq '^[0-9a-f]{64}$' || { echo "::error::expected_sha256 must be 64 lowercase hex characters"; exit 1; }
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: npm with trusted-publishing support
+        run: npm install -g 'npm@^11.5.1' && npm --version
+
+      - name: Pack and compare to the upstream candidate
+        id: pack
+        working-directory: packages/governed-egress
+        env:
+          EXPECTED: ${{ inputs.expected_sha256 }}
+        run: |
+          OUT="$RUNNER_TEMP/pack"
+          mkdir -p "$OUT"
+          npm pack --pack-destination "$OUT" >/dev/null
+          TGZ=$(ls "$OUT"/strixgov-governed-egress-*.tgz)
+          GOT=$(sha256sum "$TGZ" | cut -d' ' -f1)
+          echo "expected: $EXPECTED"
+          echo "packed:   $GOT"
+          test "$GOT" = "$EXPECTED" || { echo "::error::the mirrored source does not pack to the upstream candidate; refusing to publish"; exit 1; }
+          echo "tgz=$TGZ" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Refuse a version already on npm
+        env:
+          VERSION: ${{ steps.pack.outputs.version }}
+        run: |
+          if npm view "@strixgov/governed-egress@$VERSION" version >/dev/null 2>&1; then
+            echo "::error::@strixgov/governed-egress@$VERSION is already published"
+            exit 1
+          fi
+
+      - name: Smoke-install the exact tarball
+        run: |
+          SM="$RUNNER_TEMP/smoke"
+          mkdir -p "$SM" && cd "$SM"
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund "${{ steps.pack.outputs.tgz }}"
+          node --input-type=module -e "import * as m from '@strixgov/governed-egress'; if (typeof m.releaseThroughGate !== 'function') { console.error('missing export'); process.exit(1) } console.log('exports', Object.keys(m).length)"
+
+      - name: Publish with provenance
+        if: inputs.publish
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          # With NPM_TOKEN (first publish) use it; without it npm uses the
+          # trusted-publishing OIDC exchange. No .npmrc is written otherwise,
+          # because an empty token entry would shadow the OIDC path.
+          if [ -n "$NPM_TOKEN" ]; then
+            echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > "$HOME/.npmrc"
+          fi
+          npm publish "${{ steps.pack.outputs.tgz }}" --provenance --access public
+
+      - name: Dry run stop
+        if: ${{ !inputs.publish }}
+        run: echo "Dry run. The tarball matches the candidate; nothing was published."

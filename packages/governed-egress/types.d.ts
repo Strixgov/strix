@@ -392,19 +392,42 @@ export interface EgressAuthorization {
   promptHash: string;
   destination: { provider: string; service: string };
   purpose: string;
+  /** The tenant and actor the grant was minted for (integrator-supplied, not authenticated here). */
+  principal?: GrantPrincipal;
+  principalHash?: string;
   issuedAt: string;
   expiresAtMs: number;
   consumedAt?: string;
+  revokedAt?: string;
+  revocationReason?: string | null;
 }
 
+export interface GrantPrincipal {
+  tenant: string | null;
+  actor: string | null;
+}
+
+export function normalizeGrantPrincipal(principal?: Partial<GrantPrincipal> | null): GrantPrincipal;
+export function principalAddress(principal?: Partial<GrantPrincipal> | null): string;
+
 export interface AuthorizationStore {
+  /** Where single use holds: one process, or several processes on one host. */
+  topology?: 'SINGLE_PROCESS' | 'SINGLE_HOST_MULTI_PROCESS';
   put(auth: EgressAuthorization): void;
   get(id: string): EgressAuthorization | null;
-  /** Atomic single-use claim; exactly one caller wins. */
+  /** Atomic single-use claim; exactly one caller wins, never for a revoked grant. */
   claim(id: string, consumedAtIso: string): boolean;
+  /** Withdraw an unspent grant. Consumption and revocation are one terminal state. */
+  revoke?(id: string, options?: { revokedAtIso?: string; reason?: string | null }): boolean;
 }
 
 export function createInMemoryAuthorizationStore(): AuthorizationStore;
+
+/**
+ * Durable store for several processes on ONE host sharing a local directory.
+ * Not for network filesystems or several hosts.
+ */
+export function createFileAuthorizationStore(options: { directory: string }): AuthorizationStore & { directory: string };
 
 export function bindingAddress(input: {
   artifactHash: string;
@@ -420,6 +443,7 @@ export function mintEgressAuthorization(input: {
   promptHash: string;
   destination: { provider: string; service: string };
   purpose: string;
+  principal?: Partial<GrantPrincipal> | null;
   ttlMs?: number;
   now?: () => number;
 }): EgressAuthorization;
@@ -476,7 +500,7 @@ export function resumePointOf(
  */
 export function verifySignedEvidence(
   records: EvidenceRecord[],
-  options: { publicKeys: Array<string | Buffer>; expectedHeadHash?: string },
+  options: { publicKeys: Array<string | Buffer>; expectedHeadHash?: string; expectedLength?: number },
 ):
   | {
       status: 'VERIFIED';
@@ -484,7 +508,7 @@ export function verifySignedEvidence(
       length: number;
       headHash: string;
       keyIds: string[];
-      completeness: 'NOT_PROVEN' | 'HEAD_MATCHED';
+      completeness: 'NOT_PROVEN' | 'LENGTH_MATCHED' | 'HEAD_MATCHED';
       proves: 'SIGNED_BY_KEY_HOLDER';
       scheme: 'strix-egress-evidence-ed25519-v1';
     }
@@ -495,7 +519,7 @@ export function verifySignedEvidence(
       reasonCode:
         | 'EMPTY_LOG' | 'CHAIN_LINK_BROKEN' | 'ENTRY_HASH_MISMATCH' | 'SEQ_GAP'
         | 'UNSIGNED_RECORD' | 'MALFORMED_KEY_ID' | 'MALFORMED_SIGNATURE'
-        | 'KEY_NOT_TRUSTED' | 'SIGNATURE_INVALID' | 'HEAD_MISMATCH';
+        | 'KEY_NOT_TRUSTED' | 'SIGNATURE_INVALID' | 'HEAD_MISMATCH' | 'LENGTH_MISMATCH';
       detail: string;
       completeness: 'NOT_PROVEN';
       proves: 'SIGNED_BY_KEY_HOLDER';
@@ -774,6 +798,8 @@ export function releaseThroughGate(input: {
   prompt: string;
   destination: { provider: string; service: string };
   purpose: string;
+  /** The principal presented at release; must equal the one the grant was minted for. */
+  principal?: Partial<GrantPrincipal> | null;
   now?: () => number;
 }): Promise<{
   released: boolean;
@@ -959,6 +985,8 @@ export function governDocumentEgress(input: {
   purpose: string;
   policy: EgressPolicy;
   actor?: string;
+  /** Bound into the grant with `actor`; supply it from your authenticated session. */
+  tenant?: string;
   deps: GovernDeps;
 }): Promise<
   | {
@@ -1003,6 +1031,7 @@ export function governedAnthropicDocumentRequest(input: {
   prompt: string;
   purpose?: string;
   actor?: string;
+  tenant?: string;
   policy: EgressPolicy;
   deps: GovernDeps;
   transport?: EgressTransport;
@@ -1058,6 +1087,7 @@ export function governedOpenAiDocumentRequest(input: {
   prompt: string;
   purpose?: string;
   actor?: string;
+  tenant?: string;
   policy: EgressPolicy;
   deps: GovernDeps;
   transport?: EgressTransport;

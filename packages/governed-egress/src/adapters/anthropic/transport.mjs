@@ -33,6 +33,7 @@
  *    observation rather than a verdict, and never throws on a status.
  */
 import { checkTransportBaseUrl } from '../_shared/base-url.mjs';
+import { isGateSealed } from '../../egress/gate-seal.mjs';
 
 export class TransportError extends Error {
   constructor(kind, message) {
@@ -155,7 +156,13 @@ export function createAnthropicMessagesTransport({
       }
       return Object.freeze({ reached: true, status: res.status, bodySnippet, probedUrl });
     },
-    async send({ documentText, prompt }) {
+    async send(payload) {
+      // Sealed: only a gate, after every binding check, may transmit. A
+      // direct call is refused before any I/O (see egress/gate-seal.mjs).
+      if (!isGateSealed(payload)) {
+        throw new TransportError('unsealed', 'this transport only sends through a governed gate; call a governed adapter instead');
+      }
+      const { documentText, prompt } = payload;
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       let res;

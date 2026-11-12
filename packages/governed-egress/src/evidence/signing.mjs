@@ -177,7 +177,23 @@ export function verifySignedEvidence(records, options = {}) {
     keysUsed.add(signingKeyId);
   }
 
+  // Completeness needs an anchor obtained OUTSIDE the log: a signature only
+  // proves each record present was written by the key holder, so a log with
+  // its tail cut off still verifies record by record. Two anchors, checked
+  // independently: the expected head hash (strongest: pins the exact last
+  // record) and the expected record count (weaker, easy to ship to a SIEM).
+  // Neither is ever inferred from the log itself.
   let completeness = 'NOT_PROVEN';
+  if (options.expectedLength !== undefined) {
+    const n = options.expectedLength;
+    if (!Number.isInteger(n) || n < 1) {
+      throw new TypeError('expectedLength must be a positive integer');
+    }
+    if (records.length !== n) {
+      return fail('INVALID', records.length - 1, 'LENGTH_MISMATCH', `the log holds ${records.length} record(s), not the expected ${n} — records were removed from the end, or added`);
+    }
+    completeness = 'LENGTH_MATCHED';
+  }
   if (options.expectedHeadHash !== undefined) {
     if (options.expectedHeadHash !== chain.headHash) {
       return fail('INVALID', records.length - 1, 'HEAD_MISMATCH', `the log ends at ${chain.headHash.slice(0, 12)}…, not the expected head ${String(options.expectedHeadHash).slice(0, 12)}… — records were removed from the end, or added`);

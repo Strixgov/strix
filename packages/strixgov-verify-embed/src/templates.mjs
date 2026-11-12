@@ -116,7 +116,9 @@ export function renderViolation(evidenceId, result) {
         ${ICONS.violation}
         <div class="status-text">
           <p class="status-title">COMPLIANCE VIOLATION</p>
-          <p class="status-sub">Signature did NOT verify against the resolved public key. Record is either tampered or signed with the wrong key.</p>
+          <p class="status-sub">${result.verificationReason === "UNSUPPORTED_SCHEMA_VERSION"
+            ? "Record declares a schema version other than Signed Evidence v1. It was refused before any signature check; this is not a signature failure."
+            : "Signature did NOT verify against the resolved public key. Record is either tampered or signed with the wrong key."}</p>
         </div>
       </div>
       <div class="details">
@@ -174,6 +176,37 @@ export function renderUnsigned(evidenceId, result) {
   `;
 }
 
+/**
+ * Cannot verify — deliberately NOT the error card and deliberately not red.
+ * The record's signing key is absent from the JWKS this page fetched, which
+ * says something about this page's key material, not about the record. Saying
+ * "verification error" to a visitor implies the record failed; it did not fail,
+ * it was never checked.
+ */
+export function renderUnverifiable(evidenceId, result) {
+  const r = result.record ?? {};
+  return /* html */ `
+    <div class="card unverifiable">
+      ${head(evidenceId)}
+      <div class="status">
+        ${ICONS.legacy}
+        <div class="status-text">
+          <p class="status-title">UNVERIFIABLE</p>
+          <p class="status-sub">${result.verificationReason === "UNSUPPORTED_ALGORITHM"
+            ? "This record declares a signature algorithm other than Ed25519, the only one Signed Evidence v1 permits. It was refused before any key lookup; this is not evidence of tampering."
+            : "This record could not be checked here: its signing key is not in the key set this page fetched. That is not evidence of tampering — no conclusion about validity is warranted either way."}</p>
+        </div>
+      </div>
+      <div class="details">
+        ${detailsRow("Decision", String(r.action ?? "—").toUpperCase())}
+        ${detailsRow("Capability", r.capabilityId ?? "—")}
+        ${detailsRow("Verified at", result.verifiedAt)}
+      </div>
+      ${footer(evidenceId)}
+    </div>
+  `;
+}
+
 export function renderNotFound(evidenceId, result) {
   return /* html */ `
     <div class="card notfound">
@@ -218,6 +251,7 @@ export function render(evidenceId, result) {
     case "COMPLIANCE_VIOLATION": return renderViolation(evidenceId, result);
     case "LEGACY_UNSIGNED": return renderLegacyUnsigned(evidenceId, result);
     case "UNSIGNED": return renderUnsigned(evidenceId, result);
+    case "UNVERIFIABLE": return renderUnverifiable(evidenceId, result);
     case "NOT_FOUND": return renderNotFound(evidenceId, result);
     case "ERROR":
     default:

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2] - unreleased
+
+- The published package now ships a runnable test suite: `npm test` runs `scripts/run-tests.mjs` over the 12 suites that need no sibling monorepo package (115 tests). It exits non-zero on zero test files, zero tests, an unreadable summary, or fewer than 100 tests. 0.5.0 and 0.5.1 shipped no tests, so `npm test` there exited 0 with 0 tests. Suites that import sibling monorepo sources stay in the repository only. One source fix: `DurableApprovalLedger` (semgrep adapter) required `dir.startsWith("/")`, so it rejected every Windows directory; it now uses `path.isAbsolute`, unchanged on POSIX. Found when the shipped suite failed on Windows.
+
+## [0.5.1] - 2026-11-07
+
+- `fileApprover` accepts `requireSignedResponse` and `approverKeys`. An approving response must carry an Ed25519 signature over the exact request file (request id, SHA-256 of the request bytes, decision, time, key id). Unsigned, wrongly signed, replayed, stale or flipped responses are denied; the approver identity comes from the verified key. Denials need no signature. Misconfiguration throws at construction. Off by default; existing behaviour is unchanged.
+- New exports: `signApprovalResponse`, `verifyApprovalResponse`, `approvalPreimage`, `approverKeyId`, `normalizeApproverKeys`, `sha256Hex`, `APPROVAL_SIGNATURE_VERSION`.
+- `ApprovalResult.reason` gains `APPROVAL_UNSIGNED` and `APPROVAL_SIGNATURE_INVALID`. Receipt `approvalReason` is outside the signed payload, so no signed schema changes.
+
 ## [0.5.0] - 2026-08-03
 
 Minor, not a patch: this release adds the signed post-execution outcome

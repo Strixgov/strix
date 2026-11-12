@@ -84,7 +84,11 @@ switch (outcome.status) {
   case 'PERMIT':            // handler ran once; outcome.outcome carries the signed evidence reference
   case 'REQUIRE_APPROVAL':  // approvers must act in Strix; call again with the same proposalId later
   case 'REFUSE':            // Strix or this SDK refused; nothing ran; outcome.refusalEvidenceId when Strix recorded it
-  case 'UNAVAILABLE':       // Strix could not answer; nothing ran; do not execute
+  case 'UNAVAILABLE':       // Strix definitely did not process the request; nothing ran; do not execute
+  case 'REDEMPTION_INDETERMINATE':
+                            // Strix MAY have consumed the grant (a lost response, a 5xx, a timeout).
+                            // Nothing ran. Do NOT retry redemption. Call client.reconcileRedemption(grantId)
+                            // and act only on an authoritative CONSUMED / NOT_CONSUMED answer.
 }
 ```
 
@@ -120,6 +124,11 @@ into them.
 - It does not control code that reaches the consequence by another path. It
   governs the handler it is given; a second route to the same effect is
   outside it, and Strix does not claim universal route invariance.
+- It does not treat an ambiguous redemption as a refusal or as a permit.
+  `REDEMPTION_INDETERMINATE` means Strix may have consumed the grant; reconcile
+  before anything else. A handler that throws after PERMIT is recorded as
+  `UNKNOWN`, because a thrown error does not show that the consequence did not
+  occur. Only read-back of the destination can settle that.
 - It does not make an unavailable Strix safe to act around. `UNAVAILABLE` is
   not a permit, and a stale or missing revocation document is refused, never
   read as "nothing revoked".

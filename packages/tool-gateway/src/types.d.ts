@@ -70,7 +70,13 @@ export interface ApprovalPromptOptions {
 
 export interface ApprovalResult {
   approved: boolean;
-  reason: "USER_APPROVED" | "USER_DENIED" | "TIMEOUT" | "PROMPT_FAILED";
+  reason:
+    | "USER_APPROVED"
+    | "USER_DENIED"
+    | "TIMEOUT"
+    | "PROMPT_FAILED"
+    | "APPROVAL_UNSIGNED"
+    | "APPROVAL_SIGNATURE_INVALID";
   approvedBy?: string;
 }
 

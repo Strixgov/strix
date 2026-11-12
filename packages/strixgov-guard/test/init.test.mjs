@@ -11,7 +11,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { runInit, buildProxyConfig, packForServer, isAlreadyWrapped } from "../src/init.mjs";
+import { runInit, buildProxyConfig, packForServer, isAlreadyWrapped, PROXY_VERSION } from "../src/init.mjs";
 import { guardPaths } from "../src/paths.mjs";
 
 async function fixture() {
@@ -77,22 +77,22 @@ test("buildProxyConfig: known pack → reads pass; unknown → every call asks",
 test("init wraps servers, backs up the config, and moves the upstream verbatim", async () => {
   const f = await fixture();
   try {
-    const result = await runInit({ config: f.configPath, env: f.env, log: () => {} });
+    const result = await runInit({ unsignedApprovals: true, config: f.configPath, env: f.env, log: () => {} });
     assert.equal(result.wrapped, 2);
 
-    // Backup exists with the ORIGINAL content.
-    const entries = await fs.readdir(path.dirname(f.configPath));
+    // Backup exists with the ORIGINAL content, in the guard home (not beside the config).
+    const entries = await fs.readdir(guardPaths(f.home).backupsDir);
     const backup = entries.find((e) => e.includes(".bak-strix-guard-"));
     assert.ok(backup, "backup file created");
     const original = JSON.parse(
-      await fs.readFile(path.join(path.dirname(f.configPath), backup), "utf8"),
+      await fs.readFile(path.join(guardPaths(f.home).backupsDir, backup), "utf8"),
     );
     assert.equal(original.mcpServers.notion.command, "npx");
 
     // Client config now spawns the proxy.
     const rewritten = JSON.parse(await fs.readFile(f.configPath, "utf8"));
     assert.equal(rewritten.mcpServers.notion.command, "npx");
-    assert.ok(rewritten.mcpServers.notion.args.includes("@strixgov/mcp-proxy"));
+    assert.ok(rewritten.mcpServers.notion.args.includes(`@strixgov/mcp-proxy@${PROXY_VERSION}`));
 
     // Proxy config carries the upstream verbatim (incl. env) + approval gate.
     const paths = guardPaths(f.home);
@@ -120,8 +120,8 @@ test("init wraps servers, backs up the config, and moves the upstream verbatim",
 test("init is idempotent — a second run wraps nothing", async () => {
   const f = await fixture();
   try {
-    await runInit({ config: f.configPath, env: f.env, log: () => {} });
-    const second = await runInit({ config: f.configPath, env: f.env, log: () => {} });
+    await runInit({ unsignedApprovals: true, config: f.configPath, env: f.env, log: () => {} });
+    const second = await runInit({ unsignedApprovals: true, config: f.configPath, env: f.env, log: () => {} });
     assert.equal(second.wrapped, 0);
     assert.equal(second.skipped, 2);
     const rewritten = JSON.parse(await fs.readFile(f.configPath, "utf8"));
@@ -135,7 +135,7 @@ test("dry-run plans but writes nothing", async () => {
   const f = await fixture();
   try {
     const before = await fs.readFile(f.configPath, "utf8");
-    const result = await runInit({ config: f.configPath, env: f.env, dryRun: true, log: () => {} });
+    const result = await runInit({ unsignedApprovals: true, config: f.configPath, env: f.env, dryRun: true, log: () => {} });
     assert.equal(result.dryRun, true);
     assert.equal(result.wrapped, 0);
     assert.equal(await fs.readFile(f.configPath, "utf8"), before);
@@ -149,13 +149,13 @@ test("init fails loudly on a missing or serverless config", async () => {
   const f = await fixture();
   try {
     await assert.rejects(
-      () => runInit({ config: path.join(f.dir, "nope.json"), env: f.env, log: () => {} }),
+      () => runInit({ unsignedApprovals: true, config: path.join(f.dir, "nope.json"), env: f.env, log: () => {} }),
       /config not found/,
     );
     const empty = path.join(f.dir, "empty.json");
     await fs.writeFile(empty, JSON.stringify({ mcpServers: {} }));
     await assert.rejects(
-      () => runInit({ config: empty, env: f.env, log: () => {} }),
+      () => runInit({ unsignedApprovals: true, config: empty, env: f.env, log: () => {} }),
       /no mcpServers/,
     );
   } finally {

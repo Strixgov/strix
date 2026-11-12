@@ -51,6 +51,9 @@ export async function governedAnthropicDocumentRequest(input) {
     purpose,
     policy,
     actor,
+    // Forwarded so the grant is minted for the same principal the release
+    // presents below; without it a caller that names a tenant is always refused.
+    tenant: input.tenant,
     deps,
   });
 
@@ -85,6 +88,7 @@ export async function governedAnthropicDocumentRequest(input) {
     prompt: governed.prompt,
     destination,
     purpose,
+    principal: { tenant: input.tenant ?? null, actor: actor ?? null },
     now: deps.now,
   });
 

@@ -5,10 +5,11 @@ import http from "node:http";
 import crypto from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 import { buildCanonicalPayload, verify } from "../src/index.mjs";
 
 const run = promisify(execFile);
-const cli = new URL("../bin/verify.mjs", import.meta.url).pathname;
+const cli = fileURLToPath(new URL("../bin/verify.mjs", import.meta.url));
 const kp = crypto.generateKeyPairSync("ed25519");
 const kid = "strix-test-2026-11";
 const jwk = { ...kp.publicKey.export({ format: "jwk" }), kid };

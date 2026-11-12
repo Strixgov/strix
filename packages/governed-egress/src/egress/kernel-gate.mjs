@@ -59,6 +59,7 @@
  * and turns a refusal into a diagnosis.
  */
 import { sha256Hex } from '../artifact/hash.mjs';
+import { sealForTransport } from './gate-seal.mjs';
 import { verifySanitizedArtifact } from '../verification/verify.mjs';
 import {
   assembleEgressCommitment,
@@ -92,7 +93,7 @@ function refusal(reasonCode, detail, extra = {}) {
 function disclosureStatusFor(execution, errorKind) {
   if (execution === 'completed') return 'disclosed';
   if (errorKind === 'http') return 'disclosed';
-  if (errorKind === 'unconfigured') return 'not_disclosed';
+  if (errorKind === 'unconfigured' || errorKind === 'unsealed') return 'not_disclosed';
   return 'possibly_disclosed';
 }
 
@@ -289,12 +290,12 @@ export async function releaseUnderKernelAuthority(input) {
   let responseText = null;
   let transportError = null;
   try {
-    const result = await adapter.send({
+    const result = await adapter.send(sealForTransport({
       documentText: artifactText,
       prompt,
       purpose: authority.purpose,
       destination: { ...adapter.destination },
-    });
+    }));
     execution = 'completed';
     providerMeta = result?.providerMeta ?? null;
     responseText = result?.responseText ?? null;

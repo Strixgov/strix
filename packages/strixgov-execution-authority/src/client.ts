@@ -61,7 +61,45 @@ export type RedeemResult =
       /** Strix's signed denial record for the refusal, when it recorded one. */
       refusalEvidenceId?: string;
     }
+  | { status: 'UNAVAILABLE'; code: string; detail: string; httpStatus: number | null }
+  /**
+   * The consume request was sent, or may have been, and no definite answer
+   * came back (a lost response, a timeout, a 5xx, a malformed or unexpected
+   * body). Strix MAY have consumed the grant. The caller must NOT execute, must
+   * NOT retry redemption, and must reconcile with `reconcileRedemption` first.
+   * An ambiguous consume is never a refusal and never a permit.
+   */
+  | { status: 'REDEMPTION_INDETERMINATE'; grantId: string; strixDecisionId: string; code: string; detail: string; httpStatus: number | null; mayHaveConsumed: true };
+
+/**
+ * An UNKNOWN attempt Strix durably recorded and that no terminal outcome has
+ * resolved. It means the consequence is unresolved. It is NOT permission to
+ * dispatch again: the only way forward is read-back and a new proposal.
+ */
+function parseUnresolvedReport(v: unknown): { reportedAt: string; reportedBy: string } | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  return typeof o.reportedAt === 'string' && typeof o.reportedBy === 'string' ? { reportedAt: o.reportedAt, reportedBy: o.reportedBy } : null;
+}
+
+/** Strix's authoritative answer about a grant, read from its own store. */
+export type GrantStatus =
+  | { status: 'FOUND'; grantId: string; strixDecisionId: string; expiresAt: string; consumedAt: string | null; consumedBy: string | null; decisionState: string | null; unresolvedReport: { reportedAt: string; reportedBy: string } | null }
+  | { status: 'NOT_FOUND' }
   | { status: 'UNAVAILABLE'; code: string; detail: string; httpStatus: number | null };
+
+/**
+ * What the consumer may conclude about a redemption. Derived only from a
+ * successful, authoritative read: a transport failure is UNKNOWN, never
+ * NOT_CONSUMED. Consumption is a fact about Strix's store; it is not evidence of
+ * any destination consequence.
+ */
+export type RedemptionReconciliation =
+  /** Strix recorded a consumption. This is a fact about Strix's store, NOT permission to execute. */
+  | { status: 'CONSUMED'; consumedAt: string; consumedBy: string | null; strixDecisionId: string; decisionState: string | null; unresolvedAttempt: { reportedAt: string; reportedBy: string } | null; permitsExecution: false }
+  | { status: 'NOT_CONSUMED'; strixDecisionId: string; expiresAt: string; decisionState: string | null; unresolvedAttempt: { reportedAt: string; reportedBy: string } | null; permitsExecution: false }
+  | { status: 'NOT_FOUND'; permitsExecution: false }
+  | { status: 'UNKNOWN'; code: string; detail: string; httpStatus: number | null; permitsExecution: false };
 
 export interface OutcomeReport {
   outcome: 'EXECUTED' | 'FAILED' | 'UNKNOWN';
@@ -72,10 +110,23 @@ export interface OutcomeReport {
 }
 
 export type OutcomeResult =
+  /**
+   * Strix did not record a terminal state. Returned for an UNKNOWN report: the
+   * decision stays EXECUTING until a later EXECUTED or FAILED report, made only
+   * after destination read-back. An UNKNOWN is never recorded as FAILED.
+   */
+  | { status: 'NOT_TERMINAL'; strixDecisionId: string; state: string; reasonCode: string }
   | { status: 'RECORDED'; strixDecisionId: string; state: string; replay: boolean; signed: boolean; evidenceId: string | null; evidenceHash: string | null; proofPath: string | null }
   | { status: 'REFUSED'; reasonCode: string; detail: string };
 
 /** Refusals this SDK settles without presenting the grant: a forged or untrusted artifact is not shown to Strix. */
+/**
+ * The shape of a consume refusal's reason code, as the consume route emits it
+ * (upper-case snake case). A 409 is a definite refusal only when its body says so
+ * in this shape. The check is on the body, never on the status code alone.
+ */
+const CONSUME_REFUSAL_REASON_RE = /^[A-Z][A-Z0-9_]{2,63}$/;
+
 const LOCAL_ONLY_REFUSALS = new Set(['AUTHORITY_MALFORMED', 'AUTHORITY_ISSUER_MISMATCH', 'AUTHORITY_KEY_INVALID', 'AUTHORITY_SIGNATURE_INVALID', 'AUTHORITY_LIFETIME_EXCEEDED']);
 
 export class StrixExecutionAuthorityClient {
@@ -199,18 +250,34 @@ export class StrixExecutionAuthorityClient {
     }
     const g = grant as SignedGrant;
     const consequence = Object.fromEntries(BOUND_FIELDS.map((k) => [k, (execution as Record<string, unknown>)[k]]));
+    const grantId = g.payload.grantId;
+    const strixDecisionId = g.payload.strixDecisionId;
+    const indeterminate = (code: string, detail: string, httpStatus: number | null): RedeemResult => ({
+      status: 'REDEMPTION_INDETERMINATE',
+      grantId,
+      strixDecisionId,
+      code,
+      detail,
+      httpStatus,
+      mayHaveConsumed: true,
+    });
     let r: { status: number; json: unknown };
     try {
-      r = await this.call('POST', `/api/v1/authority/grants/${encodeURIComponent(g.payload.grantId)}/consume`, { grant, consequence, consumedBy });
+      r = await this.call('POST', `/api/v1/authority/grants/${encodeURIComponent(grantId)}/consume`, { grant, consequence, consumedBy });
     } catch (err) {
+      // The request was sent, or may have been, and no response was read. Strix
+      // may have consumed the grant. This is NOT evidence that it did not.
       const e = err as StrixUnavailableError;
-      return { status: 'UNAVAILABLE', code: e.code, detail: e.message, httpStatus: e.status };
+      return indeterminate(e.code, e.message, e.status);
     }
     const j = (r.json ?? {}) as Record<string, unknown>;
-    if (r.status === 200 && j.status === 'CONSUMED' && typeof j.grantId === 'string' && typeof j.consumedAt === 'string') {
-      return { status: 'PERMIT', grantId: j.grantId, strixDecisionId: String(j.strixDecisionId ?? g.payload.strixDecisionId), consumedAt: j.consumedAt };
+    // PERMIT only for the grant this request named, echoed back by the answer.
+    if (r.status === 200 && j.status === 'CONSUMED' && j.grantId === grantId && typeof j.consumedAt === 'string') {
+      return { status: 'PERMIT', grantId, strixDecisionId: String(j.strixDecisionId ?? strixDecisionId), consumedAt: j.consumedAt };
     }
-    if (r.status === 409 && j.status === 'REFUSED') {
+    // REFUSE is a definite refusal to act. It is a non-permit; it is not, by
+    // itself, a claim that Strix did not record anything for this grant.
+    if (r.status === 409 && j.status === 'REFUSED' && typeof j.reasonCode === 'string' && CONSUME_REFUSAL_REASON_RE.test(j.reasonCode)) {
       return {
         status: 'REFUSE',
         refusedBy: 'strix',
@@ -220,14 +287,68 @@ export class StrixExecutionAuthorityClient {
         ...(typeof j.refusalEvidenceId === 'string' ? { refusalEvidenceId: j.refusalEvidenceId } : {}),
       };
     }
+    // Once a request has been sent, no HTTP status and no body proves that Strix
+    // did not process it: an intermediary can answer after the origin has. Every
+    // other answer is indeterminate. The caller must reconcile, never retry, and
+    // never conclude "not consumed" from this response.
+    const e = problemFrom(r);
+    return indeterminate(e.code, e.message, e.status);
+  }
+
+  /**
+   * Read Strix's authoritative consumption state for a grant. Read-only: one GET,
+   * no retry inside this call, nothing mutated. A transport or unreadable answer
+   * is UNAVAILABLE, never a conclusion about the grant.
+   */
+  async getGrantStatus(grantId: string): Promise<GrantStatus> {
+    let r: { status: number; json: unknown };
+    try {
+      r = await this.call('GET', `/api/v1/authority/grants/${encodeURIComponent(grantId)}`);
+    } catch (err) {
+      const e = err as StrixUnavailableError;
+      return { status: 'UNAVAILABLE', code: e.code, detail: e.message, httpStatus: e.status };
+    }
+    const j = (r.json ?? {}) as Record<string, unknown>;
+    const problemCode = typeof (j.error as Record<string, unknown> | undefined)?.code === 'string' ? (j.error as Record<string, unknown>).code : null;
+    if (r.status === 404 && problemCode === 'GRANT_NOT_FOUND') return { status: 'NOT_FOUND' };
+    if (r.status === 200 && j.status === 'FOUND' && j.grantId === grantId && typeof j.strixDecisionId === 'string' && typeof j.expiresAt === 'string') {
+      return {
+        status: 'FOUND',
+        grantId,
+        strixDecisionId: j.strixDecisionId,
+        expiresAt: j.expiresAt,
+        consumedAt: typeof j.consumedAt === 'string' ? j.consumedAt : null,
+        consumedBy: typeof j.consumedBy === 'string' ? j.consumedBy : null,
+        decisionState: typeof j.decisionState === 'string' ? j.decisionState : null,
+        unresolvedReport: parseUnresolvedReport(j.unresolvedReport),
+      };
+    }
     const e = problemFrom(r);
     return { status: 'UNAVAILABLE', code: e.code, detail: e.message, httpStatus: e.status };
+  }
+
+  /**
+   * Resolve an ambiguous redemption from Strix's store. Only an authoritative
+   * FOUND answer can yield CONSUMED or NOT_CONSUMED. Everything else is UNKNOWN,
+   * and the caller must stay in the unknown state (no execution, no retry).
+   */
+  async reconcileRedemption(grantId: string): Promise<RedemptionReconciliation> {
+    const s = await this.getGrantStatus(grantId);
+    if (s.status === 'NOT_FOUND') return { status: 'NOT_FOUND', permitsExecution: false };
+    if (s.status === 'UNAVAILABLE') return { status: 'UNKNOWN', code: s.code, detail: s.detail, httpStatus: s.httpStatus, permitsExecution: false };
+    if (s.consumedAt !== null) {
+      return { status: 'CONSUMED', consumedAt: s.consumedAt, consumedBy: s.consumedBy, strixDecisionId: s.strixDecisionId, decisionState: s.decisionState, unresolvedAttempt: s.unresolvedReport, permitsExecution: false };
+    }
+    return { status: 'NOT_CONSUMED', strixDecisionId: s.strixDecisionId, expiresAt: s.expiresAt, decisionState: s.decisionState, unresolvedAttempt: s.unresolvedReport, permitsExecution: false };
   }
 
   /** Report what happened after the handler ran. Only meaningful for a consumed grant. */
   async reportOutcome(grantId: string, report: OutcomeReport): Promise<OutcomeResult> {
     const r = await this.call('POST', `/api/v1/authority/grants/${encodeURIComponent(grantId)}/outcome`, report);
     const j = (r.json ?? {}) as Record<string, unknown>;
+    if (r.status === 200 && j.status === 'NOT_TERMINAL') {
+      return { status: 'NOT_TERMINAL', strixDecisionId: String(j.strixDecisionId), state: String(j.state), reasonCode: String(j.reasonCode) };
+    }
     if (r.status === 200 && j.status === 'RECORDED') {
       return {
         status: 'RECORDED',

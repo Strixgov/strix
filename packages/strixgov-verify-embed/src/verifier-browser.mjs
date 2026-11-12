@@ -133,6 +133,39 @@ export function buildCanonicalPayload(record) {
   return JSON.stringify(payload);
 }
 
+// ── Declaration refusals (#2835 / #2836) ────────────────────────────
+//
+// Contract: docs/gates/SE-V1-ALGORITHM-METADATA.md. Same rules and order as
+// @strixgov/verifier, written here independently. Decided BEFORE key lookup:
+// a refused record is never VERIFIED and never reported as a signature
+// failure.
+//
+//   1. Schema version. An explicit `declaredSchemaVersion` — or, on the
+//      reconstruction path only, the record's `schemaVersion` — must be
+//      exactly 1 or "1". "1.0", "v1", 2, "2", objects are refused; nothing is
+//      coerced into 1. When the signed bytes travel as `signedPayload`, the
+//      record-level `schemaVersion` is an unsigned projection of them and is
+//      not consulted here.
+//   2. Algorithm. An explicit `signatureAlgorithm` other than exactly
+//      "Ed25519" (case-sensitive) is refused. Absent/null is the legacy case,
+//      read under the fixed SE v1 rule.
+export function declarationRefusal(record) {
+  const hasSignedBytes =
+    typeof record.signedPayload === "string" && record.signedPayload.length > 0;
+  const declarations = hasSignedBytes
+    ? [record.declaredSchemaVersion]
+    : [record.declaredSchemaVersion, record.schemaVersion];
+  for (const declared of declarations) {
+    if (declared != null && declared !== 1 && declared !== "1") {
+      return "UNSUPPORTED_SCHEMA_VERSION";
+    }
+  }
+  if (record.signatureAlgorithm != null && record.signatureAlgorithm !== "Ed25519") {
+    return "UNSUPPORTED_ALGORITHM";
+  }
+  return null;
+}
+
 // ── Network ─────────────────────────────────────────────────────────
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
@@ -163,13 +196,65 @@ async function fetchEvidence(evidenceId, proofBase = DEFAULT_PROOF_BASE) {
         continue;
       }
       const json = await r.json();
-      // Console wraps in { fields: {...} }; Academy returns flat. Normalize.
-      const fields = json.fields ?? json;
-      // Promote a few top-level helper fields the canonical payload needs.
-      return {
-        ...fields,
-        signedPayload: json.signedPayload ?? fields.signedPayload,
-      };
+
+      // THREE response shapes reach this function. This flattener MUST mirror
+      // @strixgov/verifier::fetchEvidence exactly — a divergent flattener here
+      // is the CJ-1 canonicalization drift the conformance program exists to
+      // prevent, and it fails in the worst possible direction: a valid record
+      // rendered as unsigned.
+      //
+      //   1. Console /api/public/proof/<id>:
+      //      { schemaVersion, fields: {...}, signature, signingKeyId, ... }
+      //   2. Academy /api/proof/<id>:
+      //      { ok, proof: { ...flat fields, signature, signedPayload,
+      //        signingKeyId }, verification: {...} }
+      //   3. Pre-1.3 raw shape: bare record object at top level.
+
+      // Shape 1 — Console. Detected via the co-occurrence of `fields` AND a
+      // `signature` key, which is what distinguishes it from Academy's `proof`
+      // shape.
+      if (
+        json.fields &&
+        typeof json.fields === "object" &&
+        Object.prototype.hasOwnProperty.call(json, "signature")
+      ) {
+        const fields = json.fields;
+
+        // The Console route puts `signature` and `signingKeyId` at the TOP
+        // level, as siblings of `fields` — not inside it. Spreading `fields`
+        // alone left `record.signature` undefined, so this verifier reported
+        // every signed Console record as LEGACY_UNSIGNED: a valid, signed
+        // record rendered as "no signature was ever produced". The corpus
+        // runner never caught it because it fed the Academy shape only.
+        //
+        // Promote `signature` and `schemaVersion` — and ONLY those, exactly as
+        // @strixgov/verifier's flattener does.
+        //
+        // `signingKeyId` is deliberately NOT promoted: the Console redacts the
+        // top-level copy for privacy (`strix-***-YYYY-MM`) while the canonical
+        // payload was signed with the FULL kid, which survives in `fields`.
+        // Promoting the redacted value would change the canonical bytes and
+        // break verification for every signed record — the v1.9.2/v1.9.3 bug
+        // class. `evidenceId` is excluded for the same reason (the top-level
+        // value is the caller's lookup key, which may be a hash rather than the
+        // row id).
+        return {
+          ...fields,
+          ...(json.signature !== undefined ? { signature: json.signature } : {}),
+          ...(json.schemaVersion !== undefined ? { schemaVersion: json.schemaVersion } : {}),
+          signedPayload: json.signedPayload ?? fields.signedPayload,
+        };
+      }
+
+      // Shape 2 (Academy) or shape 3 (raw). Academy nests the ENTIRE flat
+      // record — `signature`, `signedPayload`, and the FULL (unredacted)
+      // `signingKeyId` included — under `proof`. Reading the wrapper object
+      // instead left `record.signature` undefined, so every signed Academy
+      // record verified as LEGACY_UNSIGNED. That is the same defect the Console
+      // branch above records, in the other direction: the comment there said
+      // "Academy returns flat", which was true of an older response shape and
+      // silently stopped being true.
+      return json.proof ?? json;
     } catch (err) {
       lastError = err;
     }
@@ -186,9 +271,40 @@ async function fetchJwks(jwksUrl = DEFAULT_JWKS_URL) {
   return await r.json();
 }
 
+// Mirror of the JS reference resolver (@strixgov/verifier resolveJwksByKid) and
+// the Python one (strix_verify.resolve_public_keys). Returns every candidate
+// key; the caller (step 4 above) tries each and accepts on the first that
+// verifies.
+//
+// UNION exact + case-insensitive candidates — do NOT short-circuit on the first
+// exact match. A historical signer-config defect minted records under an
+// uppercase env segment (strix-PROD-2026-05, issue #1306); the kid casing never
+// enters the signed payload, so a case-variant is signature-equivalent. And if a
+// JWKS serves a WRONG key under the exact (uppercase) kid AND the CORRECT key
+// under a case-variant, an exact-first resolver returns only the wrong key and
+// the record fails though its key is served (issue #1628). Exact matches come
+// first (preferred), case-variants after. The redacted display form
+// (strix-***-YYYY-MM) matches by suffix (digits carry no case → no union).
 function resolveJwksByKid(jwks, kid) {
   if (!jwks?.keys || !Array.isArray(jwks.keys)) return [];
-  return jwks.keys.filter((k) => k.kid === kid);
+  const keys = jwks.keys;
+  const lower = typeof kid === "string" ? kid.toLowerCase() : null;
+  const exact = keys.filter((k) => k.kid === kid);
+  const ciExtra = lower
+    ? keys.filter(
+        (k) =>
+          typeof k.kid === "string" &&
+          k.kid !== kid &&
+          k.kid.toLowerCase() === lower,
+      )
+    : [];
+  const union = [...exact, ...ciExtra];
+  if (union.length > 0) return union;
+
+  const m = typeof kid === "string" ? kid.match(/^strix-\*\*\*-(\d{4}-\d{2})$/) : null;
+  if (!m) return [];
+  const suffix = `-${m[1]}`;
+  return keys.filter((k) => typeof k.kid === "string" && k.kid.endsWith(suffix));
 }
 
 // ── Compliance flag derivation ──────────────────────────────────────
@@ -242,7 +358,10 @@ function recordHasTraceFields(record) {
  *   {
  *     evidenceId,
  *     verificationStatus: "VERIFIED" | "UNSIGNED" | "LEGACY_UNSIGNED" |
- *                         "COMPLIANCE_VIOLATION" | "NOT_FOUND" | "ERROR",
+ *                         "COMPLIANCE_VIOLATION" | "UNVERIFIABLE" |
+ *                         "NOT_FOUND" | "ERROR",
+ *     verificationReason, // e.g. SIGNATURE_INVALID, SIGNING_KEY_UNKNOWN,
+ *                         // UNSUPPORTED_ALGORITHM, UNSUPPORTED_SCHEMA_VERSION
  *     signaturePresent, signatureValid, hashValid,
  *     record,            // the proof record (or null on NOT_FOUND/ERROR)
  *     compliance,        // EU AI Act flag block (or null when not requested)
@@ -293,14 +412,43 @@ export async function verify(evidenceId, opts = {}) {
     return result;
   }
 
+  // 2b. Declaration refusals, before any key lookup. Status mirrors
+  // @strixgov/verifier: an unsupported algorithm is UNVERIFIABLE (we cannot
+  // check it), an unsupported schema version is COMPLIANCE_VIOLATION (the
+  // record does not meet the SE v1 contract). `verificationReason` names
+  // which, so neither renders as a failed signature.
+  const refusal = declarationRefusal(record);
+  if (refusal) {
+    result.verificationReason = refusal;
+    if (refusal === "UNSUPPORTED_ALGORITHM") {
+      result.verificationStatus = "UNVERIFIABLE";
+      result.error = `Record declares signatureAlgorithm ${JSON.stringify(record.signatureAlgorithm)}; Signed Evidence v1 permits only "Ed25519".`;
+    } else {
+      result.verificationStatus = "COMPLIANCE_VIOLATION";
+      result.error = "Record declares a schema version other than 1; Signed Evidence v1 admits only \"1\".";
+    }
+    return result;
+  }
+
   // 3. Fetch and resolve the public key.
   let publicKeys;
   try {
     const jwks = await fetchJwks(jwksUrl);
     publicKeys = resolveJwksByKid(jwks, record.signingKeyId);
     if (publicKeys.length === 0) {
-      result.verificationStatus = "ERROR";
-      result.error = `Signing key not found in JWKS: ${record.signingKeyId}`;
+      // UNVERIFIABLE, not ERROR. An unresolvable kid means this page fetched a
+      // JWKS that does not contain the key — the record may be entirely valid
+      // against a JWKS this embed has never seen. Cannot-verify is not
+      // proven-wrong, and rendering it through the error card told a customer's
+      // visitor "VERIFICATION ERROR" about an untampered record.
+      //
+      // Matches the same correction made in @strixgov/verifier (1.22.0,
+      // SIGNING_KEY_UNKNOWN) and verifiers/python/strix_verify.py, and matches
+      // the Proof Explorer's four-state vocabulary where UNVERIFIABLE is a
+      // first-class state that never wears INVALID's colour.
+      result.verificationStatus = "UNVERIFIABLE";
+      result.verificationReason = "SIGNING_KEY_UNKNOWN";
+      result.error = `Signing key not found in the JWKS this page fetched: ${record.signingKeyId}. This is NOT evidence of tampering.`;
       return result;
     }
   } catch (err) {
@@ -329,6 +477,7 @@ export async function verify(evidenceId, opts = {}) {
   result.signatureValid = signatureValid;
   result.hashValid = signatureValid; // authenticated by signature
   result.verificationStatus = signatureValid ? "VERIFIED" : "COMPLIANCE_VIOLATION";
+  if (!signatureValid) result.verificationReason = "SIGNATURE_INVALID";
   if (!signatureValid && firstError) result.error = firstError;
 
   // 5. Derive compliance flags if the record opts in to a compliance framework.

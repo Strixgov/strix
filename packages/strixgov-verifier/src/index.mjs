@@ -286,6 +286,16 @@ export async function fetchEvidence(evidenceId, proofBase = DEFAULT_PROOF_BASE) 
       // and evidenceId are deliberately NOT promoted — see header note above.
       ...(data.signature !== undefined ? { signature: data.signature } : {}),
       ...(data.schemaVersion !== undefined ? { schemaVersion: data.schemaVersion } : {}),
+      // Per-record verification declarations (not signed fields, and so not
+      // inside `fields`). `signatureAlgorithm` is the algorithm the record
+      // declares; `declaredSchemaVersion` is the schema version the STORED
+      // record declares. The latter is promoted separately because the
+      // top-level `schemaVersion` on this response is the response's own
+      // shape version (always 1) and would otherwise mask a record that
+      // declares another version. Absent on Console versions that predate
+      // the declaration fields; absence is handled as "no declaration".
+      ...(data.signatureAlgorithm !== undefined ? { signatureAlgorithm: data.signatureAlgorithm } : {}),
+      ...(data.declaredSchemaVersion !== undefined ? { declaredSchemaVersion: data.declaredSchemaVersion } : {}),
     };
   }
 
@@ -531,7 +541,7 @@ export const VERIFICATION_REASONS = Object.freeze({
   SIGNING_KEY_UNKNOWN:
     "The signing key id does not resolve in the presented JWKS. Cannot verify — this is NOT evidence of tampering.",
   UNSUPPORTED_ALGORITHM:
-    "A candidate key is not Ed25519. Strix signs SE v1 exclusively with Ed25519; a non-Ed25519 key is never used to verify.",
+    "The record declares a signature algorithm other than Ed25519, or a candidate key is not Ed25519. Strix signs SE v1 exclusively with Ed25519; nothing else is ever used to verify. Cannot verify — this is NOT evidence of tampering.",
   SIGNATURE_INVALID:
     "A signing key resolved, and the signature did not verify over the canonical payload. The record does not match what was signed.",
   FIELD_MISMATCH:
@@ -595,6 +605,12 @@ export async function verify(evidenceId, options = {}) {
     signaturePresent: false,
     signatureValid: false,
     signatureAlgorithm: null,
+    // The algorithm the record itself declares (verbatim), and whether the
+    // algorithm used was declared by the record or inferred from the fixed
+    // Signed Evidence v1 rule because the record carries no declaration.
+    declaredSignatureAlgorithm: null,
+    signatureAlgorithmProvenance: null,
+    declaredSchemaVersion: null,
     verificationStatus: "UNKNOWN",
     verificationReason: null,
     record: null,
@@ -629,6 +645,40 @@ export async function verify(evidenceId, options = {}) {
       ? CHAIN_REASONS.NOT_CHECKED_SINGLE_RECORD
       : CHAIN_REASONS.ABSENT;
 
+    // ── Refusals that precede key lookup and every cryptographic check ──────
+    // Mirrors apps/strix-console/src/lib/proof/canonical.ts classifyFullMatch,
+    // in the same order: schema version first, then algorithm.
+    //
+    // Schema version. An EXPLICIT declared version must be exactly 1 / "1".
+    // It is never coerced: the Academy canonical form's numeric coercion below
+    // exists to recover records whose version was dropped, and must not turn a
+    // declared "1.0", "v1" or malformed value into v1. Two places can carry
+    // the declaration: `declaredSchemaVersion` (the stored value, as the
+    // Console proof route reports it) and `schemaVersion` on the record.
+    //
+    // When the response carries the signed bytes themselves (`signedPayload`),
+    // the version is read from those bytes further down and the record-level
+    // `schemaVersion` is only an unsigned projection of it: a disagreement is
+    // then reported as FIELD_MISMATCH after the envelope is authenticated, not
+    // here. The pre-check on `schemaVersion` therefore applies only on the
+    // reconstruction path, where that field is what the bytes are rebuilt from.
+    const hasSignedBytes = typeof record.signedPayload === "string" && record.signedPayload.length > 0;
+    const versionDeclarations = hasSignedBytes
+      ? [record.declaredSchemaVersion]
+      : [record.declaredSchemaVersion, record.schemaVersion];
+    result.declaredSchemaVersion = record.declaredSchemaVersion ?? record.schemaVersion ?? null;
+    for (const declared of versionDeclarations) {
+      if (declared != null && declared !== 1 && declared !== "1") {
+        return settle("COMPLIANCE_VIOLATION", "SIGNED_PAYLOAD_INVALID");
+      }
+    }
+
+    // Algorithm. An explicit declaration other than exactly "Ed25519" is
+    // refused. A record with no declaration predates the declaration field
+    // and is read under the fixed SE v1 rule, reported as inferred.
+    result.declaredSignatureAlgorithm = record.signatureAlgorithm ?? null;
+    result.signatureAlgorithmProvenance =
+      record.signatureAlgorithm != null ? "DECLARED" : "INFERRED_SE_V1_LEGACY";
     if (record.signatureAlgorithm != null && record.signatureAlgorithm !== "Ed25519") {
       return settle("UNVERIFIABLE", "UNSUPPORTED_ALGORITHM");
     }
@@ -649,7 +699,7 @@ export async function verify(evidenceId, options = {}) {
       return settle("COMPLIANCE_VIOLATION", "SIGNED_PAYLOAD_INVALID");
     }
     // Independently hash the underlying content, even if no key resolves.
-    const hash = checkEvidenceContentHash(record, payload);
+    const hash = checkEvidenceContentHash(record, payload, buildCanonicalPayload);
     result.hashValid = hash.valid;
     result.hashReason = hash.reason;
     result.recomputedEvidenceHash = hash.recomputedHash;

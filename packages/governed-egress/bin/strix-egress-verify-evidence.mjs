@@ -3,7 +3,7 @@
  * strix-egress-verify-evidence — check a signed evidence log offline.
  *
  *   strix-egress-verify-evidence evidence.jsonl --public-key key.pub.pem
- *       [--public-key older.pub.pem] [--expect-head <entryHash>] [--json]
+ *       [--public-key older.pub.pem] [--expect-head <entryHash>] [--expect-length <n>] [--json]
  *
  * Needs only the log and the public key(s) YOU trust — no network, no
  * Strix account. Exit codes:
@@ -15,12 +15,12 @@
  *
  * What VERIFIED does not mean is printed on every run: the key holder
  * recorded these entries, not that the detector was right or that nothing
- * was cut off the end (unless --expect-head matched).
+ * was cut off the end (unless --expect-head or --expect-length matched).
  */
 import { readFileSync } from 'node:fs';
 import { verifySignedEvidence } from '../src/evidence/signing.mjs';
 
-const USAGE = 'usage: strix-egress-verify-evidence <evidence.jsonl> --public-key <pem> [--public-key <pem>...] [--expect-head <hash>] [--json]';
+const USAGE = 'usage: strix-egress-verify-evidence <evidence.jsonl> --public-key <pem> [--public-key <pem>...] [--expect-head <hash>] [--expect-length <n>] [--json]';
 
 function parseArgs(argv) {
   const out = { publicKeys: [], json: false };
@@ -33,6 +33,11 @@ function parseArgs(argv) {
     };
     if (a === '--public-key') out.publicKeys.push(next());
     else if (a === '--expect-head') out.expectHead = next();
+    else if (a === '--expect-length') {
+      const v = next();
+      if (!/^[1-9][0-9]*$/.test(v)) throw new Error('--expect-length needs a positive integer');
+      out.expectLength = Number(v);
+    }
     else if (a === '--json') out.json = true;
     else if (a.startsWith('--')) throw new Error(`unknown argument ${a}`);
     else if (out.file) throw new Error('only one evidence file');
@@ -66,7 +71,7 @@ try {
 
 let result;
 try {
-  result = verifySignedEvidence(records, { publicKeys, expectedHeadHash: args.expectHead });
+  result = verifySignedEvidence(records, { publicKeys, expectedHeadHash: args.expectHead, expectedLength: args.expectLength });
 } catch (err) {
   process.stderr.write(`${err.message}\n`);
   process.exit(2);
@@ -80,7 +85,7 @@ if (args.json) {
       `VERIFIED  ${result.length} records, head ${result.headHash}`,
       `signed by ${result.keyIds.join(', ')}`,
       `proves:        ${result.proves} (these entries were recorded by the key holder and not changed since)`,
-      `completeness:  ${result.completeness}${result.completeness === 'NOT_PROVEN' ? ' (records cut off the end would go unnoticed; pass --expect-head with a head you obtained separately)' : ''}`,
+      `completeness:  ${result.completeness}${result.completeness === 'NOT_PROVEN' ? ' (records cut off the end would go unnoticed; pass --expect-head or --expect-length with an anchor you obtained separately)' : ''}`,
       'not proven:    that the detector found every identifier, or that the key holder was honest',
       '',
     ].join('\n'),

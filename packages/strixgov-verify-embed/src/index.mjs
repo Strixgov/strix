@@ -15,6 +15,7 @@ export {
   verify,
   buildCanonicalPayload,
   deriveComplianceFlags,
+  declarationRefusal,
   DEFAULT_PROOF_BASE,
   DEFAULT_JWKS_URL,
 } from "./verifier-browser.mjs";

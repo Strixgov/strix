@@ -107,6 +107,9 @@ export const STYLES = /* css */ `
   .card.verified .status-title { color: var(--sv-verified); }
   .card.violation .status-title { color: var(--sv-violation); }
   .card.legacy .status-title { color: var(--sv-legacy); }
+  /* UNVERIFIABLE shares the amber legacy tone deliberately — it must never
+     wear the failure colour. Cannot-verify is not proven-wrong. */
+  .card.unverifiable .status-title { color: var(--sv-legacy); }
   .card.unsigned .status-title { color: var(--sv-unsigned); }
   .card.notfound .status-title { color: var(--sv-violation); }
   .card.error .status-title { color: var(--sv-fg-dim); }

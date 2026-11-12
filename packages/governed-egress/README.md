@@ -384,7 +384,10 @@ npx strix-egress-verify-evidence evidence.jsonl --public-key egress-key.pub.pem
   the **end** of the file: a truncated log still verifies
   (`completeness: 'NOT_PROVEN'`). Pass `--expect-head <entryHash>` with a
   head obtained separately (for example sent to your SIEM or your auditor)
-  to catch that (`HEAD_MATCHED`).
+  to catch that (`HEAD_MATCHED`), or `--expect-length <n>` with a record
+  count obtained separately (`LENGTH_MATCHED`; weaker, because it does not
+  pin which record is last). Either anchor must come from outside the log:
+  an anchor read from the same file proves nothing.
 - **Where the key lives decides what it proves.** Keep the private key where
   the people who can edit the evidence file cannot read it (a secret store
   mounted only into the proxy). A key readable by the same people proves
@@ -404,7 +407,37 @@ Proven by `test/signed-evidence.test.mjs`, including the attack the chain
 alone cannot see: a record edited and the whole file re-chained without the
 key passes `verifyEvidenceChain` and fails `verifySignedEvidence`. Disabling
 the signature check, ignoring `--expect-head`, accepting unsigned records,
-and skipping signature checks on restart each fail that suite.
+and skipping signature checks on restart each fail that suite. A missing
+final record and a truncated tail are pinned in
+`test/evidence-completeness.test.mjs`.
+
+## Principal binding, revocation and store topology (2026-11-11)
+
+- **Principal binding.** Every local-mode authorization is bound to the
+  principal it was minted for: `{ tenant, actor }`, from the `tenant` and
+  `actor` you pass to `governDocumentEgress` or an adapter. A release
+  presented under any other principal refuses `PRINCIPAL_MISMATCH` before
+  the transport runs, and does not spend the grant. Supply both values from
+  your own authenticated session. This package authenticates nobody: the
+  binding stops a grant being spent by a different principal, it does not
+  prove the named principal is genuine. The proxy takes its actor from its
+  configuration, never from a request.
+- **Revocation.** `store.revoke(authorizationId, { reason })` withdraws an
+  unspent grant; the gate then refuses `AUTHORIZATION_REVOKED`. Consumption
+  and revocation are one terminal state, so at most one of them happens. A
+  grant already claimed cannot be revoked, because the transport may have
+  run. Grants also expire after 5 minutes by default.
+- **Store topology.** `createInMemoryAuthorizationStore()` gives single use
+  within one process. `createFileAuthorizationStore({ directory })` gives
+  single use across several processes on **one host** that share a **local**
+  directory: a grant's terminal state is one file created with `O_EXCL`, so
+  exactly one claim or revoke wins. Network filesystems and several hosts
+  are **not supported**; they need a shared transactional store, which this
+  package does not ship.
+
+Pinned in `test/grant-principal-revocation.test.mjs`, including a race of
+separate Node processes over one grant (exactly one claim wins, and a claim
+and a revoke never both succeed).
 
 ## Claude Code prompt hook (2026-09-27)
 

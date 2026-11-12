@@ -33,16 +33,20 @@
  *    provider was never contacted.
  */
 import { sha256Hex } from '../artifact/hash.mjs';
+import { principalAddress } from '../authorization/authorize.mjs';
+import { sealForTransport } from './gate-seal.mjs';
 
 export const EGRESS_REFUSAL_CODES = Object.freeze([
   'AUTHORIZATION_REQUIRED',
   'AUTHORIZATION_UNKNOWN',
   'AUTHORIZATION_EXPIRED',
+  'AUTHORIZATION_REVOKED',
   'AUTHORIZATION_CONSUMED',
   'ARTIFACT_MISMATCH',
   'PROMPT_MISMATCH',
   'DESTINATION_MISMATCH',
   'PURPOSE_MISMATCH',
+  'PRINCIPAL_MISMATCH',
   'EVIDENCE_UNAVAILABLE',
 ]);
 
@@ -72,7 +76,7 @@ function refusal(reasonCode, detail) {
 function disclosureStatusFor(execution, errorKind) {
   if (execution === 'completed') return 'disclosed';
   if (errorKind === 'http') return 'disclosed';
-  if (errorKind === 'unconfigured') return 'not_disclosed';
+  if (errorKind === 'unconfigured' || errorKind === 'unsealed') return 'not_disclosed';
   return 'possibly_disclosed';
 }
 
@@ -109,6 +113,15 @@ export async function releaseThroughGate(input) {
 
   const presentedArtifactHash = sha256Hex(artifactText ?? '');
   const presentedPromptHash = sha256Hex(prompt ?? '');
+  // The principal presented at release. A malformed principal is refused as a
+  // mismatch rather than thrown, so a bad caller value can never become an
+  // exception path around the gate.
+  let presentedPrincipalHash;
+  try {
+    presentedPrincipalHash = principalAddress(input.principal ?? null);
+  } catch {
+    presentedPrincipalHash = null;
+  }
   const denialBase = {
     presentedArtifactHash,
     presentedPromptHash,
@@ -129,9 +142,15 @@ export async function releaseThroughGate(input) {
     return r;
   }
 
+  // A grant minted before principal binding existed carries no hash; it was
+  // minted for the empty principal, so it is compared against that.
+  const boundPrincipalHash = auth.principalHash ?? principalAddress(null);
+
   let r = null;
   if (now() > auth.expiresAtMs) {
     r = refusal('AUTHORIZATION_EXPIRED', 'authorization expired before release');
+  } else if (auth.revokedAt !== undefined) {
+    r = refusal('AUTHORIZATION_REVOKED', 'authorization was revoked before release');
   } else if (auth.consumedAt !== undefined) {
     r = refusal('AUTHORIZATION_CONSUMED', 'authorization was already consumed');
   } else if (presentedArtifactHash !== auth.artifactHash) {
@@ -145,6 +164,8 @@ export async function releaseThroughGate(input) {
     r = refusal('DESTINATION_MISMATCH', 'destination does not match the authorized destination');
   } else if (purpose !== auth.purpose) {
     r = refusal('PURPOSE_MISMATCH', 'purpose does not match the authorized purpose');
+  } else if (presentedPrincipalHash !== boundPrincipalHash) {
+    r = refusal('PRINCIPAL_MISMATCH', 'the tenant or actor presented at release does not match the principal the authorization was minted for');
   }
   if (r !== null) {
     tryAppendDenial(evidence, { ...denialBase, authorizationId, reasonCode: r.reasonCode });
@@ -154,7 +175,12 @@ export async function releaseThroughGate(input) {
   // Atomic consume — redeem strictly before any side effect. A lost race
   // reports CONSUMED; the transport has not run on this path.
   if (!store.claim(authorizationId, new Date(now()).toISOString())) {
-    const lost = refusal('AUTHORIZATION_CONSUMED', 'authorization was consumed concurrently');
+    // The claim lost to a concurrent consume OR a concurrent revoke. Re-read
+    // to report which; either way the transport has not run.
+    const revoked = store.get(authorizationId)?.revokedAt !== undefined;
+    const lost = revoked
+      ? refusal('AUTHORIZATION_REVOKED', 'authorization was revoked concurrently')
+      : refusal('AUTHORIZATION_CONSUMED', 'authorization was consumed concurrently');
     tryAppendDenial(evidence, { ...denialBase, authorizationId, reasonCode: lost.reasonCode });
     return lost;
   }
@@ -171,6 +197,7 @@ export async function releaseThroughGate(input) {
       promptHash: auth.promptHash,
       destination: { ...auth.destination },
       purpose: auth.purpose,
+      principalHash: boundPrincipalHash,
       transportName: transport.name,
     });
   } catch (err) {
@@ -189,12 +216,12 @@ export async function releaseThroughGate(input) {
   let responseText = null;
   let transportError = null;
   try {
-    const result = await transport.send({
+    const result = await transport.send(sealForTransport({
       documentText: artifactText,
       prompt,
       purpose: auth.purpose,
       destination: { ...auth.destination },
-    });
+    }));
     execution = 'completed';
     providerMeta = result?.providerMeta ?? null;
     responseText = result?.responseText ?? null;

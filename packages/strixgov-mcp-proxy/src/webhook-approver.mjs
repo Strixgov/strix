@@ -120,6 +120,9 @@ export function webhookApprover(opts) {
     requestDir: opts.requestDir,
     timeoutMs: opts.timeoutMs,
     pollIntervalMs: opts.pollIntervalMs,
+    requireSignedResponse: opts.requireSignedResponse,
+    approverKeys: opts.approverKeys,
+    maxResponseAgeMs: opts.maxResponseAgeMs,
     onRequestWritten: async (_requestPath, requestId) => {
       const payload = buildWebhookPayload({ ...pendingRequest, requestId });
       try {

@@ -18,6 +18,7 @@ import {
   OPENAI_DESTINATION,
 } from '../src/adapters/openai/index.mjs';
 import { createOpenAiChatTransport, TransportError, DEFAULT_OPENAI_MODEL } from '../src/adapters/openai/transport.mjs';
+import { sealForTransport } from '../src/egress/gate-seal.mjs';
 import { createPatternDetector } from '../src/detection/pattern-detector.mjs';
 import { createTokenizingTransformer } from '../src/transformation/tokenizing-transformer.mjs';
 import { createInMemoryAuthorizationStore } from '../src/authorization/authorize.mjs';
@@ -404,7 +405,9 @@ test('the request body carries max_completion_tokens, never the deprecated max_t
     },
   });
 
-  await transport.send({ documentText: 'a document', prompt: PROMPT });
+  // A real transport only sends a gate-sealed payload; this test exercises
+  // the transport's own request shape, so it seals as the gate would.
+  await transport.send(sealForTransport({ documentText: 'a document', prompt: PROMPT }));
 
   assert.equal(requests.length, 1, 'expected exactly one provider call');
   const body = JSON.parse(requests[0].init.body);

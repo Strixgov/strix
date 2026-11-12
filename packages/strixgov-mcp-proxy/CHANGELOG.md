@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - unreleased
+
+### Changed
+- The Strix runtime dependencies (`@strixgov/tool-gateway`, `@strixgov/mcp-adapter`,
+  `@strixgov/capabilities-mcp-common`) are pinned to exact versions (0.5.2, 0.1.4 and
+  0.1.2) instead of ranges. `@strixgov/guard` launches a pinned proxy version; with
+  ranges underneath it, a new tool-gateway release still changed what every Guard
+  install ran. `@modelcontextprotocol/sdk` stays a range. A package-contract test
+  fails if a Strix dependency is given a range again.
+
+## [0.2.3] - 2026-11-07
+
+- `approval.requireSignedResponse` and `approval.approverKeys` (file and webhook approval types): approving responses must be signed by a listed approver key. Requires `@strixgov/tool-gateway` 0.5.1. Startup fails if signing is required without valid keys.
+
+## [0.2.2]
+
+### Fixed
+- The published package now ships its test suite (`test/`, except the monorepo-only
+  `installed-tarball.test.mjs`) and `scripts/preflight.mjs`, so `npm test` runs in an installed
+  copy. `scripts/run-tests.mjs` exits non-zero if no test files are found, if the runner reports
+  zero or skipped-only tests, or if fewer than 60 tests run (Node counts an empty test file as one
+  passing test).
+
 ## [0.2.1]
 
 ### Fixed

@@ -2,7 +2,7 @@
   "name": "@strixgov/governed-egress",
   "version": "0.1.0",
   "license": "Elastic-2.0",
-  "description": "Strix Governed AI Egress \u2014 data-release control immediately before external AI execution. Detects sensitive data, de-identifies by consistent tokenization, re-scans, and binds a single-use egress authorization to the exact sanitized artifact so the artifact authorized is provably the artifact released. Ships a self-hosted drop-in proxy (strix-egress-proxy), a container build, and a Claude Code prompt hook (strix-egress-prompt-hook). Elastic-2.0: free to self-host for your own use; see COMMERCIAL.md.",
+  "description": "Strix Governed AI Egress — data-release control immediately before external AI execution. Detects sensitive data, de-identifies by consistent tokenization, re-scans, and binds a single-use egress authorization to the exact sanitized artifact so the artifact authorized is provably the artifact released. Ships a self-hosted drop-in proxy (strix-egress-proxy), a container build, and a Claude Code prompt hook (strix-egress-prompt-hook). Elastic-2.0: free to self-host for your own use; see COMMERCIAL.md.",
   "keywords": [
     "strix",
     "ai-egress",
@@ -77,8 +77,5 @@
     "README.md",
     "COMMERCIAL.md",
     "LICENSE"
-  ],
-  "publishConfig": {
-    "access": "public"
-  }
+  ]
 }

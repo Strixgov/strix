@@ -80,7 +80,8 @@ for the exact wording.
    None of those are part of the ELv2 grant.
 3. **Enterprise features** a standard self-hosted deployment doesn't
    ship: SSO for approvers, KMS-backed signing keys, dedicated support,
-   custom MSA, SOC 2 / FedRAMP / regulatory attestations.
+   or custom contractual arrangements. Availability and scope require
+   separate written agreement; none is represented as shipped in v0.1.
 
 If unsure, email [`sales@strixgov.com`](mailto:sales@strixgov.com) —
 we'd rather clarify in advance than have surprises after deployment.

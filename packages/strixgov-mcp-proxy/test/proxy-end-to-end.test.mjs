@@ -713,3 +713,75 @@ test("approval.prompt (function) wins over approval.type (programmatic caller pr
     await ctx.cleanup();
   }
 });
+
+// --- Signed approvals (approval.requireSignedResponse) ---------------------
+// The file approver is the decision channel. With signing required, an
+// approving response written by anyone but an approver-key holder must not
+// reach the upstream.
+async function signedApprovalFixture() {
+  const cryptoMod = await import("node:crypto");
+  const { signApprovalResponse, approverKeyId, sha256Hex } = await import("@strixgov/tool-gateway");
+  const { publicKey, privateKey } = cryptoMod.generateKeyPairSync("ed25519");
+  const x = publicKey.export({ format: "jwk" }).x;
+  const kid = approverKeyId(x);
+  const requestDir = await tempDir("signed-approver");
+  const waitRequest = async () => {
+    for (let i = 0; i < 200; i++) {
+      const f = (await fs.readdir(requestDir)).find((n) => n.endsWith(".request.json"));
+      if (f) return { requestId: f.replace(".request.json", ""), text: await fs.readFile(path.join(requestDir, f), "utf8") };
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    throw new Error("no approval request appeared");
+  };
+  const write = (id, body) => fs.writeFile(path.join(requestDir, `${id}.response.json`), JSON.stringify(body));
+  const sign = (requestId, text) => {
+    const requestSha256 = sha256Hex(text);
+    const decidedAt = new Date().toISOString();
+    return { approved: true, requestSha256, decidedAt, kid, signature: signApprovalResponse({ privateKey, kid, requestId, requestSha256, approved: true, decidedAt }) };
+  };
+  const approval = { enabled: true, type: "file", requestDir, timeoutMs: 4000, pollIntervalMs: 20, requireSignedResponse: true, approverKeys: [{ publicKey: x, label: "alice" }] };
+  return { requestDir, waitRequest, write, sign, approval };
+}
+
+test("signed approvals: a correctly signed approval lets the write reach the upstream", async () => {
+  const f = await signedApprovalFixture();
+  const ctx = await startProxyWithApproval(f.approval);
+  try {
+    const call = ctx.consumer.callTool({ name: "write_thing", arguments: { id: "x" } });
+    const { requestId, text } = await f.waitRequest();
+    await f.write(requestId, f.sign(requestId, text));
+    const result = await call;
+    assert.equal(result.content[0].text, "executed write_thing");
+    assert.equal(ctx.upstreamCallLog.length, 1);
+  } finally {
+    await ctx.cleanup();
+    await fs.rm(f.requestDir, { recursive: true, force: true });
+  }
+});
+
+test("signed approvals: an unsigned approving response (self-approval) never reaches the upstream", async () => {
+  const f = await signedApprovalFixture();
+  const ctx = await startProxyWithApproval(f.approval);
+  try {
+    const call = ctx.consumer.callTool({ name: "write_thing", arguments: { id: "x" } });
+    const { requestId } = await f.waitRequest();
+    await f.write(requestId, { approved: true, approvedBy: "alice (human reviewer)" });
+    await assert.rejects(() => call, /denied|approval/i);
+    assert.equal(ctx.upstreamCallLog.length, 0, "unsigned approval must not execute the write");
+  } finally {
+    await ctx.cleanup();
+    await fs.rm(f.requestDir, { recursive: true, force: true });
+  }
+});
+
+test("signed approvals: requiring signatures with no approver keys refuses to start", async () => {
+  const requestDir = await tempDir("signed-misconfig");
+  try {
+    await assert.rejects(
+      () => startProxyWithApproval({ enabled: true, type: "file", requestDir, requireSignedResponse: true }),
+      /approverKeys/,
+    );
+  } finally {
+    await fs.rm(requestDir, { recursive: true, force: true });
+  }
+});

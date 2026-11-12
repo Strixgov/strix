@@ -576,7 +576,9 @@ export async function governDocumentEgress(input) {
   const { store, evidence } = deps;
   const { artifact, releaseText, prompt, policy, destination, purpose, detection, transformation } = prepared;
 
-  // 6. Mint the payload-bound, single-use authorization.
+  // 6. Mint the payload-bound, single-use authorization, bound to the
+  // principal the integrator supplied (tenant + actor). The gate refuses a
+  // release presented under any other principal (PRINCIPAL_MISMATCH).
   const releaseHash = sha256Hex(releaseText);
   const promptHash = sha256Hex(prompt);
   const authorization = mintEgressAuthorization({
@@ -585,6 +587,7 @@ export async function governDocumentEgress(input) {
     promptHash,
     destination,
     purpose,
+    principal: { tenant: input.tenant ?? null, actor: actor ?? null },
     ttlMs: deps.ttlMs,
     now: deps.now,
   });
@@ -597,6 +600,7 @@ export async function governDocumentEgress(input) {
     type: 'egress_authorized',
     artifactId: artifact.artifactId,
     actor: actor ?? null,
+    principalHash: authorization.principalHash,
     originalArtifactHash: prefixedHash(artifact.originalHash),
     releasedArtifactHash: prefixedHash(releaseHash),
     promptHash: prefixedHash(promptHash),

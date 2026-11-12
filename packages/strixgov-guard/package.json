@@ -1,7 +1,7 @@
 {
   "name": "@strixgov/guard",
-  "version": "0.1.1",
-  "description": "The seatbelt for MCP agents — one command wraps your MCP servers with Strix governance: writes require human approval, reads pass, every action produces a signed receipt.",
+  "version": "0.2.0",
+  "description": "The seatbelt for MCP agents — one command wraps your MCP servers with Strix governance: writes wait for an approval, reads pass, every action produces a signed receipt.",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -15,15 +15,18 @@
   "files": [
     "bin/",
     "src/",
+    "scripts/",
     "test/",
     "README.md",
+    "CHANGELOG.md",
+    "SECURITY.md",
     "LICENSE"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "scripts": {
-    "test": "node --test test/*.test.mjs"
+    "test": "node scripts/run-tests.mjs"
   },
   "keywords": [
     "mcp",

@@ -204,15 +204,21 @@ test('REQUIRE_APPROVAL and evaluate-REFUSED never reach redemption, and the hand
   });
 });
 
+// D4 (2026-11): once a consume request has been sent, no status code and no body
+// proves that Strix did not process it (an intermediary can answer after the
+// origin has). Every such answer is REDEMPTION_INDETERMINATE. Only a 409 whose body
+// is a Strix refusal with a well-formed reason code is a definite REFUSE. The
+// earlier UNAVAILABLE expectations for the 401, 500, 503, non-JSON, 200 and drop rows
+// are superseded; UNAVAILABLE now means no request was sent.
 for (const [label, consumeAnswer, expectStatus, expectCode] of [
   ['Strix refuses the consumption (replay / mismatch / revoked)', { status: 409, body: { status: 'REFUSED', reasonCode: 'GRANT_ALREADY_CONSUMED', detail: 'spent', refusalEvidenceId: 'xg:test-0001:refusal:1' } }, 'REFUSE', 'GRANT_ALREADY_CONSUMED'],
-  ['Strix cannot answer (500)', { status: 500, body: { error: { code: 'INTERNAL', message: 'boom', status: 500 } } }, 'UNAVAILABLE', 'INTERNAL'],
-  ['auth rejects a string error with a code (401)', { status: 401, body: { error: 'Invalid service credential', code: 'INVALID_CREDENTIAL' } }, 'UNAVAILABLE', 'INVALID_CREDENTIAL'],
-  ['auth rejects a string error without a code (401)', { status: 401, body: { error: 'Unknown tenant' } }, 'UNAVAILABLE', 'HTTP_401'],
-  ['Strix is dormant (503)', { status: 503, body: { error: { code: 'AUTHORITY_DORMANT', message: 'off', status: 503 } } }, 'UNAVAILABLE', 'AUTHORITY_DORMANT'],
-  ['the consume response is not JSON', { status: 200, raw: 'not json' }, 'UNAVAILABLE', 'MALFORMED_RESPONSE'],
-  ['the consume response is a 200 without CONSUMED', { status: 200, body: { status: 'OK' } }, 'UNAVAILABLE', 'HTTP_200'],
-  ['the connection drops mid-consume', 'DROP', 'UNAVAILABLE', 'TRANSPORT_ERROR'],
+  ['Strix cannot answer (500)', { status: 500, body: { error: { code: 'INTERNAL', message: 'boom', status: 500 } } }, 'REDEMPTION_INDETERMINATE', 'INTERNAL'],
+  ['auth rejects a string error with a code (401)', { status: 401, body: { error: 'Invalid service credential', code: 'INVALID_CREDENTIAL' } }, 'REDEMPTION_INDETERMINATE', 'INVALID_CREDENTIAL'],
+  ['auth rejects a string error without a code (401)', { status: 401, body: { error: 'Unknown tenant' } }, 'REDEMPTION_INDETERMINATE', 'HTTP_401'],
+  ['Strix is dormant (503)', { status: 503, body: { error: { code: 'AUTHORITY_DORMANT', message: 'off', status: 503 } } }, 'REDEMPTION_INDETERMINATE', 'AUTHORITY_DORMANT'],
+  ['the consume response is not JSON', { status: 200, raw: 'not json' }, 'REDEMPTION_INDETERMINATE', 'MALFORMED_RESPONSE'],
+  ['the consume response is a 200 without CONSUMED', { status: 200, body: { status: 'OK' } }, 'REDEMPTION_INDETERMINATE', 'HTTP_200'],
+  ['the connection drops mid-consume', 'DROP', 'REDEMPTION_INDETERMINATE', 'TRANSPORT_ERROR'],
 ]) {
   test(`${label}: the handler is not entered`, async () => {
     const p = proposal();
@@ -229,7 +235,7 @@ for (const [label, consumeAnswer, expectStatus, expectCode] of [
       assert.equal(r.handlerEntered, false);
       assert.equal(c.entered, 0);
       assert.equal(r.status === 'REFUSE' ? r.reasonCode : r.code, expectCode);
-      if (r.status === 'UNAVAILABLE' && typeof consumeAnswer?.body?.error === 'string') assert.equal(r.detail, `${expectCode}: ${consumeAnswer.body.error}`);
+      if ((r.status === 'UNAVAILABLE' || r.status === 'REDEMPTION_INDETERMINATE') && typeof consumeAnswer?.body?.error === 'string') assert.equal(r.detail, `${expectCode}: ${consumeAnswer.body.error}`);
       if (r.status === 'REFUSE') assert.equal(r.refusalEvidenceId, 'xg:test-0001:refusal:1');
       assert.ok(!seen.some((s) => s.url.includes('/outcome')), 'no outcome is reported for a handler that never ran');
     });
@@ -333,7 +339,13 @@ test('a revoked grant or key in the current revocation document is refused befor
   }
 });
 
-test('a handler that throws after PERMIT is reported FAILED with handlerEntered true, never EXECUTED', async () => {
+// SUPERSEDED (D4, 2026-11): this test asserted outcome FAILED, and an earlier D4
+// draft still recorded UNKNOWN as a FAILED terminal server-side. A handler that
+// throws after PERMIT does not establish that its consequence did not occur, so
+// the status is PERMIT_HANDLER_THREW and the report is UNKNOWN, which Strix
+// acknowledges without recording a terminal state. The assertions are inverted
+// deliberately; the superseded reasoning is kept here rather than deleted.
+test('a handler that throws after PERMIT is PERMIT_HANDLER_THREW with consequenceEstablished false, never FAILED or EXECUTED', async () => {
   const p = proposal();
   const g = grantFor(p);
   const reports = [];
@@ -343,15 +355,17 @@ test('a handler that throws after PERMIT is reported FAILED with handlerEntered 
     if (url.endsWith('/consume')) return { body: { status: 'CONSUMED', grantId: 'xg:test-0001', consumedAt: new Date().toISOString(), strixDecisionId: 'cmdecision0001' } };
     if (url.endsWith('/outcome')) {
       reports.push(body);
-      return { body: { status: 'RECORDED', strixDecisionId: 'cmdecision0001', state: 'FAILED', replay: false, signed: true, evidenceId: 'cmdecision0001', evidenceHash: 'b'.repeat(64), proofPath: '/api/public/proof/cmdecision0001' } };
+      // Strix does not record UNKNOWN as a terminal state (see service.ts).
+      return { body: { status: 'NOT_TERMINAL', strixDecisionId: 'cmdecision0001', state: 'EXECUTING', reasonCode: 'UNKNOWN_OUTCOME_NOT_TERMINAL', grantId: 'xg:test-0001' } };
     }
     return { body: { status: 'GRANTED', grant: g } };
   }, async ({ client }) => {
     const r = await executeGoverned({ client, proposal: p, presenter: 'handler:1', handler: async () => { throw new Error('processor timeout'); } });
-    assert.equal(r.status, 'PERMIT_HANDLER_FAILED');
+    assert.equal(r.status, 'PERMIT_HANDLER_THREW');
     assert.equal(r.handlerEntered, true);
-    assert.deepEqual(reports.map((x) => [x.outcome, x.handlerEntered]), [['FAILED', true]]);
-    assert.equal(r.outcome.state, 'FAILED');
+    assert.equal(r.consequenceEstablished, false);
+    assert.deepEqual(reports.map((x) => [x.outcome, x.handlerEntered]), [['UNKNOWN', true]]);
+    assert.equal(r.outcome.status, 'NOT_TERMINAL', 'an UNKNOWN report is not recorded as a terminal state');
   });
 });
 

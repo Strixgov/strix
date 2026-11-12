@@ -18,3 +18,15 @@ test("every script file the `test` script runs ships in the tarball", () => {
     assert.ok(covered(rel), `${rel} is used by \`npm test\` but excluded by package.json "files"`);
   }
 });
+
+test("Strix dependencies are pinned exactly, so Guard's pinned proxy version fixes the whole Strix stack", () => {
+  // In this repository they are `workspace:*`, which pnpm publishes as the exact
+  // current version; in an installed copy they must already be exact versions.
+  // A range here means a new tool-gateway release changes what an existing Guard
+  // install runs (finding 1 of the #2810 evidence run).
+  const strix = Object.entries(pkg.dependencies).filter(([n]) => n.startsWith("@strixgov/"));
+  assert.ok(strix.length >= 3, "expected the Strix runtime dependencies");
+  for (const [name, spec] of strix) {
+    assert.ok(spec === "workspace:*" || /^\d+\.\d+\.\d+$/.test(spec), `${name} is "${spec}"; pin it exactly (workspace:*)`);
+  }
+});

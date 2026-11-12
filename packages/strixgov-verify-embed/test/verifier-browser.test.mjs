@@ -11,7 +11,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { verify, buildCanonicalPayload, deriveComplianceFlags } from "../src/verifier-browser.mjs";
+import { verify, buildCanonicalPayload, deriveComplianceFlags, declarationRefusal } from "../src/verifier-browser.mjs";
+import { render } from "../src/templates.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const FIXTURES = join(
@@ -234,4 +235,54 @@ test("buildCanonicalPayload byte-parity with verified.json", () => {
   assert.equal(parsed.signingKeyId, "strix-test-2026-05");
   assert.equal(parsed.regulatoryContext.complianceMode, null);
   assert.equal(Object.keys(parsed.regulatoryContext)[0], "complianceMode");  // Console-order
+});
+
+// ── Declaration refusals (#2835 / #2836) ────────────────────────────
+
+test("declarationRefusal refuses any algorithm other than exactly Ed25519", () => {
+  for (const alg of ["RS256", "ed25519", "", 25519, "Ed25519 "]) {
+    assert.equal(declarationRefusal({ signatureAlgorithm: alg }), "UNSUPPORTED_ALGORITHM", String(alg));
+  }
+  assert.equal(declarationRefusal({ signatureAlgorithm: "Ed25519" }), null);
+  assert.equal(declarationRefusal({}), null);
+});
+
+test("declarationRefusal refuses schema versions other than 1 without coercion", () => {
+  for (const v of ["1.0", "v1", " 1", 2, "2", true, { v: 1 }]) {
+    assert.equal(declarationRefusal({ declaredSchemaVersion: v }), "UNSUPPORTED_SCHEMA_VERSION", JSON.stringify(v));
+  }
+  assert.equal(declarationRefusal({ schemaVersion: "2" }), "UNSUPPORTED_SCHEMA_VERSION");
+  assert.equal(declarationRefusal({ schemaVersion: 1, declaredSchemaVersion: "1" }), null);
+  // Schema first, then algorithm.
+  assert.equal(declarationRefusal({ schemaVersion: "2", signatureAlgorithm: "RS256" }), "UNSUPPORTED_SCHEMA_VERSION");
+  // With signed bytes present, the record-level schemaVersion is a projection.
+  assert.equal(declarationRefusal({ schemaVersion: "2", signedPayload: "{}" }), null);
+  assert.equal(declarationRefusal({ declaredSchemaVersion: "2", signedPayload: "{}" }), "UNSUPPORTED_SCHEMA_VERSION");
+});
+
+test("verify refuses a declared RS256 record before fetching the JWKS", async (t) => {
+  const calls = installMockFetch([{ ...VERIFIED, signatureAlgorithm: "RS256" }]);
+  t.after(restoreFetch);
+  const result = await verify(VERIFIED.evidenceId ?? VERIFIED.id, {
+    proofBase: "https://test.example",
+    jwksUrl: "https://test.example/.well-known/strix-jwks.json",
+  });
+  assert.equal(result.verificationStatus, "UNVERIFIABLE");
+  assert.equal(result.verificationReason, "UNSUPPORTED_ALGORITHM");
+  assert.equal(result.signatureValid, false);
+  assert.ok(!calls.some((u) => String(u).includes("strix-jwks")), "JWKS must not be fetched");
+  assert.match(render("x", result), /signature algorithm other than Ed25519/);
+});
+
+test("verify refuses a declared schema version 2 before fetching the JWKS", async (t) => {
+  const calls = installMockFetch([{ ...VERIFIED, declaredSchemaVersion: "2" }]);
+  t.after(restoreFetch);
+  const result = await verify(VERIFIED.evidenceId ?? VERIFIED.id, {
+    proofBase: "https://test.example",
+    jwksUrl: "https://test.example/.well-known/strix-jwks.json",
+  });
+  assert.equal(result.verificationStatus, "COMPLIANCE_VIOLATION");
+  assert.equal(result.verificationReason, "UNSUPPORTED_SCHEMA_VERSION");
+  assert.ok(!calls.some((u) => String(u).includes("strix-jwks")), "JWKS must not be fetched");
+  assert.match(render("x", result), /not a signature failure/);
 });
