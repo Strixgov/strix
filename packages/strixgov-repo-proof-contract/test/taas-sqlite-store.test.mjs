@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
+import {SqliteTaasStore} from '../src/taas-sqlite-store.mjs';
+import {TaasPlanningCoordinator} from '../src/taas-planning-coordinator.mjs';
+import {candidateIdentity} from '../src/taas-candidate.mjs';
+const candidate=()=>{const c={schemaVersion:'taas-candidate-v1',sourceKind:'repository',origin:'https://github.com/example/repo',sourceRevision:'a'.repeat(40),originDigest:'b'.repeat(64),capabilityIntent:'fixture',rightsReview:{status:'eligible',evidenceRefs:['synthetic:license']},routeOptions:[{route:'api_adapter',estimatedBuildCost:1,annualOperatingCost:1,rightsReview:{status:'eligible',evidenceRefs:['synthetic:license']}}]};c.candidateId=candidateIdentity(c);return c;};
+test('SQLite persists across connection restart and rejects competing stale CAS',async()=>{const dir=mkdtempSync(join(tmpdir(),'taas-sqlite-'));const path=join(dir,'fixture.db');let a,b;try{a=new DatabaseSync(path);b=new DatabaseSync(path);const s1=new SqliteTaasStore(a),s2=new SqliteTaasStore(b),p1=new TaasPlanningCoordinator({store:s1}),p2=new TaasPlanningCoordinator({store:s2}),c=candidate();assert.equal((await p1.discover(c)).ok,true);assert.equal((await p2.discover(c)).duplicate,true);const results=await Promise.all([p1.triage(c.candidateId,0,{actor:'a',evidenceRef:'e1'}),p2.triage(c.candidateId,0,{actor:'b',evidenceRef:'e2'})]);assert.equal(results.filter(x=>x.ok).length,1);a.close();b.close();a=new DatabaseSync(path);const s3=new SqliteTaasStore(a);assert.equal((await s3.get(c.candidateId)).state,'TRIAGED');assert.equal((await s3.get(c.candidateId)).revision,1);assert.equal((await new TaasPlanningCoordinator({store:s3}).qualify(c.candidateId,1,{actor:'r',evidenceRef:'e'})).state,'QUALIFIED');}finally{try{a?.close()}catch{}try{b?.close()}catch{}rmSync(dir,{recursive:true,force:true});}});
+test('SQLite CAS requires explicit state and exact revision increment',async()=>{const db=new DatabaseSync(':memory:');try{const s=new SqliteTaasStore(db),c=candidate();await s.insertIfAbsent(c.candidateId,{candidate:c,state:'DISCOVERED',revision:0});await assert.rejects(()=>s.compareAndSwap(c.candidateId,0,{candidate:c,state:'TRIAGED',revision:2},'DISCOVERED'),/INVALID_CAS/);assert.equal(await s.compareAndSwap(c.candidateId,0,{candidate:c,state:'TRIAGED',revision:1},'QUALIFIED'),false);}finally{db.close();}});

@@ -44,7 +44,7 @@
     "directory": "packages/strixgov-claude-code"
   },
   "dependencies": {
-    "@strixgov/tool-gateway": "0.5.0",
+    "@strixgov/tool-gateway": "0.5.2",
     "@strixgov/capabilities-claude-code": "0.1.0"
   },
   "engines": {

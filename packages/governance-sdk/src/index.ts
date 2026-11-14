@@ -10,6 +10,10 @@ export type { TokenValidationResult } from "./token/sdt.js";
 
 export { buildExecutionRecord, computeRecordHash, verifyRecordIntegrity, MemoryEvidenceSink, FileEvidenceSink, createEvidenceSink } from "./evidence/evidence.js";
 
+// Frozen cross-integration exact-action contract. This is a deterministic schema /
+// hashing primitive only; it grants no authority and performs no execution.
+export { EXECUTION_ENVELOPE_V1, EXECUTION_ENVELOPE_CANONICALIZATION, CAPABILITY_RESOLUTION_COMMITMENT_V1, finalizeCapabilityResolutionV1, assertCommittedCapabilityResolutionV1, buildExecutionEnvelopeV1, assertExecutionEnvelopeV1, canonicalizeExecutionEnvelopeV1, hashExecutionEnvelopeV1, hashExecutionPayloadV1, executionCommitmentCoreV1, hashExecutionCommitmentV1 } from "./execution-envelope/index.js";
+
 // Signed Evidence v1 truthful verification contract (R3).
 export { SE_V1_SIGNATURE_ALGORITHM, EVIDENCE_VERIFICATION_CONTRACT_VERSION, isFullyVerified } from "./evidence/verification-contract.js";
 export type { VerificationLayerStatus, EvidenceVerificationStatus, VerificationCheck, EvidenceVerificationContractV2 } from "./evidence/verification-contract.js";

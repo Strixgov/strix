@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {candidateIdentity,validateCandidate,compareRoutes} from '../src/taas-candidate.mjs';
+function candidate(){const c={schemaVersion:'taas-candidate-v1',sourceKind:'repository',origin:'https://github.com/example/repo',sourceRevision:'a'.repeat(40),originDigest:'b'.repeat(64),capabilityIntent:'fixture',rightsReview:{status:'eligible',evidenceRefs:['fixture:rights']},routeOptions:[{route:'api_adapter',estimatedBuildCost:1,annualOperatingCost:2,rightsReview:{status:'eligible',evidenceRefs:['fixture:route']}}]};c.candidateId=candidateIdentity(c);return c;}
+test('origin rejects credentials, fragments, invalid schemes and empty host',()=>{for(const origin of ['https://','https://user:secret@example.com/x','https://example.com/x#fragment','http://example.com/x','https://example.com.:443/x']){const c=candidate();c.origin=origin;c.candidateId=candidateIdentity(c);assert.equal(validateCandidate(c).valid,false,origin);}});
+test('route-specific rights review is mandatory',()=>{const c=candidate();delete c.routeOptions[0].rightsReview;assert.equal(validateCandidate(c).valid,false);assert.equal(compareRoutes(c).status,'HOLD');});
+test('duplicate routes refused to prevent ambiguous route selection',()=>{const c=candidate();c.routeOptions.push(structuredClone(c.routeOptions[0]));assert.equal(validateCandidate(c).valid,false);});
+test('empty or duplicate evidence references refused',()=>{const c=candidate();c.rightsReview.evidenceRefs=[''];assert.equal(validateCandidate(c).valid,false);const d=candidate();d.routeOptions[0].rightsReview.evidenceRefs=['same','same'];assert.equal(validateCandidate(d).valid,false);});

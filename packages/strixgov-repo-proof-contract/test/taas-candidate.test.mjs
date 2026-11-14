@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {candidateIdentity,validateCandidate,assessCandidate,compareRoutes} from '../src/taas-candidate.mjs';
+const rev='a'.repeat(40);
+const base=()=>{const c={schemaVersion:'taas-candidate-v1',sourceKind:'repository',origin:'https://github.com/example/project',sourceRevision:rev,originDigest:'b'.repeat(64),capabilityIntent:'Durable workflow',rightsReview:{status:'eligible',evidenceRefs:['license-review:1']},routeOptions:[{route:'reuse_existing',estimatedBuildCost:100,annualOperatingCost:20,rightsReview:{status:'eligible',evidenceRefs:['license-review:1']}},{route:'api_adapter',estimatedBuildCost:50,annualOperatingCost:60,rightsReview:{status:'eligible',evidenceRefs:['license-review:1']}},{route:'open_source_compose',estimatedBuildCost:150,annualOperatingCost:10,rightsReview:{status:'eligible',evidenceRefs:['license-review:1']}}]};c.candidateId=candidateIdentity(c);return c;};
+test('valid qualified planning candidate and three-route comparison',()=>{const c=base();assert.equal(validateCandidate(c).valid,true);assert.equal(assessCandidate(c).status,'QUALIFIED_FOR_PLANNING');const r=compareRoutes(c);assert.equal(r.status,'PLANNING_ONLY');assert.deepEqual(r.routes.map(x=>x.route),['reuse_existing','open_source_compose','api_adapter']);});
+test('missing rights fails closed',()=>{const c=base();c.rightsReview={status:'pending',evidenceRefs:[]};assert.equal(assessCandidate(c).status,'HOLD');assert.equal(compareRoutes(c).routes.length,0);});
+test('mutable repository revision rejected',()=>{const c=base();c.sourceRevision='main';c.candidateId=candidateIdentity(c);assert.equal(validateCandidate(c).valid,false);});
+test('authority and proof fields forbidden',()=>{for(const field of ['executionToken','approvalToken','evidenceRecord','claimRung','authorizedActions','deploymentTarget']){const c=base();c[field]=null;assert.ok(validateCandidate(c).errors.includes('AUTHORITY_OR_PROOF_FORBIDDEN'));}});
+test('candidate identity deterministic and changed revision distinct',()=>{const c=base();assert.equal(candidateIdentity(c),candidateIdentity(c));const d={...c,sourceRevision:'c'.repeat(40)};assert.notEqual(candidateIdentity(c),candidateIdentity(d));});
+test('malformed and negative cost route refused',()=>{assert.equal(validateCandidate(null).valid,false);const c=base();c.routeOptions[0].estimatedBuildCost=-1;assert.equal(validateCandidate(c).valid,false);});
+test('nonfinite and unreasonable horizon held',()=>{assert.equal(compareRoutes(base(),Infinity).status,'HOLD');assert.equal(compareRoutes(base(),11).status,'HOLD');});
+
+test('route rights fail closed without silently selecting a cheap unlicensed route',()=>{const c=base();c.routeOptions[0].rightsReview={status:'pending',evidenceRefs:[]};const r=compareRoutes(c);assert.equal(r.status,'PLANNING_ONLY');assert.ok(r.excludedRoutes.includes('reuse_existing'));assert.ok(!r.routes.some(x=>x.route==='reuse_existing'));});
+test('all routes unreviewed means HOLD',()=>{const c=base();for(const r of c.routeOptions)r.rightsReview={status:'pending',evidenceRefs:[]};assert.equal(compareRoutes(c).status,'HOLD');});

@@ -33,7 +33,7 @@
     }
   },
   "devDependencies": {
-    "@strixgov/tool-gateway": "0.5.0",
+    "@strixgov/tool-gateway": "0.5.2",
     "@strixgov/capabilities-mcp-common": "0.1.2"
   },
   "keywords": [
