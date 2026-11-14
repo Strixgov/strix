@@ -12,7 +12,8 @@ documents useful, by de-identifying **before** egress under a payload-bound,
 single-use authorization that the egress gate re-verifies byte-for-byte.
 
 **Self-hosted, publish-ready, not yet published.** `"private": true` was
-lifted on 2026-09-27 (Elastic-2.0 — free to self-host for your own use;
+lifted on 2026-09-27 (Strix Proprietary Software License from 2026-11-13: source open to
+inspection and verification, production use under an Agreement;
 see `COMMERCIAL.md`). No production callers in the Strix Console and not
 registered in the Console kernel; kernel registration is Phase B (below).
 Everything here runs air-gapped except the one optional live provider
