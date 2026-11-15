@@ -18,10 +18,10 @@ test('governed-egress is a publishable npm package under its exact identity',()=
   assert.equal(pkg.repository?.url,'https://github.com/Strixgov/strix');
   assert.equal(pkg.repository?.directory,'packages/governed-egress');
 });
-test('publishable distribution keeps the Elastic-2.0 source license',()=>{
-  assert.equal(pkg.license,'Elastic-2.0');
+test('publishable distribution carries the Strix Proprietary Software License',()=>{
+  assert.equal(pkg.license,'SEE LICENSE IN LICENSE');
   assert.equal(existsSync(join(root,'LICENSE')),true);
-  assert.match(readFileSync(join(root,'LICENSE'),'utf8'),/^Elastic License 2\.0/m);
+  assert.match(readFileSync(join(root,'LICENSE'),'utf8'),/^# Strix Proprietary Software License/m);
   assert.ok(pkg.files.includes('LICENSE')&&pkg.files.includes('COMMERCIAL.md'),'LICENSE and COMMERCIAL.md ship in the tarball');
 });
 test('the published file set excludes tests, fixtures and demos',()=>{

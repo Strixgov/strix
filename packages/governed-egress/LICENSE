@@ -1,91 +1,73 @@
-Elastic License 2.0
+# Strix Proprietary Software License
 
-Acceptance
+Version 1.0 · Effective 22 October 2026
 
-By using the software, you agree to all of the terms and conditions below.
+Copyright (c) 2026 Strix. All rights reserved.
 
-Copyright License
+This license covers `@strixgov/governed-egress` and every container image, archive or build produced from it, including the self-hosted egress proxy, the Claude Code prompt hook, scripts, tests and documentation in `packages/governed-egress` (together, the **"Software"**). Strix (**"Strix"**) owns the Software. It is licensed, not sold.
 
-The licensor grants you a non-exclusive, royalty-free, worldwide,
-non-sublicensable, non-transferable license to use, copy, distribute, make
-available, and prepare derivative works of the software, in each case subject
-to the limitations and conditions below.
+The Software is proprietary and confidential. Apart from the rights expressly granted below, Strix reserves all rights, including all copyright, trade secret, patent and trademark rights. No right is granted by implication, estoppel or otherwise.
 
-Limitations
+## 1. Definitions
 
-You may not provide the software to third parties as a hosted or managed service,
-where the service provides users with access to any substantial set of the
-features or functionality of the software.
+- **"Agreement"** means a written agreement signed by Strix that authorizes your use of the Software, such as an Order Form under the Strix Master Subscription and Services Agreement.
+- **"You"** means the individual or legal entity that receives the Software, and its employees and contractors who act on its behalf and are bound by obligations at least as protective as these.
+- **"Evaluation Period"** means 30 days from the day you first receive the Software from Strix, or another period Strix states in writing.
+- **"Production Use"** means any use with live, real or production data, any use that serves end users or third parties, or any use beyond internal evaluation.
 
-You may not move, change, disable, or circumvent the license key functionality
-in the software, and you may not remove or obscure any functionality in the
-software that is protected by the license key.
+## 2. What you may do
 
-You may not alter, remove, or obscure any licensing, copyright, or other
-notices of the licensor in the software. Any use of the licensor's trademarks
-is subject to applicable law.
+**2.1 Under an Agreement.** If you have an Agreement, you may use the Software only as that Agreement and its Order Forms allow. If this license and the Agreement conflict, the Agreement controls.
 
-Patents
+**2.2 Evaluation.** If Strix gave you the Software for evaluation and you have no Agreement, then for the Evaluation Period you may install and run it internally, in nonproduction environments, using synthetic or test data only, solely to decide whether to buy a license or services from Strix.
 
-The licensor grants you a license, under any patent claims the licensor can
-license, or becomes able to license, to make, have made, use, sell, offer for
-sale, import and have imported the software, in each case subject to the
-limitations and conditions in this license. This license does not cover any
-patent claims that you cause to be infringed by modifications or additions to
-the software. If you or your company make any written claim that the software
-infringes or contributes to infringement of any patent, your patent license
-for the software granted under these terms ends immediately. If your company
-makes such a claim, your patent license ends immediately for work on behalf
-of your company.
+**2.3 Verification.** Independent verification is part of what Strix sells, so even during evaluation you may:
+1. read and inspect the source code;
+2. rebuild it, compute and compare hashes and checksums, and run the included tests, fixtures and verification scripts; and
+3. share your verification method and results, including logs, hashes and pass/fail outcomes, with your auditors, regulators and professional advisers, and publish them, **provided** you do not publish or distribute the Software or substantial parts of it.
 
-Notices
+## 3. What you may not do
 
-You must ensure that anyone who gets a copy of any part of the software from
-you also gets a copy of these terms.
+Unless an Agreement expressly allows it, you may not:
+1. copy, distribute, sell, sublicense, lend, rent, publish or otherwise make the Software available to any third party;
+2. put the Software to Production Use;
+3. offer the Software, or any functionality of it, to third parties as a hosted, managed or outsourced service;
+4. modify the Software or create derivative works, except for local changes needed to perform the verification in section 2.3, which you may not distribute;
+5. use the Software, its source code or its documentation to design, build or train a product or service that competes with Strix;
+6. remove, alter or obscure any copyright, license, trademark or confidentiality notice;
+7. bypass, disable or interfere with any license key, entitlement check or other technical control in the Software; or
+8. use the Software for an unlawful purpose or in breach of any third party's rights.
 
-If you modify the software, you must include in any modified copies of the
-software prominent notices stating that you have modified the software.
+## 4. Confidentiality
 
-No Other Rights
+The non-public parts of the Software, including its source code and any non-public documentation, are Strix's confidential information. You must protect them with at least reasonable care, and use them only as this license allows. This does not apply to information that is or becomes public through no fault of yours, that you already lawfully had, or that you developed independently without using the Software.
 
-These terms do not imply any licenses other than those expressly granted in
-these terms.
+## 5. Third-party and open-source components
 
-Termination
+The Software includes third-party components that are licensed under their own terms (see the notices that ship with the Software and each component's own license). Those terms govern those components. This license does not restrict any right those terms give you.
 
-If you use the software in violation of these terms, such use is not licensed,
-and your licenses will automatically terminate. If the licensor provides you
-with a notice of your violation, and you cease all violation of this license
-no later than 30 days after you receive that notice, your licenses will be
-reinstated retroactively. However, if you violate these terms after such
-reinstatement, any additional violation of these terms will cause your
-licenses to terminate automatically and permanently.
+## 6. Feedback
 
-No Liability
+If you give Strix suggestions or feedback about the Software, Strix may use them without restriction or obligation to you.
 
-As far as the law allows, the software comes as is, without any warranty or
-condition, and the licensor will not be liable to you for any damages arising
-out of these terms or the use or nature of the software, under any kind of
-legal claim.
+## 7. Termination
 
-Definitions
+Evaluation rights end automatically when the Evaluation Period ends. All rights under this license end automatically if you breach it. Strix may also end any evaluation at any time by giving notice. When your rights end, you must stop using the Software and delete or destroy every copy in your possession or control, except your verification results under section 2.3. Sections 3 to 10 survive termination.
 
-The "licensor" is the entity offering these terms, and the "software" is the
-software the licensor makes available under these terms, including any portion
-of it.
+## 8. No warranty
 
-"you" refers to the individual or entity agreeing to these terms.
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTY OF ANY KIND, EXPRESS, IMPLIED OR STATUTORY, INCLUDING ANY WARRANTY OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, NON-INFRINGEMENT OR ACCURACY, EXCEPT AS EXPRESSLY STATED IN AN AGREEMENT. STRIX DOES NOT WARRANT THAT THE SOFTWARE WILL PREVENT ANY DISCLOSURE OF DATA, MEET ANY REGULATORY REQUIREMENT, OR OPERATE WITHOUT INTERRUPTION OR ERROR.
 
-"your company" is any legal entity, sole proprietorship, or other kind of
-organization that you work for, plus all organizations that have control over,
-are under the control of, or are under common control with that organization.
-"control" means ownership of substantially all the assets of an entity, or
-the power to direct its management and policies by vote, contract, or
-otherwise. Control can be direct or indirect.
+## 9. Limitation of liability
 
-"your licenses" are all the licenses granted to you for the software under
-these terms.
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, AND EXCEPT AS EXPRESSLY STATED IN AN AGREEMENT, STRIX WILL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY OR PUNITIVE DAMAGES, OR FOR ANY LOSS OF DATA, PROFITS, REVENUE OR GOODWILL, ARISING FROM THIS LICENSE OR THE SOFTWARE, EVEN IF ADVISED OF THEIR POSSIBILITY. STRIX'S TOTAL LIABILITY UNDER THIS LICENSE WILL NOT EXCEED ONE HUNDRED US DOLLARS (USD $100).
 
-"use" means anything you do with the software requiring one of your licenses.
+## 10. General
 
-"trademark" means trademarks, service marks, and similar rights.
+- **Remedies.** A breach of sections 3 or 4 may cause Strix irreparable harm. Strix may seek injunctive relief in addition to any other remedy.
+- **Export.** You must comply with all applicable export control and sanctions laws.
+- **Governing law.** The governing law and venue stated in your Agreement apply. If there is no Agreement, the laws of the U.S. state in which Strix has its principal place of business apply, excluding conflict-of-laws rules, and the state and federal courts located there have exclusive jurisdiction.
+- **Earlier versions.** This license applies to every version of the Software released on or after the effective date above. Copies of earlier versions that someone lawfully received under a different license remain governed by that license, but only as to those copies.
+- **Entire terms.** This license, together with any Agreement, is the entire agreement about the Software. A waiver is effective only in writing. If any provision is unenforceable, the rest remains in effect.
+
+Licensing questions: sales@strixgov.com
