@@ -5,6 +5,14 @@ All notable changes to `@strixgov/mcp-adapter` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - unreleased
+
+### Fixed
+- The published package ships `scripts/` and `test/` (except the monorepo-only
+  `installed-tarball.test.mjs`), so `npm test` runs in an installed copy instead
+  of failing on a missing `scripts/preflight.mjs`. The suite needs the
+  `@strixgov/tool-gateway` peer installed.
+
 ## [0.1.4]
 
 A tool that reports an error is now recorded as failed. No change to the

@@ -102,7 +102,7 @@ A new **published** package under `packages/` that is missing from the linter's
 
 | Package | Path | License | Boundary |
 |---|---|---|---|
-| `@strixgov/governed-egress` | `packages/governed-egress` | Elastic-2.0 | Protected data-release runtime; local single-use artifact authorization. Source distribution does not establish npm/container publication or production acceptance. |
+| `@strixgov/governed-egress` | `packages/governed-egress` | Strix Proprietary Software License | Protected data-release runtime; local single-use artifact authorization. Source distribution does not establish npm/container publication or production acceptance. |
 | `@strixgov/execution-authority` | `packages/strixgov-execution-authority` | MIT | Open execution-authority contract and verification surface; does not distribute the private issuer or kernel. |
 
 These classifications follow upstream's license-parity policy. Registry

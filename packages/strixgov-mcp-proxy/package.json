@@ -21,7 +21,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@strixgov/capabilities-mcp-common": "0.1.2",
-    "@strixgov/mcp-adapter": "0.1.4",
+    "@strixgov/mcp-adapter": "0.1.5",
     "@strixgov/tool-gateway": "0.5.2"
   },
   "devDependencies": {

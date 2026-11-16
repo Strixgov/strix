@@ -4,9 +4,11 @@ This repository is the **public release surface** for the open-source
 pieces of [Strix](https://www.strixgov.com), an execution-control system
 for AI agents. Everything here runs locally and needs no Strix account.
 The trust primitives — the verifier, the tool-gateway, and the capability
-packs — are **MIT-licensed**; the one MCP runtime adapter
-(`@strixgov/mcp-adapter`) is source-available under **Elastic License 2.0**
-(free to use, not to resell as a competing managed service). See
+packs — are **MIT-licensed**. The MCP runtime packages
+(`@strixgov/mcp-adapter`, `@strixgov/mcp-proxy`) are source-available under
+**Elastic License 2.0** (free to use, not to resell as a competing managed
+service). `@strixgov/governed-egress` is source-available under the **Strix
+Proprietary Software License**: production use needs a signed Agreement. See
 [LICENSING_BOUNDARY.md](LICENSING_BOUNDARY.md).
 
 It is a mirror, not the source of truth — the canonical code lives
@@ -48,7 +50,7 @@ not resolve them yet. Listed so the set is complete rather than flattering.
 | [`@strixgov/mcp-credentials`](packages/strixgov-mcp-credentials/) | OS-keychain credential store for upstream MCP server tokens. Store once, never re-paste. |
 | [`@strixgov/healthcare-demo`](packages/strixgov-healthcare-demo/) | Healthcare governance demo surface. Synthetic data only. |
 | [`@strixgov/repo-proof-contract`](packages/strixgov-repo-proof-contract/) | Language-neutral contract for the Repo-to-Proof manifest. The JSON Schema is the source; the TypeScript and Python bindings are generated from it, and `npm run check:bindings` re-derives them to prove the committed copies still match. |
-| [`@strixgov/governed-egress`](packages/governed-egress/) | Governed AI Egress, self-hosted: a drop-in proxy for OpenAI- and Anthropic-shaped chat calls that detects identifiers, tokenizes them before release, re-scans, and releases only the exact bytes it authorized; a container build; and a Claude Code prompt hook. A clean result means no findings by its detector, not that the text contains no sensitive data. Elastic-2.0. |
+| [`@strixgov/governed-egress`](packages/governed-egress/) | Governed AI Egress, self-hosted: a drop-in proxy for OpenAI- and Anthropic-shaped chat calls that detects identifiers, tokenizes them before release, re-scans, and releases only the exact bytes it authorized; a container build; and a Claude Code prompt hook. A clean result means no findings by its detector, not that the text contains no sensitive data. Strix Proprietary Software License. |
 
 Each package is self-contained under `packages/<name>/`, at the exact
 path its published `package.json` declares in `repository.directory`, so
@@ -139,8 +141,10 @@ cd packages/strixgov-verifier && npm test
 Two-tier, and frozen in CI (`scripts/lint-license-parity.mjs`). The open
 trust primitives — `@strixgov/verifier`, `@strixgov/tool-gateway`, and the
 two `@strixgov/capabilities-*` packs — are **MIT**; the runtime control
-surfaces `@strixgov/mcp-adapter`, `@strixgov/mcp-proxy` and `@strixgov/governed-egress`
-are **Elastic License 2.0** (source-available; free
-to use, not to resell as a competing managed service). The repository root
+surfaces `@strixgov/mcp-adapter` and `@strixgov/mcp-proxy` are **Elastic License
+2.0** (source-available; free to use, not to resell as a competing managed
+service). `@strixgov/governed-egress` is under the **Strix Proprietary Software
+License** (source-available for inspection and verification; production use
+needs a signed Agreement). The repository root
 is MIT. Each package declares its own license — see [LICENSE](LICENSE), each
 package's own `LICENSE`, and [LICENSING_BOUNDARY.md](LICENSING_BOUNDARY.md).

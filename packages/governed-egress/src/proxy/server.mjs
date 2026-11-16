@@ -54,6 +54,7 @@
 import { createServer as createHttpServer } from 'node:http';
 import { createServer as createHttpsServer } from 'node:https';
 import { timingSafeEqual, randomUUID, createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { governedAnthropicDocumentRequest } from '../adapters/anthropic/index.mjs';
 import { governedOpenAiDocumentRequest } from '../adapters/openai/index.mjs';
 import { createAnthropicMessagesTransport, DEFAULT_ANTHROPIC_MODEL } from '../adapters/anthropic/transport.mjs';
@@ -68,7 +69,16 @@ import { MAX_ARTIFACT_BYTES } from '../artifact/limits.mjs';
 import { TOKEN_PREFIX } from '../detection/categories.mjs';
 import { openAiStreamBody, anthropicStreamBody } from './sse.mjs';
 
+// `version` is the proxy component's own version, deliberately independent
+// of the npm package version (the detector carries its own too). Surfaces
+// that report it also report the package, so the two are never confused.
 export const PROXY_INFO = Object.freeze({ name: 'strix-egress-proxy', version: '0.2.0' });
+const PACKAGE_INFO = (() => {
+  const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+  return Object.freeze({ name: pkg.name, version: pkg.version });
+})();
+/** Largest output-token limit a client may request; larger values refuse by name. */
+export const MAX_OUTPUT_TOKENS = 64_000;
 export const MAX_PROXY_BODY_BYTES = MAX_ARTIFACT_BYTES + 64 * 1024;
 export const MIN_TOKEN_LENGTH = 32;
 export const DEFAULT_STREAM_CHUNK_CHARS = 64;
@@ -84,19 +94,21 @@ export const TRANSCRIPT_INSTRUCTION =
 const PROVIDERS = Object.freeze({
   anthropic: {
     request: governedAnthropicDocumentRequest,
-    transport: (model, baseUrl) => createAnthropicMessagesTransport(baseUrl ? { model, baseUrl } : { model }),
+    transport: (model, baseUrl, maxTokens) =>
+      createAnthropicMessagesTransport({ model, ...(baseUrl ? { baseUrl } : {}), ...(maxTokens ? { maxTokens } : {}) }),
     defaultModel: DEFAULT_ANTHROPIC_MODEL,
   },
   openai: {
     request: governedOpenAiDocumentRequest,
-    transport: (model, baseUrl) => createOpenAiChatTransport(baseUrl ? { model, baseUrl } : { model }),
+    transport: (model, baseUrl, maxTokens) =>
+      createOpenAiChatTransport({ model, ...(baseUrl ? { baseUrl } : {}), ...(maxTokens ? { maxTokens } : {}) }),
     defaultModel: DEFAULT_OPENAI_MODEL,
   },
 });
 
 // Parameters a client may send that the governed transport does not forward.
 const IGNORED = Object.freeze([
-  'temperature', 'top_p', 'top_k', 'max_tokens', 'max_completion_tokens', 'stop', 'stop_sequences',
+  'temperature', 'top_p', 'top_k', 'stop', 'stop_sequences',
   'presence_penalty', 'frequency_penalty', 'seed', 'user', 'metadata', 'logit_bias', 'stream_options',
 ]);
 // Parameters that change what the request IS; each refuses by name.
@@ -164,7 +176,7 @@ function hasMarker(text) {
 
 /**
  * Parse either wire shape into
- * { document, prompt, model, ignored, stream, turns, foreignTokens }.
+ * { document, prompt, model, maxTokens, ignored, stream, turns, foreignTokens }.
  * Exported for tests; pure.
  */
 export function parseChatRequest(body, shape) {
@@ -180,6 +192,20 @@ export function parseChatRequest(body, shape) {
   if (has(body, 'stream') && body.stream !== undefined && body.stream !== null) {
     if (typeof body.stream !== 'boolean') throw bad('BODY_MALFORMED', '`stream` must be a boolean');
     stream = body.stream;
+  }
+  // The client's output limit is forwarded, never silently replaced.
+  // `max_tokens` (both shapes) and `max_completion_tokens` (OpenAI) mean the
+  // same thing; two different values refuse rather than one being picked.
+  let maxTokens = null;
+  for (const field of ['max_tokens', 'max_completion_tokens']) {
+    if (!has(body, field) || body[field] === undefined || body[field] === null) continue;
+    const v = body[field];
+    if (!Number.isInteger(v) || v < 1) throw bad('BODY_MALFORMED', `\`${field}\` must be a positive integer`);
+    if (v > MAX_OUTPUT_TOKENS) throw bad('MAX_TOKENS_TOO_LARGE', `\`${field}\` exceeds ${MAX_OUTPUT_TOKENS}`);
+    if (maxTokens !== null && maxTokens !== v) {
+      throw bad('BODY_MALFORMED', '`max_tokens` and `max_completion_tokens` disagree');
+    }
+    maxTokens = v;
   }
   const messages = body.messages;
   if (!Array.isArray(messages) || messages.length === 0) throw bad('BODY_MALFORMED', '`messages` must be a non-empty array');
@@ -252,6 +278,7 @@ export function parseChatRequest(body, shape) {
     document,
     prompt,
     model,
+    maxTokens,
     ignored: [...IGNORED.filter((k) => has(body, k)), ...[...ignoredMessageFields].sort()],
     stream,
     turns: turns.length,
@@ -410,7 +437,7 @@ export function createEgressProxy(config) {
   const log = config.log ?? ((line) => process.stdout.write(`${line}\n`));
   // `baseUrl` is the operator's own provider endpoint (a private or regional
   // deployment). The transport refuses anything but an absolute https URL.
-  const transportFor = config.transportFor ?? ((m) => provider.transport(m, config.baseUrl));
+  const transportFor = config.transportFor ?? ((m, maxTokens) => provider.transport(m, config.baseUrl, maxTokens));
   // Construct the real transport once at startup, so a missing or malformed
   // provider key refuses the START rather than failing the first request.
   if (!config.transportFor) {
@@ -463,7 +490,7 @@ export function createEgressProxy(config) {
       actor,
       policy,
       deps,
-      transport: transportFor(requestedModel),
+      transport: transportFor(requestedModel, parsed.maxTokens),
       reidentify,
       scanResponse,
     });
@@ -501,7 +528,7 @@ export function createEgressProxy(config) {
     const shape = path === '/v1/messages' ? 'anthropic' : 'openai';
     try {
       if (req.method === 'GET' && path === '/healthz') {
-        return send(res, 200, { ok: true, proxy: PROXY_INFO, provider: config.provider, model });
+        return send(res, 200, { ok: true, proxy: PROXY_INFO, package: PACKAGE_INFO, provider: config.provider, model });
       }
       if (req.method === 'POST' && (path === '/v1/chat/completions' || path === '/v1/messages')) {
         return await handleChat(req, res, shape);

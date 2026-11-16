@@ -10,8 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.4] - unreleased
 
 ### Changed
+- Pins `@strixgov/mcp-adapter` 0.1.5 (was 0.1.4), whose published package runs `npm test`.
 - The Strix runtime dependencies (`@strixgov/tool-gateway`, `@strixgov/mcp-adapter`,
-  `@strixgov/capabilities-mcp-common`) are pinned to exact versions (0.5.2, 0.1.4 and
+  `@strixgov/capabilities-mcp-common`) are pinned to exact versions (0.5.2, 0.1.5 and
   0.1.2) instead of ranges. `@strixgov/guard` launches a pinned proxy version; with
   ranges underneath it, a new tool-gateway release still changed what every Guard
   install ran. `@modelcontextprotocol/sdk` stays a range. A package-contract test

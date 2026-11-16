@@ -82,7 +82,7 @@ Repo root:
 | `package.json` | This repo | Workspace root (`packages/*`). No dependencies; pins the package set. |
 | `CONTRIBUTING.md`, `MIRROR.md`, `LICENSE` | This repo | Repo-level docs. No upstream counterparts. |
 | `PUBLIC_RELEASE_INVARIANTS.md` | This repo | The chain-of-custody contract: source of truth, locked layout, derivation invariants (PR-1..PR-5), sync guarantees, what's omitted, provenance expectations. Enforced upstream by `scripts/lint-public-release-invariants.mjs`. |
-| `LICENSING_BOUNDARY.md` | Mirror | Byte-for-byte mirror of the upstream root `LICENSING_BOUNDARY.md`. Documents the MIT / Elastic-2.0 split across all `@strixgov/*` packages. Referenced from `packages/tool-gateway/README.md` via `../../LICENSING_BOUNDARY.md`; must stay present at this repo root for that link to resolve on the public mirror. |
+| `LICENSING_BOUNDARY.md` | Mirror | Byte-for-byte mirror of the upstream root `LICENSING_BOUNDARY.md`. Documents the MIT / Elastic-2.0 / Strix Proprietary split across all `@strixgov/*` packages. Referenced from `packages/tool-gateway/README.md` via `../../LICENSING_BOUNDARY.md`; must stay present at this repo root for that link to resolve on the public mirror. |
 
 Marketing surface, under `marketing/<slug>/`:
 

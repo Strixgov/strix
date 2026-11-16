@@ -318,6 +318,12 @@ option and pack; `--version` prints the proxy and package versions.
   new value. The leading system message is the prompt, which is scanned and
   refuses on any identifier. Sampling parameters the governed transport does
   not forward are named in `strix.ignoredParameters`, never silently honoured.
+  The output limit is forwarded: `max_tokens` (both shapes) or
+  `max_completion_tokens` (OpenAI), a positive integer up to 64,000; two
+  different values, or a malformed one, refuse. Without one the provider call
+  uses 1,024. `/healthz` reports the package version beside the proxy
+  component version (`proxy.version` is the component's own version, not the
+  npm version).
 - **Streaming (v0.2):** `stream: true` is accepted in both shapes and returns
   server-sent events the SDKs expect (OpenAI `chat.completion.chunk` + `[DONE]`;
   Anthropic `message_start` … `message_stop`). The provider call itself is

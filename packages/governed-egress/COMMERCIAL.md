@@ -1,5 +1,9 @@
 # Commercial use of `@strixgov/governed-egress`
 
+**Status (2026-11-15): 0.1.0 is published on npm** under the Strix Proprietary
+Software License. The paragraph below was written before that publish and is
+kept as written.
+
 **Status: publish-ready, not yet published.** Licence changed on 2026-11-13
 from Elastic-2.0 to the **Strix Proprietary Software License** (owner decision
 "Proprietary everywhere"). The owner states no copy was shared under

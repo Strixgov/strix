@@ -8,10 +8,19 @@
 #
 #   packages/governed-egress/container/smoke-test.sh <image>
 set -euo pipefail
+# Git Bash on Windows rewrites arguments that start with "/" into Windows
+# paths, so "/app/pkg/bin/..." meant for the container became a host path and
+# the hook check failed with exit 1 (2026-11-15). This turns that off; it is
+# a no-op everywhere else.
+export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
 
 IMAGE="${1:?usage: smoke-test.sh <image>}"
 NAME="strix-egress-smoke-$$"
 WORK="$(mktemp -d)"
+# The host side of a bind mount must be a path Docker can see. Under Git Bash
+# (path conversion off, above) that is the Windows form of $WORK; elsewhere
+# cygpath does not exist and $WORK is already right.
+HOST_WORK="$(cygpath -m "$WORK" 2>/dev/null || printf '%s' "$WORK")"
 cleanup() { docker rm -f "$NAME" >/dev/null 2>&1 || true; rm -rf "$WORK"; }
 trap cleanup EXIT
 
@@ -43,7 +52,7 @@ TOKEN="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
 docker run -d --name "$NAME" --network none \
   --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges \
   -e STRIX_EGRESS_PROXY_TOKEN="$TOKEN" -e ANTHROPIC_API_KEY=smoke-placeholder-not-a-key \
-  -v "$WORK/policy.json:/config/policy.json:ro" \
+  -v "$HOST_WORK/policy.json:/config/policy.json:ro" \
   "$IMAGE" --provider anthropic >/dev/null
 
 probe() { # $1 = method, $2 = path, $3 = token ('' for none) -> prints status

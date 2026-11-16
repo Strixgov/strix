@@ -188,5 +188,52 @@ test('startup refuses when the real provider key is missing, instead of failing 
 test('healthz answers without auth and reveals no configuration beyond provider and model', async () => {
   const { base } = await start();
   const r = await fetch(`${base}/healthz`).then((x) => x.json());
-  assert.deepEqual(Object.keys(r).sort(), ['model', 'ok', 'provider', 'proxy']);
+  // `package` (name + version) sits beside `proxy` (name + component
+  // version): a version string was already public here, and reporting only
+  // the component version read as the package being 0.2.0 when it is 0.1.0.
+  assert.deepEqual(Object.keys(r).sort(), ['model', 'ok', 'package', 'provider', 'proxy']);
+});
+
+test('max_tokens / max_completion_tokens are forwarded to the transport, not ignored', async () => {
+  const seen = [];
+  const { base } = await start({
+    transportFor: (model, maxTokens) => {
+      seen.push(maxTokens);
+      return { name: 'fake', async send() { return { responseText: 'ok' }; } };
+    },
+  });
+  const a = await post(base, '/v1/messages', { model: 'test-model', max_tokens: 321, messages: [{ role: 'user', content: 'hi' }] }, { 'x-api-key': TOKEN });
+  assert.equal(a.status, 200);
+  assert.deepEqual(a.json.strix.ignoredParameters, [], 'max_tokens is honoured, so it is not listed as ignored');
+  const b = await post(base, '/v1/chat/completions', { model: 'test-model', max_completion_tokens: 77, messages: [{ role: 'user', content: 'hi' }] });
+  assert.equal(b.status, 200);
+  const c = await post(base, '/v1/chat/completions', { model: 'test-model', messages: [{ role: 'user', content: 'hi' }] });
+  assert.equal(c.status, 200);
+  assert.deepEqual(seen, [321, 77, null], 'absent means the transport default, never a guessed value');
+});
+
+test('a malformed, conflicting or oversized output limit refuses by name, and nothing is sent', async () => {
+  const { base, sent } = await start();
+  for (const [extra, code] of [
+    [{ max_tokens: 0 }, 'BODY_MALFORMED'],
+    [{ max_tokens: 1.5 }, 'BODY_MALFORMED'],
+    [{ max_tokens: '100' }, 'BODY_MALFORMED'],
+    [{ max_tokens: 10, max_completion_tokens: 20 }, 'BODY_MALFORMED'],
+    [{ max_tokens: 10_000_000 }, 'MAX_TOKENS_TOO_LARGE'],
+  ]) {
+    const r = await post(base, '/v1/chat/completions', { model: 'test-model', messages: [{ role: 'user', content: 'hi' }], ...extra });
+    assert.equal(r.status, 400, JSON.stringify(extra));
+    assert.match(JSON.stringify(r.json), new RegExp(code), JSON.stringify(extra));
+  }
+  assert.equal(sent.length, 0);
+});
+
+test('health reports the package version beside the proxy component version', async () => {
+  const { base } = await start();
+  const r = await fetch(`${base}/healthz`);
+  const json = await r.json();
+  const pkg = JSON.parse(await import('node:fs').then((fs) => fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')));
+  assert.equal(json.package.version, pkg.version);
+  assert.equal(json.package.name, pkg.name);
+  assert.ok(json.proxy.version, 'component version still reported');
 });
