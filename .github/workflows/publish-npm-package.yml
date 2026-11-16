@@ -1,0 +1,174 @@
+name: publish an npm package with provenance
+
+# Publishes one @strixgov package from this public repository WITH signed npm
+# provenance (the "Built and signed on GitHub Actions" badge on npmjs.com: a
+# Sigstore attestation linking the tarball to this commit and this workflow).
+# npm generates provenance only when the source repository is public, which is
+# why publishing happens here and not in the private upstream repository.
+#
+# Generalizes publish-governed-egress.yml to every package that ships its
+# source as-is (no build step). Packages whose `files` ship a built `dist/` are
+# refused: this repository does not yet prove those build standalone, and a
+# tarball built here must match the one that was tested upstream.
+#
+# This workflow does not decide what ships. The operator syncs and gates the
+# mirror upstream, pushes it, runs this workflow as a dry run (publish
+# unchecked), which packs from this commit and prints the tarball's sha256,
+# and then runs it again with publish checked and that sha256. The second run
+# re-packs and refuses unless the bytes are identical, so nothing that landed
+# on main between the two runs can ship unreviewed. Packing the mirror on
+# Linux or WSL gives the same bytes (checked with npm 10.9 and 11.6); packing
+# on native Windows has not been checked and may differ in file modes.
+#
+# Operator setup (once per package):
+#   1. Create the GitHub environment `npm-publish` on this repository with a
+#      required reviewer, so every publish waits for a human approval.
+#   2. On npmjs.com -> the package -> Settings -> Trusted publishing, add
+#      GitHub Actions: Strixgov/strix, workflow publish-npm-package.yml,
+#      environment npm-publish. No token is stored.
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package directory under packages/
+        required: true
+        type: choice
+        options:
+          - governed-egress
+          - strixgov-capabilities-claude-code
+          - strixgov-capabilities-mcp-common
+          - strixgov-capabilities-odysseus
+          - strixgov-claude-code
+          - strixgov-guard
+          - strixgov-healthcare-demo
+          - strixgov-mcp-adapter
+          - strixgov-mcp-credentials
+          - strixgov-mcp-proxy
+          - strixgov-mcp-token-validator
+          - strixgov-rcm-reference
+          - strixgov-repo-proof-contract
+          - strixgov-verifier
+          - tool-gateway
+      expected_sha256:
+        description: sha256 of the tarball you packed locally from the mirror (required to publish)
+        required: false
+        type: string
+      publish:
+        description: Actually publish (unchecked = dry run that prints the packed sha256)
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: pack, verify and publish ${{ inputs.package }}
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing + Sigstore provenance
+    steps:
+      - name: Refuse off main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::publish runs from refs/heads/main only (got $GITHUB_REF)"
+          exit 1
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: npm with trusted-publishing support
+        run: npm install -g 'npm@^11.5.1' && npm --version
+
+      - name: Check the package manifest
+        id: meta
+        working-directory: packages/${{ inputs.package }}
+        run: |
+          node -e '
+            const p = require("./package.json");
+            const fail = (m) => { console.error("::error::" + m); process.exit(1); };
+            if (p.private) fail(p.name + " is private");
+            if ((p.files || []).some((f) => /^dist\/?$/.test(f))) fail(p.name + " ships a built dist/; not supported by this workflow");
+            for (const k of ["dependencies", "peerDependencies", "optionalDependencies"])
+              for (const [d, v] of Object.entries(p[k] || {}))
+                if (String(v).startsWith("workspace:")) fail(p.name + " has " + k + "." + d + " = " + v);
+            const fs = require("node:fs");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT,
+              "name=" + p.name + "\nversion=" + p.version + "\nimportable=" + Boolean(p.exports || p.main) + "\n");
+          '
+
+      - name: Refuse a version already on npm
+        env:
+          SPEC: ${{ steps.meta.outputs.name }}@${{ steps.meta.outputs.version }}
+        run: |
+          if npm view "$SPEC" version >/dev/null 2>&1; then
+            echo "::error::$SPEC is already published"
+            exit 1
+          fi
+
+      - name: Pack
+        id: pack
+        working-directory: packages/${{ inputs.package }}
+        run: |
+          OUT="$RUNNER_TEMP/pack"
+          mkdir -p "$OUT"
+          npm pack --pack-destination "$OUT" >/dev/null
+          TGZ=$(ls "$OUT"/*.tgz)
+          SHA=$(sha256sum "$TGZ" | cut -d' ' -f1)
+          echo "packed $(basename "$TGZ") sha256 $SHA" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "tgz=$TGZ" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Compare to the reviewed tarball
+        if: inputs.publish || inputs.expected_sha256 != ''
+        env:
+          EXPECTED: ${{ inputs.expected_sha256 }}
+          GOT: ${{ steps.pack.outputs.sha }}
+        run: |
+          echo "$EXPECTED" | grep -Eq '^[0-9a-f]{64}$' || { echo "::error::expected_sha256 must be 64 lowercase hex characters"; exit 1; }
+          test "$GOT" = "$EXPECTED" || { echo "::error::packed $GOT, expected $EXPECTED; refusing"; exit 1; }
+          echo "tarball matches the reviewed sha256"
+
+      - name: Smoke-install the exact tarball
+        env:
+          NAME: ${{ steps.meta.outputs.name }}
+          IMPORTABLE: ${{ steps.meta.outputs.importable }}
+        run: |
+          SM="$RUNNER_TEMP/smoke"
+          mkdir -p "$SM" && cd "$SM"
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund "${{ steps.pack.outputs.tgz }}"
+          if [ "$IMPORTABLE" = "true" ]; then
+            node --input-type=module -e "const m = await import(process.env.NAME); console.log('exports', Object.keys(m).length)"
+          else
+            test -f "node_modules/$NAME/package.json" && echo "installed (no import entry point)"
+          fi
+
+      - name: Publish with provenance
+        if: inputs.publish
+        run: npm publish "${{ steps.pack.outputs.tgz }}" --provenance --access public
+
+      - name: Confirm the attestation exists
+        if: inputs.publish
+        env:
+          SPEC: ${{ steps.meta.outputs.name }}@${{ steps.meta.outputs.version }}
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if npm view "$SPEC" dist.attestations --json 2>/dev/null | grep -q provenance; then
+              echo "provenance attestation present for $SPEC"; exit 0
+            fi
+            sleep 20
+          done
+          echo "::error::$SPEC published but no provenance attestation was visible after 2 minutes"
+          exit 1
+
+      - name: Dry run stop
+        if: ${{ !inputs.publish }}
+        run: echo "Dry run. Nothing was published. Packed sha256 ${{ steps.pack.outputs.sha }}"
