@@ -1,0 +1,139 @@
+name: publish the governed-egress proxy image with provenance
+
+# Builds ghcr.io/strixgov/governed-egress-proxy from this public repository,
+# runs the image's smoke test, pushes it, and attaches a signed build
+# provenance attestation (Sigstore, via actions/attest-build-provenance) that
+# names this repository, this commit and this workflow run. Anyone can check
+# it with:
+#   gh attestation verify oci://ghcr.io/strixgov/governed-egress-proxy:<version> --owner Strixgov
+#
+# What the attestation proves: this image digest was built by this workflow
+# from this commit. What it does not prove: that rebuilding gives the same
+# digest (the base image node:22-slim is not pinned by digest), or anything
+# about the image's behaviour beyond the smoke test.
+#
+# The version comes from packages/governed-egress/package.json. A version
+# whose tag already exists in GHCR is refused, so a published image is never
+# overwritten. Run with publish unchecked first: it builds and smoke-tests
+# without pushing.
+#
+# Operator setup (once):
+#   1. Create the GitHub environment `ghcr-publish` on this repository with a
+#      required reviewer and deployment branch `main`.
+#   2. In the Strixgov org: Packages -> governed-egress-proxy -> Package
+#      settings -> Manage Actions access -> add repository Strixgov/strix with
+#      role Write. Without it GITHUB_TOKEN cannot push to a package that a
+#      person created.
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Push and attest (unchecked = build and smoke test only)
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/strixgov/governed-egress-proxy
+
+jobs:
+  image:
+    name: build, smoke test, push and attest
+    runs-on: ubuntu-latest
+    environment: ghcr-publish
+    permissions:
+      contents: read
+      packages: write # push to GHCR
+      id-token: write # Sigstore signing
+      attestations: write # store the attestation
+    steps:
+      - name: Refuse off main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::publish runs from refs/heads/main only (got $GITHUB_REF)"
+          exit 1
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Read the version
+        id: ver
+        run: |
+          V="$(node -p "require('./packages/governed-egress/package.json').version")"
+          echo "$V" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::unexpected version '$V'"; exit 1; }
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "image $IMAGE:$V" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Log in to GHCR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Refuse a tag that already exists
+        env:
+          V: ${{ steps.ver.outputs.version }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          if OUT=$(docker manifest inspect "$IMAGE:$V" 2>&1); then
+            if [ "$PUBLISH" = "true" ]; then
+              echo "::error::$IMAGE:$V already exists; bump the version"
+              exit 1
+            fi
+            echo "::warning::$IMAGE:$V already exists; this dry run continues, a publish run would refuse"
+            exit 0
+          fi
+          if ! echo "$OUT" | grep -qiE 'no such manifest|manifest unknown|not found'; then
+            echo "::error::could not tell whether $IMAGE:$V exists: $OUT"
+            exit 1
+          fi
+          echo "$IMAGE:$V does not exist yet"
+
+      - name: Build
+        working-directory: packages/governed-egress
+        env:
+          V: ${{ steps.ver.outputs.version }}
+        run: |
+          docker build \
+            --label org.opencontainers.image.source=https://github.com/Strixgov/strix \
+            --label org.opencontainers.image.version="$V" \
+            --label org.opencontainers.image.licenses=LicenseRef-Strix-Proprietary \
+            --label org.opencontainers.image.revision="$GITHUB_SHA" \
+            -t "$IMAGE:$V" .
+
+      - name: Smoke test
+        run: bash packages/governed-egress/container/smoke-test.sh "$IMAGE:${{ steps.ver.outputs.version }}"
+
+      - name: Push
+        if: inputs.publish
+        id: push
+        env:
+          V: ${{ steps.ver.outputs.version }}
+        run: |
+          docker push "$IMAGE:$V"
+          REF=$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:$V")
+          DIGEST="${REF#*@}"
+          echo "$DIGEST" | grep -Eq '^sha256:[0-9a-f]{64}$' || { echo "::error::could not read the pushed digest ($REF)"; exit 1; }
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "pushed $IMAGE:$V $DIGEST" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Attest build provenance
+        if: inputs.publish
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: Verify the attestation
+        if: inputs.publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          V: ${{ steps.ver.outputs.version }}
+        run: gh attestation verify "oci://$IMAGE:$V" --owner Strixgov
+
+      - name: Dry run stop
+        if: ${{ !inputs.publish }}
+        run: echo "Dry run. Built and smoke-tested $IMAGE:${{ steps.ver.outputs.version }}; nothing was pushed."
