@@ -6,14 +6,10 @@ name: publish an npm package with provenance
 # npm generates provenance only when the source repository is public, which is
 # why publishing happens here and not in the private upstream repository.
 #
-# Generalizes publish-governed-egress.yml to every @strixgov package in this
-# mirror. Packages that ship their source as-is are packed in place. Packages
-# whose `files` ship a built `dist/` are built here: the package directory is
-# copied out of the workspace, its dependencies are installed fresh from npm,
-# `npm run build` produces dist/, and that copy is packed. No dist/ is ever
-# taken from the repository. The build has no lockfile, so a new TypeScript or
-# @types release between the dry run and the publish run changes the bytes and
-# the publish refuses; re-run the dry run when that happens.
+# Generalizes publish-governed-egress.yml to every package that ships its
+# source as-is (no build step). Packages whose `files` ship a built `dist/` are
+# refused: this repository does not yet prove those build standalone, and a
+# tarball built here must match the one that was tested upstream.
 #
 # This workflow does not decide what ships. The operator syncs and gates the
 # mirror upstream, pushes it, runs this workflow as a dry run (publish
@@ -39,14 +35,11 @@ on:
         required: true
         type: choice
         options:
-          - governance-sdk
           - governed-egress
           - strixgov-capabilities-claude-code
           - strixgov-capabilities-mcp-common
           - strixgov-capabilities-odysseus
           - strixgov-claude-code
-          - strixgov-execution-authority
-          - strixgov-governed-action
           - strixgov-guard
           - strixgov-healthcare-demo
           - strixgov-mcp-adapter
@@ -55,7 +48,6 @@ on:
           - strixgov-mcp-token-validator
           - strixgov-rcm-reference
           - strixgov-repo-proof-contract
-          - strixgov-swarm-adapter
           - strixgov-verifier
           - tool-gateway
       expected_sha256:
@@ -86,9 +78,9 @@ jobs:
           echo "::error::publish runs from refs/heads/main only (got $GITHUB_REF)"
           exit 1
 
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
 
@@ -101,18 +93,15 @@ jobs:
         run: |
           node -e '
             const p = require("./package.json");
-            const fs = require("node:fs");
             const fail = (m) => { console.error("::error::" + m); process.exit(1); };
             if (p.private) fail(p.name + " is private");
-            const built = (p.files || []).some((f) => /^dist\/?$/.test(f));
-            if (built && !(p.scripts && p.scripts.build)) fail(p.name + " ships dist/ but has no build script");
-            if (built && !fs.existsSync("tsconfig.json")) fail(p.name + " ships dist/ but tsconfig.json is not mirrored");
-            if (fs.existsSync("dist")) fail(p.name + " has a committed dist/; the workflow builds it and will not ship a prebuilt one");
+            if ((p.files || []).some((f) => /^dist\/?$/.test(f))) fail(p.name + " ships a built dist/; not supported by this workflow");
             for (const k of ["dependencies", "peerDependencies", "optionalDependencies"])
               for (const [d, v] of Object.entries(p[k] || {}))
                 if (String(v).startsWith("workspace:")) fail(p.name + " has " + k + "." + d + " = " + v);
+            const fs = require("node:fs");
             fs.appendFileSync(process.env.GITHUB_OUTPUT,
-              "name=" + p.name + "\nversion=" + p.version + "\nimportable=" + Boolean(p.exports || p.main) + "\nbuilt=" + built + "\n");
+              "name=" + p.name + "\nversion=" + p.version + "\nimportable=" + Boolean(p.exports || p.main) + "\n");
           '
 
       - name: Refuse a version already on npm
@@ -124,30 +113,12 @@ jobs:
             exit 1
           fi
 
-      - name: Build dist/ outside the workspace
-        if: steps.meta.outputs.built == 'true'
-        id: build
-        run: |
-          SRC="packages/${{ inputs.package }}"
-          DIR="$RUNNER_TEMP/build/${{ inputs.package }}"
-          mkdir -p "$DIR"
-          cp -R "$SRC/." "$DIR/"
-          rm -rf "$DIR/node_modules" "$DIR/dist"
-          cd "$DIR"
-          npm install --no-audit --no-fund
-          npm run build
-          test -d dist || { echo "::error::build produced no dist/"; exit 1; }
-          echo "built with typescript $(node -p 'require("typescript/package.json").version')" | tee -a "$GITHUB_STEP_SUMMARY"
-          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
-
       - name: Pack
         id: pack
-        env:
-          DIR: ${{ steps.build.outputs.dir || format('{0}/packages/{1}', github.workspace, inputs.package) }}
+        working-directory: packages/${{ inputs.package }}
         run: |
           OUT="$RUNNER_TEMP/pack"
           mkdir -p "$OUT"
-          cd "$DIR"
           npm pack --pack-destination "$OUT" >/dev/null
           TGZ=$(ls "$OUT"/*.tgz)
           SHA=$(sha256sum "$TGZ" | cut -d' ' -f1)
